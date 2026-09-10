@@ -1,0 +1,12 @@
+{
+  "providers": {
+    "opencode": {
+      "modelOverrides": {
+        "muse-spark-1.3-contributor-free": {
+          "contextWindow": 200000,
+          "maxTokens": 64000
+        }
+      }
+    }
+  }
+}

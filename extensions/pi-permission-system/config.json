@@ -1,0 +1,80 @@
+{
+  "$schema": "https://raw.githubusercontent.com/gotgenes/pi-packages/main/packages/pi-permission-system/schemas/permissions.schema.json",
+  "debugLog": false,
+  "permissionReviewLog": true,
+  "yoloMode": true,
+  "doublePressToConfirm": true,
+  "forwardingTimeoutMs": 600000,
+  "promptMaxRows": 24,
+  "promptFieldMaxWidth": 400,
+  "reviewLogFieldMaxWidth": 1000,
+  "piInfrastructureReadPaths": [],
+  "authorizerChain": [],
+  "permission": {
+    "*": "ask",
+    "path": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      ".env*": "deny",
+      "*.env.example": "allow",
+      "*.pem": "deny",
+      "*.key": "deny",
+      "*.p12": "deny",
+      "*.pfx": "deny",
+      "*id_rsa*": "deny",
+      "*id_ed25519*": "deny",
+      "*credentials*": "deny",
+      "*secret*": "deny",
+      "~/.ssh/*": "deny",
+      "~/.aws/*": "deny",
+      "~/.gnupg/*": "deny"
+    },
+    "read": "allow",
+    "ls": "allow",
+    "grep": "allow",
+    "find": "allow",
+    "write": "ask",
+    "edit": "ask",
+    "bash": {
+      "*": "ask",
+      "ls": "allow",
+      "ls *": "allow",
+      "pwd": "allow",
+      "echo *": "allow",
+      "cat *": "allow",
+      "head *": "allow",
+      "tail *": "allow",
+      "wc *": "allow",
+      "which *": "allow",
+      "whoami": "allow",
+      "date": "allow",
+      "uname *": "allow",
+      "git status": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git branch": "allow",
+      "git branch *": "allow",
+      "git show *": "allow",
+      "rm -rf *": "deny",
+      "rm -r *": "deny",
+      "sudo *": "deny",
+      "chmod -R *": "deny",
+      "chown -R *": "deny",
+      "mkfs *": "deny",
+      "dd *": "deny",
+      ":(){:|:&};:": "deny"
+    },
+    "mcp": {
+      "*": "ask",
+      "mcp_status": "allow",
+      "mcp_list": "allow"
+    },
+    "skill": {
+      "*": "ask"
+    },
+    "external_directory": {
+      "*": "ask"
+    }
+  }
+}

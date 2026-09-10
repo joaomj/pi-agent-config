@@ -1,0 +1,11 @@
+{
+  "lastChangelogVersion": "0.85.1",
+  "theme": "dark",
+  "defaultProvider": "opencode",
+  "defaultModel": "muse-spark-1.3-contributor-free",
+  "defaultThinkingLevel": "xhigh",
+  "modelThinkingLevels": {
+    "opencode/muse-spark-1.3-contributor-free": "xhigh"
+  },
+  "packages": ["npm:@gotgenes/pi-permission-system"]
+}

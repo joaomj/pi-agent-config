@@ -1,0 +1,20 @@
+# secrets - never commit
+auth.json
+trust.json
+
+# runtime / cache - never commit
+sessions/
+models-store.json
+*.log
+# permission-system review/debug logs contain unredacted commands - never commit
+extensions/*/logs/
+
+# installed packages - reinstallable via settings.json
+# (npm/package.json is tracked: it pins allowScripts approvals)
+npm/*
+!npm/package.json
+!npm/.gitignore
+git/
+
+# OS
+.DS_Store
