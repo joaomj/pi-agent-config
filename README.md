@@ -71,9 +71,9 @@ Workflow wrappers (`Select and follow X`) were dropped on purpose — `/skill:na
 Enforced by `npm:@gotgenes/pi-permission-system`, no custom extension:
 
 - `path`: deny secrets (`*.env`, `*.pem`, `*.key`, `*credentials*`, `*secret*`, `*.npmrc`, `*.pypirc`, `*.git-credentials`, `*.netrc`, `*.authinfo`, `.docker/config.json`, `gh/hosts.yml`, `~/.ssh/*`, `~/.aws/*`, `~/.gnupg/*`). `*.env.example` allowed.
-- `bash`: `ask` by default. Safe reads (`git status/diff/log/branch/show`, `ls`, `pwd`, `cat`, …) allowed. `rm -rf`, `sudo`, `chmod -R`, `chown -R`, `mkfs`, `dd`, fork bomb denied.
+- `bash`: `allow` by default. Destructive commands (`rm -rf`, `rm -r`, `sudo`, `chmod -R`, `chown -R`, `mkfs`, `dd`, fork bomb) and remote writes (`git push`, `gh pr create`, `gh release create`) prompt.
 - `git push`, `gh pr create`, `gh release create` prompt (covered by `bash *: ask`).
-- `write`/`edit`: ask. `read`/`ls`/`grep`/`find`: allow. Skills, MCP, outside-cwd: ask.
+- `write`/`edit`: ask, except plain docs (`*.md`, `*.mdx`, `*.rst`, `*.txt`) which allow. `read`/`ls`/`grep`/`find`: allow. Skills, MCP, outside-cwd: ask.
 - `yoloMode: false`, `permissionReviewLog: false`, `authorizerChain: []`.
 
 ## Settings

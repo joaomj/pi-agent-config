@@ -41,10 +41,22 @@
     "ls": "allow",
     "grep": "allow",
     "find": "allow",
-    "write": "ask",
-    "edit": "ask",
-    "bash": {
+    "write": {
       "*": "ask",
+      "*.md": "allow",
+      "*.mdx": "allow",
+      "*.rst": "allow",
+      "*.txt": "allow"
+    },
+    "edit": {
+      "*": "ask",
+      "*.md": "allow",
+      "*.mdx": "allow",
+      "*.rst": "allow",
+      "*.txt": "allow"
+    },
+    "bash": {
+      "*": "allow",
       "ls": "allow",
       "ls *": "allow",
       "pwd": "allow",
@@ -57,20 +69,23 @@
       "whoami": "allow",
       "date": "allow",
       "uname *": "allow",
-      "git status": "allow",
+      "git status*": "allow",
       "git diff*": "allow",
       "git log*": "allow",
       "git branch": "allow",
       "git branch *": "allow",
       "git show *": "allow",
-      "rm -rf *": "deny",
-      "rm -r *": "deny",
-      "sudo *": "deny",
-      "chmod -R *": "deny",
-      "chown -R *": "deny",
-      "mkfs *": "deny",
-      "dd *": "deny",
-      ":(){:|:&};:": "deny"
+      "rm -rf *": "ask",
+      "rm -r *": "ask",
+      "sudo *": "ask",
+      "chmod -R *": "ask",
+      "chown -R *": "ask",
+      "mkfs *": "ask",
+      "dd *": "ask",
+      ":(){:|:&};:": "ask",
+      "git push*": "ask",
+      "gh pr create*": "ask",
+      "gh release create*": "ask"
     },
     "mcp": {
       "*": "ask",
