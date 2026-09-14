@@ -8,9 +8,9 @@ Global guardrails for pi. Procedures live in skills, not here.
 - Preserve unrelated user changes. Never reset, checkout, or overwrite them.
 - No commits, pushes, PRs, releases, or remote writes without explicit user approval, each time.
 - Do not read `.env` values or expose secrets. Use the app config interface.
-- Python via `uv` / `uvx` only. Direct `python`, `pip`, `pytest`, `ruff`, `mypy` are blocked.
+- Python via `uv` / `uvx` only. Run project tools with `uv run`; direct `python`, `python3`, `pip`, `pip3`, `pytest`, `ruff`, and `mypy` are blocked. Respect the project lockfile and environment.
 - Search with `rg` for content, `fd` for files, `fzf --filter` for fuzzy narrowing via `bash`.
-- Use native `git` for local ops; use `gh` for GitHub PR/issue/release writes.
+- Use native `git` for local ops. Use `gh` for GitHub URLs and operations; do not use `curl` or `wget` for GitHub.
 - Treat a successful git op as complete. Re-inspect only after error or when next action needs state.
 
 ## Collaboration

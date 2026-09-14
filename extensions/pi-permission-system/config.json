@@ -76,6 +76,8 @@
       "echo *": "allow",
       "cat *": "allow",
       "rg *": "allow",
+      "fd *": "allow",
+      "fzf --filter *": "allow",
       "grep *": "allow",
       "head *": "allow",
       "tail *": "allow",
