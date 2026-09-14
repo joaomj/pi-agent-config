@@ -13,8 +13,8 @@ information without a decision that the information will support.
 
 State the user-visible goal, deliverable, work stages, and reason for the chosen
 path before research. Use `codebase-investigation` for questions about current local code
-without an external-facts component. Use `focused-exploration` for option
-generation without a specific factual question.
+without an external-facts component. Use the option-comparison behavior in
+`codebase-investigation` when comparing alternatives does not need external facts.
 
 ## Source order
 

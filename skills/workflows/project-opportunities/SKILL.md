@@ -13,7 +13,8 @@ general audit, roadmap, implementation plan, or code change.
 ## Exclude
 
 Use `codebase-investigation` when the user only wants current-system facts.
-Use `focused-exploration` when the user wants to compare a known set of options.
+Use the option-comparison behavior in `codebase-investigation` when the user
+wants to compare a known set of options.
 Use `codebase-design` when the user specifically wants structural code
 improvements. Use `implementation-planning` when the user has selected the work
 and wants repository-specific implementation steps.
@@ -41,7 +42,7 @@ and wants repository-specific implementation steps.
    dependency. Recommend one next opportunity and explain why it comes first.
 8. Put lower-value or speculative ideas in a short deferred list.
 9. State contradictions, missing evidence, and verification gaps.
-10. Stop. Offer `focused-exploration`, `implementation-planning`, or another
+10. Stop. Offer `codebase-investigation`, `implementation-planning`, or another
     matching workflow as a handoff only when useful.
 
 ## Allowed Skills

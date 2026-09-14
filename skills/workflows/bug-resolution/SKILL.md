@@ -1,6 +1,7 @@
 ---
 name: bug-resolution
 description: Resolve incorrect, failing, slow, or broken behavior through reproduction, diagnosis, minimal repair, regression protection, and verification. Use when the user wants a bug fixed.
+disable-model-invocation: true
 ---
 
 # Bug Resolution

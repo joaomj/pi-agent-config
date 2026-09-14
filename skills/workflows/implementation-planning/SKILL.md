@@ -1,6 +1,7 @@
 ---
 name: implementation-planning
 description: Produce a repository-backed implementation plan when the user requests delivery steps for a clear change without implementing it. Use when the user wants a plan instead of code.
+disable-model-invocation: true
 ---
 
 # Implementation Planning

@@ -12,7 +12,7 @@
   "authorizerChain": [],
   "permission": {
     "*": "ask",
-    "path": {
+    "path_read": {
       "*": "allow",
       "*.env": "deny",
       "*.env.*": "deny",
@@ -35,33 +35,48 @@
       "**/.config/gh/hosts.yml": "deny",
       "~/.ssh/*": "deny",
       "~/.aws/*": "deny",
-      "~/.gnupg/*": "deny"
+      "~/.gnupg/*": "deny",
+      "*auth.json": "deny",
+      "*trust.json": "deny"
+    },
+    "path_write": {
+      "*.env": "deny",
+      "*.env.*": "deny",
+      ".env*": "deny",
+      "*.env.example": "allow",
+      "*.pem": "deny",
+      "*.key": "deny",
+      "*.p12": "deny",
+      "*.pfx": "deny",
+      "*id_rsa*": "deny",
+      "*id_ed25519*": "deny",
+      "*credentials*": "deny",
+      "*secret*": "deny",
+      "*.npmrc": "deny",
+      "*.pypirc": "deny",
+      "*.git-credentials": "deny",
+      "*.netrc": "deny",
+      "*.authinfo": "deny",
+      "**/.docker/config.json": "deny",
+      "**/.config/gh/hosts.yml": "deny",
+      "~/.ssh/*": "deny",
+      "~/.aws/*": "deny",
+      "~/.gnupg/*": "deny",
+      "*auth.json": "deny",
+      "*trust.json": "deny"
     },
     "read": "allow",
     "ls": "allow",
     "grep": "allow",
     "find": "allow",
-    "write": {
-      "*": "ask",
-      "*.md": "allow",
-      "*.mdx": "allow",
-      "*.rst": "allow",
-      "*.txt": "allow"
-    },
-    "edit": {
-      "*": "ask",
-      "*.md": "allow",
-      "*.mdx": "allow",
-      "*.rst": "allow",
-      "*.txt": "allow"
-    },
     "bash": {
-      "*": "allow",
       "ls": "allow",
       "ls *": "allow",
       "pwd": "allow",
       "echo *": "allow",
       "cat *": "allow",
+      "rg *": "allow",
+      "grep *": "allow",
       "head *": "allow",
       "tail *": "allow",
       "wc *": "allow",
@@ -69,34 +84,42 @@
       "whoami": "allow",
       "date": "allow",
       "uname *": "allow",
+      "jq *": "allow",
       "git status*": "allow",
       "git diff*": "allow",
       "git log*": "allow",
-      "git branch": "allow",
-      "git branch *": "allow",
       "git show *": "allow",
-      "rm -rf *": "ask",
-      "rm -r *": "ask",
-      "sudo *": "ask",
-      "chmod -R *": "ask",
-      "chown -R *": "ask",
-      "mkfs *": "ask",
-      "dd *": "ask",
-      ":(){:|:&};:": "ask",
-      "git push*": "ask",
-      "gh pr create*": "ask",
-      "gh release create*": "ask"
+      "git rev-parse*": "allow",
+      "git ls-files*": "allow",
+      "git ls-tree*": "allow",
+      "git grep*": "allow",
+      "git branch": "allow",
+      "git branch --show-current": "allow",
+      "git branch --list*": "allow",
+      "git tag --list*": "allow",
+      "git remote -v": "allow",
+      "git remote get-url*": "allow",
+      "python": "deny",
+      "python *": "deny",
+      "python3": "deny",
+      "python3 *": "deny",
+      "pip": "deny",
+      "pip *": "deny",
+      "pip3": "deny",
+      "pip3 *": "deny",
+      "pytest": "deny",
+      "pytest *": "deny",
+      "ruff": "deny",
+      "ruff *": "deny",
+      "mypy": "deny",
+      "mypy *": "deny"
     },
     "mcp": {
-      "*": "ask",
       "mcp_status": "allow",
-      "mcp_list": "allow"
+      "mcp_list": "allow",
+      "mcp_search": "allow",
+      "mcp_describe": "allow"
     },
-    "skill": {
-      "*": "ask"
-    },
-    "external_directory": {
-      "*": "ask"
-    }
+    "skill": "allow"
   }
 }

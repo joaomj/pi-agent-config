@@ -1,6 +1,7 @@
 ---
 name: codebase-investigation
 description: Explain how the current repository or behavior works through focused read-only investigation, without proposing delivery work unless requested. Use when the user wants explanation without implementation.
+disable-model-invocation: true
 ---
 
 # Codebase Investigation
@@ -13,8 +14,8 @@ module. Classify the expected result, not the wording alone.
 ## Exclude
 
 Use `bug-resolution` when the user wants a fix or root-cause repair. Use
-`software-delivery` when the user wants changes. Use `focused-exploration` when
-the user wants options for a future design rather than current facts.
+`software-delivery` when the user wants changes. Use the option-comparison
+section below when the user wants to compare known alternatives.
 
 ## Ordered Steps
 

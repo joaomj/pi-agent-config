@@ -15,22 +15,17 @@ models.json          Provider model overrides (context / max tokens)
 
 ## Principles
 
-- Keep pi fast: default system prompt, `quietStartup`, no async fetch in extensions, no model judge, no MCP.
-- Lazy load procedures. Protection stays always on.
-- Deterministic only where it matters: secrets deny, remote writes ask. Everything else stays out of the way.
+- Keep pi fast: default system prompt, no async fetch in extensions, no model judge, no MCP.
+- Keep generic workflows manual-only; lazy-load capabilities when they add concrete knowledge.
+- Keep protection always on: secrets and unsupported Python commands deny; unknown shell commands and consequential actions ask.
 - Storage stays bounded: one JSONL file per session, one append per completed message. Permission review log off (it was the only unbounded log).
 
 ## Skills
 
-15 advertised (name + description in system prompt, full body loaded on use):
+10 advertised (name + description in system prompt, full body loaded on use):
 
 | Skill | When |
 |---|---|
-| `codebase-investigation` | Explain how current code works, read-only (includes option-compare note) |
-| `direct-assistance` | Small question or safe one-command task |
-| `bug-resolution` | Reproduce, diagnose, fix, regression-test |
-| `software-delivery` | Deliver approved change end to end |
-| `implementation-planning` | Repo-backed delivery steps before editing |
 | `code-review` | P0/P1 correctness, security, regression risks |
 | `codebase-design` | Module seams, refactor boundaries, test seams |
 | `coding-standards` | Style and conventions |
@@ -42,17 +37,22 @@ models.json          Provider model overrides (context / max tokens)
 | `show-me` | Small visual when prose stays abstract |
 | `architecture-diagram` | Architecture visuals |
 
-5 explicit-only (`disable-model-invocation: true`, invoke via `/skill:name`):
+10 explicit-only (`disable-model-invocation: true`, invoke via `/skill:name`):
 
 | Skill | When |
 |---|---|
-| `create-pull-request` | User explicitly asks for a PR |
+| `direct-assistance` | Small question or safe one-command task |
+| `codebase-investigation` | Explain current code or compare known options |
+| `bug-resolution` | Reproduce, diagnose, fix, regression-test |
+| `implementation-planning` | Repo-backed delivery steps before editing |
+| `software-delivery` | Deliver approved change end to end |
 | `project-opportunities` | What to do next in a project |
-| `write-postmortem` | Record fixed bug / incident |
+| `create-pull-request` | User explicitly asks for a PR |
+| `write-postmortem` | Record fixed bug or incident |
 | `architecture-decision` | Hard-to-reverse choice with alternatives |
-| `google-personal-cli` | Read-only Gmail / Drive via `gpersonal` |
+| `google-personal-cli` | Read-only Gmail and Drive via `gpersonal` |
 
-Dropped from the OpenCode port: `product-definition`, `improve-agent`, `doc-maintenance`, workflow router, `focused-exploration` (merged), `opencode_lint`.
+The generic workflow layer is manual-only so current models can choose their own reasoning process by default. `focused-exploration` was merged into the option-comparison section of `codebase-investigation`.
 
 Invoke: `/skill:code-review`, `/skill:create-pull-request extra args`.
 
@@ -70,17 +70,19 @@ Workflow wrappers (`Select and follow X`) were dropped on purpose — `/skill:na
 
 Enforced by `npm:@gotgenes/pi-permission-system`, no custom extension:
 
-- `path`: deny secrets (`*.env`, `*.pem`, `*.key`, `*credentials*`, `*secret*`, `*.npmrc`, `*.pypirc`, `*.git-credentials`, `*.netrc`, `*.authinfo`, `.docker/config.json`, `gh/hosts.yml`, `~/.ssh/*`, `~/.aws/*`, `~/.gnupg/*`). `*.env.example` allowed.
-- `bash`: `allow` by default. Destructive commands (`rm -rf`, `rm -r`, `sudo`, `chmod -R`, `chown -R`, `mkfs`, `dd`, fork bomb) and remote writes (`git push`, `gh pr create`, `gh release create`) prompt.
-- `git push`, `gh pr create`, `gh release create` prompt (covered by `bash *: ask`).
-- `write`/`edit`: ask, except plain docs (`*.md`, `*.mdx`, `*.rst`, `*.txt`) which allow. `read`/`ls`/`grep`/`find`: allow. Skills, MCP, outside-cwd: ask.
+- One universal `ask` fallback covers every permission without a more specific `allow` or `deny`; surfaces do not repeat it.
+- `read`/`ls`/`grep`/`find`: allow inside cwd. External reads and writes inherit the universal `ask`.
+- Directional path rules deny secret reads and writes across all tools (`*.env`, `*.env.*`, `.env*`, `*.pem`, `*.key`, `*.p12`, `*.pfx`, `*id_rsa*`, `*id_ed25519*`, `*credentials*`, `*secret*`, `*.npmrc`, `*.pypirc`, `*.git-credentials`, `*.netrc`, `*.authinfo`, `.docker/config.json`, `gh/hosts.yml`, `~/.ssh/*`, `~/.aws/*`, `~/.gnupg/*`, `*auth.json`, `*trust.json`). `*.env.example` is allowed.
+- `bash`: inherits `ask`. Common local inspection commands and read-only Git forms allow. Direct `python`, `python3`, `pip`, `pip3`, `pytest`, `ruff`, and `mypy` deny; use `uv` or `uvx` instead.
+- `write`/`edit`: inherit `ask`, including documentation and agent instruction files. Bash output redirects use the same write-path policy.
+- `mcp`: discovery reads allow (`mcp_status`, `mcp_list`, `mcp_search`, `mcp_describe`); other operations inherit `ask`. Skill loading allows without prompting.
 - `yoloMode: false`, `permissionReviewLog: false`, `authorizerChain: []`.
 
 ## Settings
 
-- `quietStartup: true`, `enableSkillCommands: true`, `showCacheMissNotices: false`
-- `defaultThinkingLevel: medium` (per-model medium, `gpt-6-astra` low). Raise per task with `/thinking` or `--thinking high`.
-- `enabledModels`: 5 pinned patterns for Ctrl+P cycling. Catalog overrides in `models.json`.
+- `quietStartup: false`, `enableSkillCommands: true`, `showCacheMissNotices: false`
+- `defaultThinkingLevel: xhigh`; per-model defaults are recorded in `settings.json`.
+- `enabledModels`: 6 pinned patterns for Ctrl+P cycling. Catalog overrides are in `models.json`.
 - `transport: websocket-cached`.
 
 ## Use

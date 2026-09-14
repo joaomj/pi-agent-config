@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.85.1",
   "theme": "dark",
-  "quietStartup": true,
+  "quietStartup": false,
   "enableSkillCommands": true,
   "defaultProvider": "opencode",
   "defaultModel": "muse-spark-1.3-contributor-free",

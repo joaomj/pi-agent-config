@@ -1,6 +1,7 @@
 ---
 name: software-delivery
 description: Orchestrate an approved feature, refactor, configuration, or infrastructure change from intent through verification and optional review or pull request. Use when approved work needs end-to-end delivery.
+disable-model-invocation: true
 ---
 
 # Software Delivery
