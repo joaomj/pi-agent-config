@@ -41,7 +41,7 @@ pi list
 ```
 
 Start pi and confirm that the startup header reports the global `AGENTS.md`, five
-skills, ten prompt templates, and the permission extension. Run `/reload` after
+skills, eleven prompt templates, and the permission extension. Run `/reload` after
 a resource edit or restart pi after a permission-policy edit.
 
 ## Configuration
@@ -80,6 +80,7 @@ Common interactive commands:
 /opportunities [focus]
 /show-me [topic]
 /code-review [scope]
+/gitignore [focus]
 /commit
 /pr [instructions]
 /release <version>

@@ -6,8 +6,10 @@ Global guardrails for pi. Procedures live in skills, not here.
 
 - Read current code and relevant docs before claims or edits.
 - Preserve unrelated user changes. Never reset, checkout, or overwrite them.
-- No commits, pushes, PRs, releases, or remote writes without explicit user approval, each time.
+- No commits, pushes, releases, or other remote writes without explicit user approval, each time.
 - Do not read `.env` values or expose secrets. Use the app config interface.
+- Keep planning artifacts, drafts, TODO files, temporary outputs, local configs, and backups out of Git unless the user explicitly requests them as durable project files.
+- For current implementation behavior, prioritize source code, executable configuration, tests, and deployed behavior. Treat tickets and prose documentation as intended behavior until the repository or runtime confirms them.
 - Python via `uv` / `uvx` only. Run project tools with `uv run`; direct `python`, `python3`, `pip`, `pip3`, `pytest`, `ruff`, and `mypy` are blocked. Respect the project lockfile and environment.
 - Search with `rg` for content, `fd` for files, `fzf --filter` for fuzzy narrowing via `bash`.
 - Use native `git` for local ops. Use `gh` for GitHub URLs and operations; do not use `curl` or `wget` for GitHub.
@@ -23,6 +25,6 @@ Global guardrails for pi. Procedures live in skills, not here.
 ## Writing
 
 - Chat: friendly, concise, direct. Short paragraphs, plain words.
-- Reports, docs, PR titles/bodies, commits: follow `technical-writing` skill when loaded.
+- Reports, docs, and commits: follow `technical-writing` skill when loaded.
 - Code review comments: prose of a typical software engineer.
 - Never use emojis.

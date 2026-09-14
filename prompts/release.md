@@ -27,5 +27,5 @@ Create a GitHub release for `$ARGUMENTS`.
 A tag-push workflow also regenerates `CHANGELOG.md` as a safety net for tags
 created outside this prompt.
 
-Do not create a release, tag, commit, or pull request before the user approves
-the proposed release contents.
+Do not create a release or tag, or commit release changes, before the user
+approves the proposed release contents.
