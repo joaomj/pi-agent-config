@@ -2,7 +2,9 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@gotgenes/pi-permission-system": "31.0.0"
+    "@gotgenes/pi-permission-system": "31.0.0",
+    "@liborw/pi-startup-time": "0.1.0",
+    "beval-pi-lazy-loader": "1.1.0"
   },
   "allowScripts": {
     "tree-sitter-bash@0.25.1": true
