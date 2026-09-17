@@ -26,15 +26,6 @@
   ],
   "packages": [
     "npm:@gotgenes/pi-permission-system",
-    "npm:@liborw/pi-startup-time",
-    "npm:beval-pi-lazy-loader"
-  ],
-  "lazyLoader": {
-    "enabled": true,
-    "startDelay": 0,
-    "timeout": 5000,
-    "hotReload": false,
-    "whitelist": [],
-    "blacklist": []
-  }
+    "npm:@liborw/pi-startup-time"
+  ]
 }

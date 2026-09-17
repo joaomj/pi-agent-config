@@ -41,19 +41,17 @@ pi list
 ```
 
 Start pi and confirm that the startup header reports the global `AGENTS.md`, five
-skills, eleven prompt templates, and three extensions. Run `/reload` after
+skills, eleven prompt templates, and the configured extensions. Run `/reload` after
 a resource edit or restart pi after a permission-policy edit.
 
 ## Configuration
 
 - `AGENTS.md` contains global safety, tooling, collaboration, and writing rules.
-- `settings.json` selects the startup model, thinking level, transport, pi
-  packages, and lazy-loader behavior.
+- `settings.json` selects the startup model, thinking level, transport, and pi
+  packages.
 - `models.json` overrides context and output limits for selected models.
-- `extensions/lazy/README.md` defines the deferral policy for background
-  extensions.
-- `extensions/lazy/` holds deferred extensions. The directory is empty by
-  default.
+- `extensions/opencode-zen-fingerprint/` makes OpenCode Zen free-tier requests
+  pass the client fingerprint gate.
 - `extensions/pi-permission-system/config.json` contains deterministic
   `allow`, `ask`, and `deny` policy.
 - `skills/` contains standards and specialized output contracts that pi loads
@@ -64,12 +62,11 @@ a resource edit or restart pi after a permission-policy edit.
 - `scripts/update-changelog.sh` generates the changelog locally, and
   `.github/workflows/update-changelog.yml` updates it after every `v*` tag.
 
-The configuration installs three synchronous extensions. `npm:@gotgenes/pi-permission-system`
+The configuration loads three extensions. `npm:@gotgenes/pi-permission-system`
 enforces the `allow`, `ask`, and `deny` policy. `npm:@liborw/pi-startup-time`
 measures startup time, shows the result in the footer, and provides
-`/startup-time`. `npm:beval-pi-lazy-loader` loads `extensions/lazy/` in the
-background after the session starts. All three extensions stay synchronous
-because permission gates and startup measurement require first-turn presence.
+`/startup-time`. `extensions/opencode-zen-fingerprint/` rewrites the OpenCode
+Zen client fingerprint so free-tier requests pass the server-side gate.
 
 The permission policy has one universal `ask` fallback. It allows common local
 inspection commands, denies sensitive paths and unsupported direct Python
@@ -105,8 +102,8 @@ Use `/model` to change the model, `/thinking` to change reasoning effort, and
 - Edit a skill under `skills/<group>/<name>/SKILL.md`.
 - Add a prompt as `prompts/<command>.md`.
 - Edit permission rules in `extensions/pi-permission-system/config.json`.
-- Place a deferred extension under `extensions/lazy/` per
-  `extensions/lazy/README.md`.
+- Edit the OpenCode fingerprint extension under
+  `extensions/opencode-zen-fingerprint/`.
 - Run `pi update --extensions` to update installed packages.
 - Run `bash install.sh` to repair package installation in the active checkout.
 - Run `bash scripts/update-changelog.sh vMAJOR.MINOR.PATCH` before a release.
