@@ -1,6 +1,14 @@
 # pi-agent-config
 
-Personal global configuration for the [pi coding agent](https://pi.dev).
+Public personal-workstation configuration for the
+[pi coding agent](https://pi.dev). It is the reproducible source for the Pi
+installation on the repository owner's Mac.
+
+## Scope
+
+This repository contains generic personal instructions, models, skills,
+prompts, extensions, and permission policy for one workstation. Authentication,
+sessions, caches, logs, and other runtime state remain local and untracked.
 
 ## Requirements
 
@@ -60,15 +68,22 @@ a resource edit or restart pi after a permission-policy edit.
 - `scripts/update-changelog.sh` generates the changelog locally, and
   `.github/workflows/update-changelog.yml` updates it after every `v*` tag.
 
-The configuration loads three extensions. `npm:@gotgenes/pi-permission-system`
-enforces the `allow`, `ask`, and `deny` policy. `npm:@liborw/pi-startup-time`
-measures startup time, shows the result in the footer, and provides
-`/startup-time`.
+The configuration loads five extension packages:
 
-The permission policy has one universal `ask` fallback. It allows common local
-inspection commands, denies sensitive paths and unsupported direct Python
-commands, and lets skill content load without a prompt. External access,
-writes, and unknown shell commands require approval.
+- `npm:@gotgenes/pi-permission-system` enforces deterministic `allow`, `ask`,
+  and `deny` rules.
+- `npm:@kiranpg/pi-sentry` redacts secrets from model input, tool output, and
+  session history.
+- `npm:pi-web-access` provides web search and content retrieval.
+- `npm:pine-of-glass` provides observability tools. This configuration enables
+  its Pi Meantime extension through `extensions/pi-meantime/config.json`.
+- `npm:pi-rewind-unwind` adds file-aware `/undo` and `/tree` restoration.
+
+The permission policy allows ordinary local work by default. Explicit rules
+block sensitive paths and destructive operations, and require confirmation for
+external access, package changes, Git writes, deployment operations, and other
+high-impact commands. Permission review logs remain local and ignored because
+they can contain unredacted commands.
 
 ## Use
 
@@ -96,6 +111,9 @@ Use `/model` to change the model, `/thinking` to change reasoning effort, and
 
 ## Maintain
 
+Keep changes generic and suitable for a public personal-workstation
+configuration. Review each change for private information before committing it.
+
 - Edit a skill under `skills/<group>/<name>/SKILL.md`.
 - Add a prompt as `prompts/<command>.md`.
 - Edit permission rules in `extensions/pi-permission-system/config.json`.
@@ -112,6 +130,9 @@ auth.json
 trust.json
 sessions/
 models-store.json
+state/
+web-search.json
+config.public.json
 extensions/*/logs/
 npm/* except npm/package.json and npm/.gitignore
 git/

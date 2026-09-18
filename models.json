@@ -4,15 +4,24 @@
       "modelOverrides": {
         "gpt-5.6-luna": {
           "contextWindow": 200000,
-          "maxTokens": 64000
+          "maxTokens": 64000,
+          "compat": {
+            "supportsLongCacheRetention": true
+          }
         },
         "gpt-5.6-sol": {
           "contextWindow": 200000,
-          "maxTokens": 64000
+          "maxTokens": 64000,
+          "compat": {
+            "supportsLongCacheRetention": true
+          }
         },
         "gpt-6-astra": {
           "contextWindow": 200000,
-          "maxTokens": 64000
+          "maxTokens": 64000,
+          "compat": {
+            "supportsLongCacheRetention": true
+          }
         }
       }
     },
@@ -24,7 +33,24 @@
         },
         "deepseek/deepseek-v4.1-flash": {
           "contextWindow": 200000,
-          "maxTokens": 64000
+          "maxTokens": 64000,
+          "reasoning": true,
+          "thinkingLevelMap": {
+            "minimal": null,
+            "low": null,
+            "medium": null,
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": null
+          },
+          "compat": {
+            "supportsDeveloperRole": false,
+            "thinkingFormat": "openrouter",
+            "requiresReasoningContentOnAssistantMessages": true,
+            "supportsLongCacheRetention": true,
+            "sendSessionAffinityHeaders": true,
+            "sessionAffinityFormat": "openrouter"
+          }
         }
       }
     }

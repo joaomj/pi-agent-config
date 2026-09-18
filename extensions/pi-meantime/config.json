@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "widget": true,
+  "notices": true,
+  "slowStartFactor": 3,
+  "slowStartFloorMs": 5000,
+  "slowStreamFactor": 3,
+  "slowStreamMinTokens": 300,
+  "baselineMinCalls": 3,
+  "prefillCauseTokens": 20000
+}

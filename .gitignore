@@ -4,10 +4,34 @@ trust.json
 
 # runtime / cache - never commit
 sessions/
+state/
 models-store.json
+web-search-cache/
+web-search.json
 *.log
+*.bak*
+permission-system-config.json
+pi-permissions.jsonc
+config.public.json
 # permission-system review/debug logs contain unredacted commands - never commit
 extensions/*/logs/
+
+# local credentials and private material - never commit
+*.env
+*.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.netrc
+*.npmrc
+**/auth.json
+**/trust.json
+**/*credentials*
+**/*secret*
 
 # installed packages - reinstallable via settings.json
 # (npm/package.json is tracked: it pins allowScripts approvals)
