@@ -50,8 +50,6 @@ a resource edit or restart pi after a permission-policy edit.
 - `settings.json` selects the startup model, thinking level, transport, and pi
   packages.
 - `models.json` overrides context and output limits for selected models.
-- `extensions/opencode-zen-fingerprint/` makes OpenCode Zen free-tier requests
-  pass the client fingerprint gate.
 - `extensions/pi-permission-system/config.json` contains deterministic
   `allow`, `ask`, and `deny` policy.
 - `skills/` contains standards and specialized output contracts that pi loads
@@ -65,8 +63,7 @@ a resource edit or restart pi after a permission-policy edit.
 The configuration loads three extensions. `npm:@gotgenes/pi-permission-system`
 enforces the `allow`, `ask`, and `deny` policy. `npm:@liborw/pi-startup-time`
 measures startup time, shows the result in the footer, and provides
-`/startup-time`. `extensions/opencode-zen-fingerprint/` rewrites the OpenCode
-Zen client fingerprint so free-tier requests pass the server-side gate.
+`/startup-time`.
 
 The permission policy has one universal `ask` fallback. It allows common local
 inspection commands, denies sensitive paths and unsupported direct Python
@@ -102,8 +99,6 @@ Use `/model` to change the model, `/thinking` to change reasoning effort, and
 - Edit a skill under `skills/<group>/<name>/SKILL.md`.
 - Add a prompt as `prompts/<command>.md`.
 - Edit permission rules in `extensions/pi-permission-system/config.json`.
-- Edit the OpenCode fingerprint extension under
-  `extensions/opencode-zen-fingerprint/`.
 - Run `pi update --extensions` to update installed packages.
 - Run `bash install.sh` to repair package installation in the active checkout.
 - Run `bash scripts/update-changelog.sh vMAJOR.MINOR.PATCH` before a release.
