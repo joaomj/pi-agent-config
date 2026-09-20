@@ -1,0 +1,8 @@
+{
+  "exaApiKey": "$EXA_API_KEY",
+  "jinaApiKey": "$JINA_API_KEY",
+  "provider": "exa",
+  "workflow": "auto-summary",
+  "summaryModel": "openrouter/z-ai/glm-5.3-flash:low",
+  "autoOpenBrowser": false
+}

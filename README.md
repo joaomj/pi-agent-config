@@ -137,3 +137,7 @@ extensions/*/logs/
 npm/* except npm/package.json and npm/.gitignore
 git/
 ```
+
+Copy `web-search.example.json` to `web-search.json` (gitignored) and provide
+keys via environment references such as `$EXA_API_KEY`, or via Keychain
+`!security` resolvers on macOS. Never commit the real file.
