@@ -13,6 +13,17 @@
   "permission": {
     "*": "allow",
 
+    "path": {
+      "*": "allow",
+      "*.env": "deny",
+      "*.env.*": "deny",
+      ".env*": "deny",
+      "*.env*": "deny",
+      "*.env.example": "allow",
+      "*.env.sample": "allow",
+      "*.env.template": "allow"
+    },
+
     "path_read": {
       "*": "allow",
 
@@ -146,6 +157,16 @@
     "bash": {
       "*": "allow",
 
+      "env": "ask",
+      "env *": "ask",
+      "printenv": "ask",
+      "printenv *": "ask",
+      "export": "ask",
+      "export -p": "ask",
+      "set": "ask",
+      "declare -p*": "ask",
+      "typeset -p*": "ask",
+
       "sudo *": { "action": "deny", "reason": "Privilege escalation is an owner action." },
       "doas *": { "action": "deny", "reason": "Privilege escalation is an owner action." },
       "su": "deny",
@@ -181,7 +202,6 @@
       "*id_ecdsa*": "deny",
       "*id_dsa*": "deny",
       "*.pem": "deny",
-      "*.env*": "deny",
       "cat *.env.example": "allow",
       "cat *.env.sample": "allow",
       "cat *.env.template": "allow",

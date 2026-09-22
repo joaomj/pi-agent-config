@@ -12,7 +12,6 @@ sessions, caches, logs, and other runtime state remain local and untracked.
 
 ## Requirements
 
-- pi `0.85.1` or a compatible later version
 - Git
 - Node.js and npm for installed extensions
 - `uv`, `rg`, `fd`, and `fzf` for configured agent workflows
@@ -79,10 +78,11 @@ The configuration loads five extension packages:
   its Pi Meantime extension through `extensions/pi-meantime/config.json`.
 - `npm:pi-rewind-unwind` adds file-aware `/undo` and `/tree` restoration.
 
-The permission policy allows ordinary local work by default. Explicit rules
-block sensitive paths and destructive operations, and require confirmation for
-external access, package changes, Git writes, deployment operations, and other
-high-impact commands. Permission review logs remain local and ignored because
+The permission policy allows ordinary local work by default. Path rules block
+sensitive files across file tools and recognized shell paths. Command rules
+block destructive operations and require confirmation for external access,
+package changes, Git writes, deployment operations, and other high-impact
+commands. Permission review logs remain local and ignored because
 they can contain unredacted commands.
 
 ## Use
@@ -117,7 +117,7 @@ configuration. Review each change for private information before committing it.
 - Edit a skill under `skills/<group>/<name>/SKILL.md`.
 - Add a prompt as `prompts/<command>.md`.
 - Edit permission rules in `extensions/pi-permission-system/config.json`.
-- Run `pi update --extensions` to update installed packages.
+- Ask the agent to check package updates before installing them. It should compare the published code and dependencies with the installed versions, check for new install scripts, and report the risk and rollback version. Approve each update before installation. Extensions run with full local access; automated checks cannot guarantee that an update is safe.
 - Run `bash install.sh` to repair package installation in the active checkout.
 - Run `bash scripts/update-changelog.sh vMAJOR.MINOR.PATCH` before a release.
 - Run `git diff --check` before committing configuration changes.
