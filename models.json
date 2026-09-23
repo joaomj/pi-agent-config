@@ -1,23 +1,5 @@
 {
   "providers": {
-    "openai-codex": {
-      "modelOverrides": {
-        "gpt-6-luna": {
-          "contextWindow": 200000,
-          "promptCache": { "short": 300 },
-          "compat": {
-            "supportsLongCacheRetention": true
-          }
-        },
-        "gpt-6-sol": {
-          "contextWindow": 200000,
-          "promptCache": { "short": 300 },
-          "compat": {
-            "supportsLongCacheRetention": true
-          }
-        }
-      }
-    },
     "openrouter": {
       "modelOverrides": {
         "meta/muse-spark-1.3-contributor": {

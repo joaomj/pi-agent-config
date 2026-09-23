@@ -9,8 +9,6 @@
   "defaultThinkingLevel": "high",
   "cacheWarming": "idle",
   "modelThinkingLevels": {
-    "openai-codex/gpt-6-luna": "xhigh",
-    "openai-codex/gpt-6-sol": "medium",
     "openrouter/meta/muse-spark-1.3-contributor": "xhigh",
     "openrouter/z-ai/glm-5.3-flash": "low"
   },
@@ -22,8 +20,6 @@
     "reserveTokens": 24000
   },
   "enabledModels": [
-    "openai-codex/gpt-6-luna:xhigh",
-    "openai-codex/gpt-6-sol:medium",
     "openrouter/meta/muse-spark-1.3-contributor:xhigh",
     "openrouter/z-ai/glm-5.3-flash:low",
     "meta/muse-spark-1.3-contributor"
