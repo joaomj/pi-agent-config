@@ -2,11 +2,11 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@gotgenes/pi-permission-system": "32.1.0",
+    "@gotgenes/pi-permission-system": "33.0.5",
     "@kiranpg/pi-sentry": "^0.1.2",
     "pi-rewind-unwind": "^0.3.0",
-    "pi-web-access": "^0.29.0",
-    "pine-of-glass": "^0.12.0"
+    "pi-web-access": "0.30.0",
+    "pine-of-glass": "0.12.0"
   },
   "allowScripts": {
     "tree-sitter-bash@0.25.1": true
