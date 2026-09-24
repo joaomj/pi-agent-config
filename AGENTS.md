@@ -18,6 +18,7 @@ Global guardrails for pi. Procedures live in skills, not here.
 - When the user must run commands pi cannot run (sudo, API keys, auth, local-only steps): write one temporary runnable script, not a multi-step manual list. Minimize user action to a single copy and run.
 - Run long-duration scripts detached/in background so the session stays responsive. Report start, check results asynchronously, then report outcome per stage.
 - Default to focused or tracer-bullet tests only. Do not run full/long suites without explicit user approval each time; report what was skipped and remains unverified.
+- Do not write tests without explicit user approval each time. Justify each proposed test in lay terms and get approval before writing it. Prefer a handful of end-to-end black-box tests that emulate real-world behavior; avoid unit tests as much as possible.
 - Treat a successful git op as complete. Re-inspect only after error or when next action needs state.
 
 ## Collaboration

@@ -47,7 +47,7 @@ pi --version
 pi list
 ```
 
-Start pi and confirm that the startup header reports the global `AGENTS.md`, five
+Start pi and confirm that the startup header reports the global `AGENTS.md`, four
 skills, eleven prompt templates, and the configured extensions. Run `/reload` after
 a resource edit or restart pi after a permission-policy edit.
 
