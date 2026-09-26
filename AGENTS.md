@@ -1,25 +1,32 @@
 # AGENTS.md
 
-Global guardrails for pi. Procedures live in skills, not here.
+Precedence: the user's explicit request in this conversation > project
+conventions > this file > skills.
 
 ## Working rules
 
-- Read current code and relevant docs before claims or edits.
-- Preserve unrelated user changes. Never reset, checkout, or overwrite them.
 - No commits, pushes, releases, or other remote writes without explicit user approval, each time.
-- Do not read `.env` values or expose secrets. Use the app config interface.
 - Keep planning artifacts, drafts, TODO files, temporary outputs, local configs, caches, sessions, auths, credentials, and backups out of Git unless the user explicitly requests them as durable project files.
 - Never reference ticket IDs, plan files, or session artifacts in code (identifiers, docstrings, comments) or in commits.
-- Never use broad staging such as `git add -A` or `git add .` here. Inspect `git status --short` and stage only explicit source/config paths; verify the staged file list before committing.
-- For current implementation behavior, prioritize source code, executable configuration, tests, and deployed behavior. Treat tickets and prose documentation as intended behavior until the repository or runtime confirms them.
-- Python via `uv` / `uvx` only. Run project tools with `uv run`; direct `python`, `python3`, `pip`, `pip3`, `pytest`, `ruff`, and `mypy` are blocked. Respect the project lockfile and environment.
-- Search with `rg` for content, `fd` for files, `fzf --filter` for fuzzy narrowing via `bash`.
-- Use native `git` for local ops. Use `gh` for GitHub URLs and operations; do not use `curl` or `wget` for GitHub.
-- When the user must run commands pi cannot run (sudo, API keys, auth, local-only steps): write one temporary runnable script, not a multi-step manual list. Minimize user action to a single copy and run.
-- Run long-duration scripts detached/in background so the session stays responsive. Report start, check results asynchronously, then report outcome per stage.
-- Default to focused or tracer-bullet tests only. Do not run full/long suites without explicit user approval each time; report what was skipped and remains unverified.
-- Do not write tests without explicit user approval each time. Justify each proposed test in lay terms and get approval before writing it. Prefer a handful of end-to-end black-box tests that emulate real-world behavior; avoid unit tests as much as possible.
+- Search with `rg` for content, `fd` for files via `bash`.
+- Use native `git` for local ops. Use `gh` for GitHub API and repository operations.
+- If a required dependency is missing, install it (the permission prompt handles approval).
+- When I must run things you cannot (sudo, auth, secrets) or there is more than one command to run: write one temporary script (`/tmp/<name>.sh` for simple cases, `/tmp/<name>.py` for complex ones) that logs to both the terminal and a file in `/tmp`, and give me the exact command to run it. One copy-and-run step.
+- Run long agent-side commands with output to a log file so the session stays responsive. Report start, then check the log and report the outcome per stage.
 - Treat a successful git op as complete. Re-inspect only after error or when next action needs state.
+
+## Code changes
+
+- Never swallow an unexpected error or turn it into `None`, empty data, or success. Propagate it with context.
+- Make retried mutations idempotent. Bound retries and keep the final error.
+- Validate configuration at startup: report the setting name and how to fix it.
+- Keep each hand-written file focused; split by responsibility, not by size.
+- No abstractions for hypothetical needs. No backward compatibility unless I ask.
+
+## Tests
+
+- Run the narrowest check that proves the change. Ask before full or slow suites, and report what stayed unverified.
+- Ask before writing tests, justifying each in plain words. Prefer a few end-to-end black-box or tracer-bullet tests that act like a real user. Avoid unit tests as much as possible.
 
 ## Collaboration
 
@@ -31,6 +38,6 @@ Global guardrails for pi. Procedures live in skills, not here.
 ## Writing
 
 - Chat: friendly, concise, direct. Short paragraphs, plain words.
-- Reports, docs, and commits: follow `technical-writing` skill when loaded.
-- Code review comments: prose of a typical software engineer.
+- For files, PR text, and commit messages, load the `technical-writing` skill.
+- PR review comments: plain prose, as a typical engineer writes.
 - Never use emojis.

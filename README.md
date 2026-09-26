@@ -47,8 +47,8 @@ pi --version
 pi list
 ```
 
-Start pi and confirm that the startup header reports the global `AGENTS.md`, four
-skills, eleven prompt templates, and the configured extensions. Run `/reload` after
+Start pi and confirm that the startup header reports the global `AGENTS.md`, three
+skills, ten prompt templates, and the configured extensions. Run `/reload` after
 a resource edit or restart pi after a permission-policy edit.
 
 ## Configuration
@@ -61,7 +61,7 @@ a resource edit or restart pi after a permission-policy edit.
   `allow`, `ask`, and `deny` policy.
 - `skills/` contains standards and specialized output contracts that pi loads
   on demand.
-- `prompts/` contains explicit slash commands for planning, review, release,
+- `prompts/` contains explicit slash commands for planning, review,
   and other repeatable deliverables.
 - `CHANGELOG.md` is generated from version tags and commit history.
 - `scripts/update-changelog.sh` generates the changelog locally, and
@@ -78,11 +78,11 @@ The configuration loads five extension packages:
   its Pi Meantime extension through `extensions/pi-meantime/config.json`.
 - `npm:pi-rewind-unwind` adds file-aware `/undo` and `/tree` restoration.
 
-The permission policy allows ordinary local work by default. Path rules block
-sensitive files across file tools and recognized shell paths. Command rules
-block destructive operations and require confirmation for external access,
-package changes, Git writes, deployment operations, and other high-impact
-commands. Permission review logs remain local and ignored because
+The permission policy allows ordinary local work by default. Path rules deny
+precise credential files and ask elsewhere across file tools and recognized
+shell paths. Command rules require confirmation for deletions, package
+changes, network downloads, Git writes, privileged operations, deployments,
+and other high-impact commands. Permission review logs remain local and ignored because
 they can contain unredacted commands.
 
 ## Use
@@ -103,7 +103,6 @@ Common interactive commands:
 /gitignore [focus]
 /commit
 /pr [instructions]
-/release <version>
 ```
 
 Use `/model` to change the model, `/thinking` to change reasoning effort, and

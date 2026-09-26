@@ -21,7 +21,7 @@ instructions.
    check-only variants. Never enable autofix or run a command that writes source
    files. If no check-only command exists, report that gap instead of inventing
    one.
-6. Draft the title and body in repository style. Include:
+6. Draft the title and body following the repository or organization naming conventions (check CONTRIBUTING.md, the PR template, and recent merged PR titles). Include:
    - Summary and motivation
    - Before and after behavior
    - User or operational impact
@@ -36,7 +36,7 @@ instructions.
    assignee, and complete body. Ask for approval of the push and PR creation.
 9. After approval, push the source branch and create the PR with `gh pr create`
    and `--assignee @me`.
-10. Report the PR URL and every failed, skipped, or unavailable verification.
+10. Report the PR URL and the checks URL, plus every failed, skipped, or unavailable verification. Do not poll PR checks or CI and do not wait for them; the user reviews CI in the browser.
 
 Do not push, create, edit, close, merge, or comment on a PR without explicit
 user approval for that remote write.

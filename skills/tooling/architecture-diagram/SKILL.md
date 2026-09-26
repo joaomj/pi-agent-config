@@ -1,7 +1,6 @@
 ---
 name: architecture-diagram
 description: Generate professional software diagram files for system structure, runtime flows, integrations, data, deployment, or security boundaries. Use only when the user asks for a diagram artifact.
-license: MIT
 ---
 
 # Architecture Diagram

@@ -1,7 +1,6 @@
 ---
 name: technical-writing
 description: Write and revise file-based technical artifacts with ASD-STE100 controlled-English rules, evidence, repository terminology, and artifact-specific references. Use for documentation, reports, READMEs, API docs, PR text, ADRs, postmortems, and commit prose; not for chat.
-license: MIT
 ---
 
 # Technical Writing
