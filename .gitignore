@@ -33,6 +33,9 @@ extensions/*/logs/
 **/*credentials*
 **/*secret*
 
+# local tool binaries
+/bin/
+
 # installed packages - reinstallable via settings.json
 # (npm/package.json is tracked: it pins allowScripts approvals)
 npm/*
