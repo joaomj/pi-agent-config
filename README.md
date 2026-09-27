@@ -40,9 +40,9 @@ Run `/login` to connect a model provider, then `/model` to select a model
 you can access. See the [Pi quickstart](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/quickstart.md)
 for authentication and usage instructions.
 
-For optional web search, copy [web-search.example.json](web-search.example.json)
-to `web-search.json` in the configuration directory. Set the environment variables
-referenced by the file. Keep credentials local; `web-search.json` is ignored by Git.
+Web search, fetch, crawl, and screenshots come from the `donsetch` package:
+keyless, no accounts. To add an Exa key on top of the keyless chain, run
+`~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>`.
 
 ## Update
 

@@ -27,41 +27,10 @@
   ],
   "packages": [
     "npm:@gotgenes/pi-permission-system",
-    {
-      "source": "npm:@kiranpg/pi-sentry@0.1.2",
-      "extensions": [],
-      "skills": [],
-      "prompts": [],
-      "themes": []
-    },
-    {
-      "source": "npm:pi-web-access",
-      "extensions": [],
-      "skills": [],
-      "prompts": [],
-      "themes": []
-    },
-    {
-      "source": "npm:pi-rewind-unwind",
-      "extensions": [],
-      "skills": [],
-      "prompts": [],
-      "themes": []
-    },
-    {
-      "source": "npm:pi-usage-meters",
-      "extensions": [],
-      "skills": [],
-      "prompts": [],
-      "themes": []
-    },
-    {
-      "source": "npm:@tintinweb/pi-subagents",
-      "extensions": [],
-      "skills": [],
-      "prompts": [],
-      "themes": []
-    },
+    "npm:@kiranpg/pi-sentry@0.1.2",
+    "npm:donsetch",
+    "npm:pi-usage-meters",
+    "npm:@tintinweb/pi-subagents",
     "npm:pi-open-tui"
   ],
   "tuiMode": "fullscreen",

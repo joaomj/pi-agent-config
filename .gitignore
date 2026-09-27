@@ -13,6 +13,7 @@ web-search.json
 permission-system-config.json
 pi-permissions.jsonc
 config.public.json
+usage-meters-state.json
 # permission-system review/debug logs contain unredacted commands - never commit
 extensions/*/logs/
 
