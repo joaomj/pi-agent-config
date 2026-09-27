@@ -2,9 +2,12 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@gotgenes/pi-permission-system": "33.0.5",
+    "@gotgenes/pi-permission-system": "33.0.3",
     "@kiranpg/pi-sentry": "^0.1.2",
+    "@tintinweb/pi-subagents": "0.19.0",
+    "pi-open-tui": "0.3.7",
     "pi-rewind-unwind": "^0.3.0",
+    "pi-usage-meters": "0.5.0",
     "pi-web-access": "0.30.0",
     "pine-of-glass": "0.12.0"
   },
