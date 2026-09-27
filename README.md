@@ -1,25 +1,15 @@
 # pi-agent-config
 
-Public personal-workstation configuration for the
-[pi coding agent](https://pi.dev). It is the reproducible source for the Pi
-installation on the repository owner's Mac.
-
-## Scope
-
-This repository contains generic personal instructions, models, skills,
-prompts, extensions, and permission policy for one workstation. Authentication,
-sessions, caches, logs, and other runtime state remain local and untracked.
-
-## Requirements
-
-- Git
-- Node.js and npm for installed extensions
-- `uv`, `rg`, `fd`, and `fzf` for configured agent workflows
-- `gh` for GitHub operations
+Personal configuration for the [Pi coding agent](https://pi.dev).
 
 ## Install
 
-Run the bootstrap command:
+You need Bash, Git, and Node.js with npm. See the
+[Pi quickstart](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/quickstart.md)
+for current Node.js requirements.
+
+Review [install.sh](install.sh) and the packages in [settings.json](settings.json)
+before installation. Extensions run with your local permissions.
 
 ```bash
 tmp_dir="$(mktemp -d)" && \
@@ -28,115 +18,59 @@ tmp_dir="$(mktemp -d)" && \
   rm -rf "$tmp_dir"
 ```
 
-The installer:
+The installer installs Pi if needed, clones this configuration into `~/.pi/agent`,
+and installs its configured packages. It verifies the installation and reports
+missing optional workflow tools.
 
-1. Installs pi through npm when `pi` is not available.
-2. Refuses to overwrite an existing `~/.pi/agent` directory.
-3. Clones this repository into `~/.pi/agent`.
-4. Installs the configured pi packages.
-5. Verifies pi and reports missing optional workflow tools.
+If `~/.pi/agent` already exists, back it up and move it before installation.
+The installer does not overwrite another checkout.
 
-Export `PI_CODING_AGENT_DIR` before the command to install in another directory.
-Review the script and third-party extension code before installation because pi
-extensions run with full local access.
+For a different location, export `PI_CODING_AGENT_DIR` before installation.
+Keep that variable set when you run Pi.
 
-## Verify
+## Start
 
-```bash
-pi --version
-pi list
-```
-
-Start pi and confirm that the startup header reports the global `AGENTS.md`, three
-skills, ten prompt templates, and the configured extensions. Run `/reload` after
-a resource edit or restart pi after a permission-policy edit.
-
-## Configuration
-
-- `AGENTS.md` contains global safety, tooling, collaboration, and writing rules.
-- `settings.json` selects the startup model, thinking level, transport, and pi
-  packages.
-- `models.json` overrides context and output limits for selected models.
-- `extensions/pi-permission-system/config.json` contains deterministic
-  `allow`, `ask`, and `deny` policy.
-- `skills/` contains standards and specialized output contracts that pi loads
-  on demand.
-- `prompts/` contains explicit slash commands for planning, review,
-  and other repeatable deliverables.
-- `CHANGELOG.md` is generated from version tags and commit history.
-- `scripts/update-changelog.sh` generates the changelog locally, and
-  `.github/workflows/update-changelog.yml` updates it after every `v*` tag.
-
-The configuration loads five extension packages:
-
-- `npm:@gotgenes/pi-permission-system` enforces deterministic `allow`, `ask`,
-  and `deny` rules.
-- `npm:@kiranpg/pi-sentry` redacts secrets from model input, tool output, and
-  session history.
-- `npm:pi-web-access` provides web search and content retrieval.
-- `npm:pine-of-glass` provides observability tools. This configuration enables
-  its Pi Meantime extension through `extensions/pi-meantime/config.json`.
-- `npm:pi-rewind-unwind` adds file-aware `/undo` and `/tree` restoration.
-
-The permission policy allows ordinary local work by default. Path rules deny
-precise credential files and ask elsewhere across file tools and recognized
-shell paths. Command rules require confirmation for deletions, package
-changes, network downloads, Git writes, privileged operations, deployments,
-and other high-impact commands. Permission review logs remain local and ignored because
-they can contain unredacted commands.
-
-## Use
+From your project directory, run:
 
 ```bash
 pi
-pi -p "summarize recent commits"
-pi --thinking high -p "diagnose the failure in this log"
 ```
 
-Common interactive commands:
+Run `/login` to connect a model provider, then `/model` to select a model
+you can access. See the [Pi quickstart](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/quickstart.md)
+for authentication and usage instructions.
 
-```text
-/plan <ticket>
-/opportunities [focus]
-/show-me [topic]
-/code-review [scope]
-/gitignore [focus]
-/commit
-/pr [instructions]
+For optional web search, copy [web-search.example.json](web-search.example.json)
+to `web-search.json` in the configuration directory. Set the environment variables
+referenced by the file. Keep credentials local; `web-search.json` is ignored by Git.
+
+## Update
+
+From the configuration checkout, run:
+
+```bash
+node scripts/sync.mjs
 ```
 
-Use `/model` to change the model, `/thinking` to change reasoning effort, and
-`Ctrl+S` in either selector to save the startup default.
+The [sync script](scripts/sync.mjs) pulls from the branch's upstream with
+`--ff-only --autostash`. It restores tracked local changes, then replaces
+`settings.json`'s `enabledModels` with the upstream value, or removes it if absent
+upstream. Other local settings remain unchanged. Untracked files are not stashed.
 
-## Maintain
+If conflicts occur, resolve them before syncing again. Keep any failed autostash
+until you recover your changes. Restart Pi after syncing.
 
-Keep changes generic and suitable for a public personal-workstation
-configuration. Review each change for private information before committing it.
+Sync does not install packages. To reinstall configured packages, review any
+package changes first, then run `bash install.sh` from the configuration checkout.
 
-- Edit a skill under `skills/<group>/<name>/SKILL.md`.
-- Add a prompt as `prompts/<command>.md`.
-- Edit permission rules in `extensions/pi-permission-system/config.json`.
-- Ask the agent to check package updates before installing them. It should compare the published code and dependencies with the installed versions, check for new install scripts, and report the risk and rollback version. Approve each update before installation. Extensions run with full local access; automated checks cannot guarantee that an update is safe.
-- Run `bash install.sh` to repair package installation in the active checkout.
-- Run `bash scripts/update-changelog.sh vMAJOR.MINOR.PATCH` before a release.
-- Run `git diff --check` before committing configuration changes.
+## Configuration
 
-Do not commit authentication, trust, session, model-cache, package-install, or
-permission-log data. `.gitignore` excludes these paths:
+Use the files themselves as the reference:
 
-```text
-auth.json
-trust.json
-sessions/
-models-store.json
-state/
-web-search.json
-config.public.json
-extensions/*/logs/
-npm/* except npm/package.json and npm/.gitignore
-git/
-```
+- [settings.json](settings.json): defaults and installed packages.
+- [AGENTS.md](AGENTS.md): agent instructions.
+- [Permission rules](extensions/pi-permission-system/config.json): local access policy.
+- [skills/](skills/) and [prompts/](prompts/): reusable workflows.
 
-Copy `web-search.example.json` to `web-search.json` (gitignored) and provide
-keys via environment references such as `$EXA_API_KEY`, or via Keychain
-`!security` resolvers on macOS. Never commit the real file.
+Keep authentication, sessions, logs, and other private runtime data out of Git.
+See [.gitignore](.gitignore) for exclusions.
