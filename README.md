@@ -96,7 +96,8 @@ They do not call model providers.
 
 ## Configuration
 
-Use the files themselves as the reference:
+[Technical context](docs/tech-context.md) is the source of truth for engineering decisions and how this Pi instance operates.
+Use the files themselves as the implementation reference:
 
 - [settings.json](settings.json): defaults and installed packages.
 - [AGENTS.md](AGENTS.md): agent instructions.
