@@ -26,5 +26,5 @@ audience.
 6. Mark assumptions and unknowns. Do not invent participants or behavior.
 7. Read and follow `references/output-contract.md` before creating files.
 
-For an inline visual response, use the `/show-me` command instead. Do not create
+For an inline visual response, answer directly in chat with a diagram. Do not create
 files unless the user requested a diagram artifact.

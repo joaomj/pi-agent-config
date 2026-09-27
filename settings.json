@@ -42,13 +42,6 @@
       "themes": []
     },
     {
-      "source": "npm:pine-of-glass",
-      "extensions": [
-        "extensions/pi-meantime/**",
-        "extensions/pi-cachemire/**"
-      ]
-    },
-    {
       "source": "npm:pi-rewind-unwind",
       "extensions": [],
       "skills": [],

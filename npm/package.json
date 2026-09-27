@@ -8,8 +8,7 @@
     "pi-open-tui": "^0.3.9",
     "pi-rewind-unwind": "^0.3.0",
     "pi-usage-meters": "^0.5.0",
-    "pi-web-access": "^0.32.0",
-    "pine-of-glass": "^0.13.0"
+    "pi-web-access": "^0.32.0"
   },
   "allowScripts": {
     "tree-sitter-bash@0.25.1": true
