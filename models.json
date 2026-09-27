@@ -1,20 +1,23 @@
 {
   "providers": {
-    "openrouter": {
+    "meta": {
       "modelOverrides": {
-        "meta/muse-spark-1.3-contributor": {
-          "contextWindow": 200000,
+        "muse-spark-1.3-contributor": {
+          "contextWindow": 250000,
           "maxTokens": 64000,
           "promptCache": { "short": 300 }
         }
       }
     },
-    "meta": {
+    "openai-codex": {
       "modelOverrides": {
-        "muse-spark-1.3-contributor": {
-          "contextWindow": 200000,
-          "maxTokens": 64000,
-          "promptCache": { "short": 300 }
+        "gpt-6-luna": {
+          "contextWindow": 250000,
+          "maxTokens": 64000
+        },
+        "gpt-6-astra": {
+          "contextWindow": 250000,
+          "maxTokens": 64000
         }
       }
     }
