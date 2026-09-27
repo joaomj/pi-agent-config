@@ -14,6 +14,29 @@ const paths = (text) => text.split("\0").filter(Boolean);
 const json = (path) => JSON.parse(readFileSync(path, "utf8"));
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
+function detectPlatform() {
+  const os = process.platform;
+  if (os !== "linux" && os !== "darwin") {
+    throw new Error(`Unsupported operating system: ${os}. Run sync on Ubuntu/Linux or macOS.`);
+  }
+  const arch = process.arch;
+  if (arch !== "x64" && arch !== "arm64") {
+    throw new Error(`Unsupported architecture: ${arch}. Use x64 or arm64 Node.js on ${os}.`);
+  }
+  switch (os) {
+    case "linux": {
+      const report = process.report.getReport();
+      let libc;
+      if (report.header.glibcVersionRuntime) libc = "gnu";
+      else if (report.sharedObjects.some((path) => /(?:ld-musl|libc\.musl)/.test(path))) libc = "musl";
+      else throw new Error("Cannot identify the Linux C library. Use a glibc or musl Node.js installation and retry.");
+      return { label: `Linux ${arch} (${libc})`, fffPackage: `@ff-labs/fff-bin-linux-${arch}-${libc}` };
+    }
+    case "darwin":
+      return { label: `macOS ${arch}`, fffPackage: `@ff-labs/fff-bin-darwin-${arch}` };
+  }
+}
+
 function executable(name) {
   for (const directory of (process.env.PATH ?? "").split(delimiter)) {
     const path = resolve(directory, name);
@@ -103,13 +126,26 @@ function install() {
   const installedVersionsMatch = () => {
     try {
       return Object.entries(lock.packages).every(([path, entry]) =>
-        !path || json(join(npmDir, path, "package.json")).version === entry.version);
+        !path || (entry.optional && !existsSync(join(npmDir, path, "package.json"))) ||
+        json(join(npmDir, path, "package.json")).version === entry.version);
     } catch (cause) {
       if (cause.code === "ENOENT") return false;
       throw cause;
     }
   };
   const verifyBinary = (directory) => {
+    if (Object.hasOwn(dependencies, "@ff-labs/pi-fff")) {
+      console.log(`Verifying FFF native package for ${platform.label}...`);
+      const nativePath = `node_modules/${platform.fffPackage}`;
+      const expected = lock.packages[nativePath]?.version;
+      if (!expected || !existsSync(join(directory, nativePath, "package.json"))) {
+        throw new Error(`Missing native package ${platform.fffPackage}. Install npm optional dependencies for ${platform.label} and retry.`);
+      }
+      const actual = json(join(directory, nativePath, "package.json")).version;
+      if (actual !== expected) throw new Error(`Installed ${platform.fffPackage}@${actual}; lockfile requires ${expected}.`);
+      const nativeEntry = pathToFileURL(join(directory, "node_modules/@ff-labs/fff-node/dist/index.js")).href;
+      run(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(nativeEntry)});`], directory);
+    }
     if (Object.hasOwn(dependencies, "donsetch")) {
       console.log("Verifying the platform-specific donsetch binary (downloads it if missing)...");
       run(process.execPath, [join(directory, "node_modules/donsetch/bin/donsetch.js"), "--version"], directory);
@@ -131,7 +167,7 @@ function install() {
     console.log(`Installing locked packages with npm ${npmVersion}; lifecycle scripts are disabled.`);
     run(npm, ["ci", "--ignore-scripts", "--legacy-peer-deps", "--global=false", "--dry-run=false", "--bin-links=true", "--no-audit", "--no-fund"], stage);
     for (const [path, entry] of Object.entries(lock.packages)) {
-      if (!path) continue;
+      if (!path || (entry.optional && !existsSync(join(stage, path, "package.json")))) continue;
       const actual = json(join(stage, path, "package.json")).version;
       if (actual !== entry.version) throw new Error(`Installed ${path}@${actual}; lockfile requires ${entry.version}.`);
     }
@@ -218,6 +254,8 @@ function sync() {
   }
 }
 
+const platform = detectPlatform();
+console.log(`Detected ${platform.label}.`);
 const [major, minor] = process.versions.node.split(".").map(Number);
 if (major < 22 || (major === 22 && minor < 19)) {
   throw new Error("Node.js 22.19 or newer is required. Update Node.js and retry.");

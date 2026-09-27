@@ -19,6 +19,10 @@ node ~/.pi/agent/scripts/sync.mjs
 If `~/.pi/agent` is already a checkout of this repository, run only the sync command.
 For a different location, clone there and set `PI_CODING_AGENT_DIR` when you run Pi.
 
+Sync first detects the operating system and Node.js architecture. It supports Linux and macOS on x64 or arm64.
+On Linux, it also identifies glibc or musl. Unsupported systems stop before sync changes any files.
+It selects the FFF native package for that platform; npm skips optional binaries for other platforms.
+
 Sync installs the Pi version in [.pi-version](.pi-version) under `~/.local` if needed.
 It installs dependencies from [npm/package-lock.json](npm/package-lock.json) in a temporary directory.
 Only a successful installation replaces the active packages.
@@ -28,7 +32,7 @@ Sync disables npm lifecycle scripts and bypasses npm's release-age delay for thi
 It explicitly checks the `donsetch` binary, which downloads its platform-specific release if absent.
 The download uses the locked package version and verifies the release checksum.
 Global npm settings remain unchanged.
-Sync verifies extension loading and CLI startup without a model request.
+Sync verifies the selected FFF native package, its Node.js library import, extension loading, and CLI startup without a model request.
 
 ## Start
 

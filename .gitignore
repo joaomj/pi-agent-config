@@ -7,6 +7,7 @@ sessions/
 state/
 models-store.json
 web-search-cache/
+fff/
 web-search.json
 *.log
 *.bak*

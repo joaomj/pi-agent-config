@@ -1,6 +1,10 @@
 {
+  "showModel": true,
   "maxConcurrent": 4,
+  "defaultMaxTurns": 20,
+  "graceTurns": 3,
   "workflowsEnabled": false,
+  "worktreeIsolation": true,
   "disableDefaultAgents": true,
   "fallbackSubagent": "none"
 }
