@@ -37,10 +37,10 @@ extensions/*/logs/
 # local tool binaries
 /bin/
 
-# installed packages - reinstallable via settings.json
-# (npm/package.json is tracked: it pins allowScripts approvals)
+# Installed packages are reproduced from the tracked lockfile.
 npm/*
 !npm/package.json
+!npm/package-lock.json
 !npm/.gitignore
 git/
 

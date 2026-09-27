@@ -2,14 +2,11 @@
   "name": "pi-extensions",
   "private": true,
   "dependencies": {
-    "@gotgenes/pi-permission-system": "^35.0.0",
-    "@kiranpg/pi-sentry": "^0.1.2",
+    "@gotgenes/pi-permission-system": "35.0.0",
+    "@kiranpg/pi-sentry": "0.1.2",
     "@tintinweb/pi-subagents": "0.19.0",
-    "donsetch": "^4.3.6",
-    "pi-open-tui": "^0.3.9",
-    "pi-usage-meters": "^0.5.0"
-  },
-  "allowScripts": {
-    "tree-sitter-bash@0.25.1": true
+    "donsetch": "4.3.6",
+    "pi-open-tui": "0.3.9",
+    "pi-usage-meters": "0.5.0"
   }
 }

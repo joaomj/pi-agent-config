@@ -26,12 +26,12 @@
     "openai-codex/gpt-6-astra:low"
   ],
   "packages": [
-    "npm:@gotgenes/pi-permission-system",
+    "npm:@gotgenes/pi-permission-system@35.0.0",
     "npm:@kiranpg/pi-sentry@0.1.2",
-    "npm:donsetch",
-    "npm:pi-usage-meters",
-    "npm:@tintinweb/pi-subagents",
-    "npm:pi-open-tui"
+    "npm:donsetch@4.3.6",
+    "npm:pi-usage-meters@0.5.0",
+    "npm:@tintinweb/pi-subagents@0.19.0",
+    "npm:pi-open-tui@0.3.9"
   ],
   "tuiMode": "fullscreen",
   "fullscreenScrollbar": "always",

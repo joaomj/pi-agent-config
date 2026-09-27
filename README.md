@@ -4,29 +4,31 @@ Personal configuration for the [Pi coding agent](https://pi.dev).
 
 ## Install
 
-You need Bash, Git, and Node.js with npm. See the
-[Pi quickstart](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/quickstart.md)
-for current Node.js requirements.
+Use Git, Node.js 22.19 or newer, and npm 9 or newer on Ubuntu or macOS.
+Add `~/.local/bin` to your shell's `PATH`.
+Review [sync.mjs](scripts/sync.mjs) and [settings.json](settings.json) before installation.
+Extensions run with your local permissions.
 
-Review [install.sh](install.sh) and the packages in [settings.json](settings.json)
-before installation. Extensions run with your local permissions.
+Clone the repository once, then run sync:
 
 ```bash
-tmp_dir="$(mktemp -d)" && \
-  git clone --depth 1 https://github.com/joaomj/pi-agent-config.git "$tmp_dir/config" && \
-  bash "$tmp_dir/config/install.sh" && \
-  rm -rf "$tmp_dir"
+git clone https://github.com/joaomj/pi-agent-config.git ~/.pi/agent
+node ~/.pi/agent/scripts/sync.mjs
 ```
 
-The installer installs Pi if needed, clones this configuration into `~/.pi/agent`,
-and installs its configured packages. It verifies the installation and reports
-missing optional workflow tools.
+If `~/.pi/agent` is already a checkout of this repository, run only the sync command.
+For a different location, clone there and set `PI_CODING_AGENT_DIR` when you run Pi.
 
-If `~/.pi/agent` already exists, back it up and move it before installation.
-The installer does not overwrite another checkout.
+Sync installs the Pi version in [.pi-version](.pi-version) under `~/.local` if needed.
+It installs dependencies from [npm/package-lock.json](npm/package-lock.json) in a temporary directory.
+Only a successful installation replaces the active packages.
+A verification failure restores the previous packages.
 
-For a different location, export `PI_CODING_AGENT_DIR` before installation.
-Keep that variable set when you run Pi.
+Sync disables npm lifecycle scripts and bypasses npm's release-age delay for this command only.
+It explicitly checks the `donsetch` binary, which downloads its platform-specific release if absent.
+The download uses the locked package version and verifies the release checksum.
+Global npm settings remain unchanged.
+Sync verifies extension loading and CLI startup without a model request.
 
 ## Start
 
@@ -46,22 +48,47 @@ keyless, no accounts. To add an Exa key on top of the keyless chain, run
 
 ## Update
 
-From the configuration checkout, run:
+Run the same command on either machine:
 
 ```bash
-node scripts/sync.mjs
+node ~/.pi/agent/scripts/sync.mjs
 ```
 
-The [sync script](scripts/sync.mjs) pulls from the branch's upstream with
-`--ff-only --autostash`. It restores tracked local changes, then replaces
-`settings.json`'s `enabledModels` with the upstream value, or removes it if absent
-upstream. Other local settings remain unchanged. Untracked files are not stashed.
+The [sync script](scripts/sync.mjs) fetches the current branch's upstream.
+It backs up tracked configuration, Git patches, and repository history under `~/.pi/backups/`.
+It then replaces tracked configuration and local commits with the upstream revision and installs locked packages.
+The backup contains the previous files under `files/` and Git history in `repository.bundle`.
+Do not publish backups: tracked local changes can contain private values.
 
-If conflicts occur, resolve them before syncing again. Keep any failed autostash
-until you recover your changes. Restart Pi after syncing.
+Sync leaves untracked and ignored content untouched, except for generated `npm/node_modules`.
+This preserves `docs/`, credentials, sessions, and recovery data.
+It stops if an incoming tracked file would overwrite untracked content.
+Move the conflicting file outside the checkout, then retry.
+On the first update to the tracked lockfile, this can include an existing `npm/package-lock.json`.
 
-Sync does not install packages. To reinstall configured packages, review any
-package changes first, then run `bash install.sh` from the configuration checkout.
+Sync also stops during an unfinished merge or rebase.
+An installation failure returns a nonzero exit status; the previous packages remain available.
+The tracked configuration stays at the fetched revision, so retry sync after fixing the reported error.
+Restart Pi after a successful sync.
+
+### Upgrade versions
+
+Sync installs repository versions; it does not select the latest releases.
+To upgrade packages, change the exact versions in `npm/package.json` and `settings.json` together.
+Regenerate `npm/package-lock.json` with lifecycle scripts disabled and legacy peer resolution enabled.
+Change `.pi-version` to upgrade Pi.
+Review and verify these changes before publishing them.
+Do not use `pi update --extensions` to align machines: it bypasses the repository lockfile.
+
+### Check sync behavior
+
+```bash
+node --test tests/sync.test.mjs
+```
+
+These checks use temporary Git repositories and simulated npm and Pi commands.
+They cover repeatable sync, backups, private-file preservation, collisions, and failure reporting.
+They do not call model providers.
 
 ## Configuration
 
