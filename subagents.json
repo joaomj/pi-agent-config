@@ -1,0 +1,6 @@
+{
+  "maxConcurrent": 4,
+  "workflowsEnabled": false,
+  "disableDefaultAgents": true,
+  "fallbackSubagent": "none"
+}
