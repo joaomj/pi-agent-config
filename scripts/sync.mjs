@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { accessSync, constants, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { accessSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { findPackageJSON } from "node:module";
 import { homedir, tmpdir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
@@ -12,7 +12,6 @@ const root = resolve(dirname(script), "..");
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
 const paths = (text) => text.split("\0").filter(Boolean);
 const json = (path) => JSON.parse(readFileSync(path, "utf8"));
-const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 
 function detectPlatform() {
   const os = process.platform;
@@ -58,7 +57,7 @@ async function verify(pi) {
     const packagePath = findPackageJSON("@earendil-works/pi-coding-agent", pathToFileURL(realpathSync(pi)));
     const metadata = json(packagePath);
     const entry = metadata.exports?.["."]?.import ?? metadata.main;
-    if (!entry) throw new Error(`Pi SDK entry is missing in ${packagePath}. Reinstall the pinned Pi version.`);
+    if (!entry) throw new Error(`Pi SDK entry is missing in ${packagePath}. Reinstall the latest Pi version.`);
     const { DefaultResourceLoader } = await import(pathToFileURL(resolve(dirname(packagePath), entry)).href);
     const loader = new DefaultResourceLoader({ cwd, agentDir: root });
     await loader.reload();
@@ -73,122 +72,142 @@ async function verify(pi) {
   }
 }
 
+function packageSource(entry) {
+  return typeof entry === "string" ? entry : entry?.source;
+}
+
+function configuredNpmNames(settings) {
+  const names = new Set();
+  const packages = Array.isArray(settings.packages) ? settings.packages : [];
+  for (const entry of packages) {
+    const source = packageSource(entry);
+    if (typeof source !== "string" || !source.startsWith("npm:")) continue;
+    const remainder = source.slice("npm:".length);
+    const at = remainder.lastIndexOf("@");
+    const name = at > 0 ? remainder.slice(0, at) : remainder;
+    if (name) names.add(name);
+  }
+  return names;
+}
+
+function checkLocalSources(settings) {
+  if (settings.packages !== undefined && !Array.isArray(settings.packages)) throw new Error("settings.json packages must be an array. Set it to package sources before syncing.");
+  const packages = Array.isArray(settings.packages) ? settings.packages : [];
+  for (const entry of packages) {
+    const source = packageSource(entry);
+    if (typeof source !== "string" || !source) continue;
+    if (source.startsWith("npm:") || source.startsWith("git:") || source.includes("://")) continue;
+    let local = source;
+    if (local.startsWith("file:")) local = local.slice("file:".length);
+    const resolved = local.startsWith("~/") ? join(homedir(), local.slice(2)) : resolve(root, local);
+    if (!existsSync(resolved)) {
+      throw new Error(`Local package ${source} configured in settings.json packages is missing at ${resolved}. Create it or remove it from settings.json before syncing.`);
+    }
+  }
+}
+
 function install() {
   const npmDir = join(root, "npm");
-  const version = readFileSync(join(root, ".pi-version"), "utf8").trim();
-  if (!exactVersion.test(version)) throw new Error("Set .pi-version to an exact Pi version, such as 0.87.1.");
-  const manifest = json(join(npmDir, "package.json"));
-  const lock = json(join(npmDir, "package-lock.json"));
   const settings = json(join(root, "settings.json"));
-  const dependencies = manifest.dependencies;
-  if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) {
-    throw new Error("npm/package.json must declare dependencies with exact versions.");
-  }
-  const expectedSources = Object.entries(dependencies).map(([name, value]) => {
-    if (!exactVersion.test(value)) throw new Error(`Pin npm/package.json dependencies.${name} to an exact version.`);
-    if (lock.packages?.[""]?.dependencies?.[name] !== value || lock.packages?.[`node_modules/${name}`]?.version !== value) {
-      throw new Error(`npm/package-lock.json does not match ${name}@${value}. Regenerate the lockfile before syncing.`);
-    }
-    return `npm:${name}@${value}`;
-  }).sort();
-  if (!Array.isArray(settings.packages) || JSON.stringify([...settings.packages].sort()) !== JSON.stringify(expectedSources)) {
-    throw new Error("settings.json packages must match the exact versions in npm/package.json.");
-  }
-  if (JSON.stringify(Object.keys(lock.packages?.[""]?.dependencies ?? {}).sort()) !== JSON.stringify(Object.keys(dependencies).sort())) {
-    throw new Error("npm/package-lock.json dependencies differ from npm/package.json. Regenerate the lockfile.");
-  }
+  checkLocalSources(settings);
+  const npmNames = configuredNpmNames(settings);
+
   const npm = executable("npm");
   if (!npm) throw new Error("npm is required. Install npm and add it to PATH.");
   const npmVersion = execFileSync(npm, ["--version"], { encoding: "utf8" }).trim();
   if (Number(npmVersion.split(".")[0]) < 9) throw new Error("npm 9 or newer is required. Update npm and retry.");
-  const env = { ...process.env, PI_CODING_AGENT_DIR: root, PI_OFFLINE: "1" };
-  if (Number(npmVersion.split(".")[0]) >= 11) env.npm_config_min_release_age = "0";
-  const run = (command, args, cwd = root) => execFileSync(command, args, { cwd, env, stdio: "inherit", timeout: 300_000 });
+
+  const prefix = join(homedir(), ".local");
+  const childEnv = {
+    ...process.env,
+    PI_CODING_AGENT_DIR: root,
+    npm_config_ignore_scripts: "true",
+    npm_config_min_release_age: "0",
+  };
+  // Pi's version check treats any nonempty PI_OFFLINE value as offline.
+  delete childEnv.PI_OFFLINE;
+  const runOnline = (command, args, cwd) =>
+    execFileSync(command, args, { cwd, env: childEnv, stdio: "inherit", timeout: 300_000 });
+
   let pi = executable("pi");
-  if (!pi || execFileSync(pi, ["--version"], { env, encoding: "utf8" }).trim() !== version) {
-    const prefix = join(homedir(), ".local");
-    console.log(`Installing Pi ${version} under ${prefix}...`);
-    run(npm, ["install", "--global", "--prefix", prefix, "--ignore-scripts", "--dry-run=false", "--bin-links=true", `@earendil-works/pi-coding-agent@${version}`]);
+  if (!pi) {
+    console.log(`Installing latest Pi under ${prefix}...`);
+    const neutral = mkdtempSync(join(tmpdir(), "pi-update-"));
+    try {
+      execFileSync(npm,
+        ["install", "--global", "--prefix", prefix, "--ignore-scripts", "--dry-run=false", "--bin-links=true", "@earendil-works/pi-coding-agent@latest"],
+        { cwd: neutral, env: childEnv, stdio: "inherit", timeout: 300_000 });
+    } finally {
+      rmSync(neutral, { recursive: true, force: true });
+    }
     pi = executable("pi");
     if (!pi || realpathSync(pi) !== realpathSync(join(prefix, "bin", "pi"))) {
       throw new Error(`Put ${join(prefix, "bin")} first in PATH, then retry sync.`);
     }
-  }
-  if (execFileSync(pi, ["--version"], { env, encoding: "utf8" }).trim() !== version) {
-    throw new Error(`Pi version does not match .pi-version (${version}). Check PATH and retry.`);
+  } else {
+    console.log("Updating Pi to the latest version...");
+    const neutral = mkdtempSync(join(tmpdir(), "pi-update-"));
+    try {
+      runOnline(pi, ["update", "--no-approve"], neutral);
+    } finally {
+      rmSync(neutral, { recursive: true, force: true });
+    }
+    pi = executable("pi");
+    if (!pi) throw new Error(`Pi executable is missing after update. Put ${join(prefix, "bin")} first in PATH, then retry sync.`);
   }
 
-  const installed = join(npmDir, "node_modules");
-  const fingerprint = createHash("sha256")
-    .update(readFileSync(join(npmDir, "package.json")))
-    .update(readFileSync(join(npmDir, "package-lock.json"))).digest("hex");
-  const stamp = join(installed, ".pi-config-lock");
-  const installedVersionsMatch = () => {
-    try {
-      return Object.entries(lock.packages).every(([path, entry]) =>
-        !path || (entry.optional && !existsSync(join(npmDir, path, "package.json"))) ||
-        json(join(npmDir, path, "package.json")).version === entry.version);
-    } catch (cause) {
-      if (cause.code === "ENOENT") return false;
-      throw cause;
-    }
-  };
-  const verifyBinary = (directory) => {
-    if (Object.hasOwn(dependencies, "@ff-labs/pi-fff")) {
-      console.log(`Verifying FFF native package for ${platform.label}...`);
-      const nativePath = `node_modules/${platform.fffPackage}`;
-      const expected = lock.packages[nativePath]?.version;
-      if (!expected || !existsSync(join(directory, nativePath, "package.json"))) {
-        throw new Error(`Missing native package ${platform.fffPackage}. Install npm optional dependencies for ${platform.label} and retry.`);
-      }
-      const actual = json(join(directory, nativePath, "package.json")).version;
-      if (actual !== expected) throw new Error(`Installed ${platform.fffPackage}@${actual}; lockfile requires ${expected}.`);
-      const nativeEntry = pathToFileURL(join(directory, "node_modules/@ff-labs/fff-node/dist/index.js")).href;
-      run(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(nativeEntry)});`], directory);
-    }
-    if (Object.hasOwn(dependencies, "donsetch")) {
-      console.log("Verifying the platform-specific donsetch binary (downloads it if missing)...");
-      run(process.execPath, [join(directory, "node_modules/donsetch/bin/donsetch.js"), "--version"], directory);
-    }
-  };
-  if (existsSync(stamp) && readFileSync(stamp, "utf8") === fingerprint && installedVersionsMatch()) {
-    console.log("Installed packages already match the lockfile.");
-    verifyBinary(npmDir);
-    run(process.execPath, [script, "--verify", pi]);
-    return;
+  const backupParent = mkdtempSync(join(tmpdir(), "pi-packages-"));
+  const backup = join(backupParent, "npm-backup");
+  const hadPrior = existsSync(npmDir);
+  if (hadPrior) {
+    cpSync(npmDir, backup, { recursive: true, dereference: false, verbatimSymlinks: true });
   }
-  const stage = mkdtempSync(join(npmDir, ".sync-"));
-  const previous = join(stage, "previous-node_modules");
-  let activated = false;
-  let completed = false;
+
   try {
-    copyFileSync(join(npmDir, "package.json"), join(stage, "package.json"));
-    copyFileSync(join(npmDir, "package-lock.json"), join(stage, "package-lock.json"));
-    console.log(`Installing locked packages with npm ${npmVersion}; lifecycle scripts are disabled.`);
-    run(npm, ["ci", "--ignore-scripts", "--legacy-peer-deps", "--global=false", "--dry-run=false", "--bin-links=true", "--no-audit", "--no-fund"], stage);
-    for (const [path, entry] of Object.entries(lock.packages)) {
-      if (!path || (entry.optional && !existsSync(join(stage, path, "package.json")))) continue;
-      const actual = json(join(stage, path, "package.json")).version;
-      if (actual !== entry.version) throw new Error(`Installed ${path}@${actual}; lockfile requires ${entry.version}.`);
+    for (const generated of ["package.json", "package-lock.json", "node_modules"]) {
+      rmSync(join(npmDir, generated), { recursive: true, force: true });
     }
-    verifyBinary(stage);
-    writeFileSync(join(stage, "node_modules", ".pi-config-lock"), fingerprint);
-    if (existsSync(installed)) renameSync(installed, previous);
-    renameSync(join(stage, "node_modules"), installed);
-    activated = true;
-    run(process.execPath, [script, "--verify", pi]);
-    completed = true;
-    console.log(`Setup complete: Pi ${version}, locked packages, and extension loading verified.`);
+    const neutral = mkdtempSync(join(tmpdir(), "pi-update-"));
+    try {
+      console.log("Updating packages to the latest versions from settings.json (local packages are used in place)...");
+      runOnline(pi, ["update", "--extensions", "--no-approve"], neutral);
+    } finally {
+      rmSync(neutral, { recursive: true, force: true });
+    }
+
+    const wantsFff = [...npmNames].some((name) =>
+      name === "@ff-labs/pi-fff" || name === "@ff-labs/fff-node" || name === platform.fffPackage);
+    if (wantsFff) {
+      console.log(`Verifying FFF native package for ${platform.label}...`);
+      if (!existsSync(join(npmDir, "node_modules", platform.fffPackage, "package.json"))) {
+        throw new Error(`Missing native package ${platform.fffPackage} for ${platform.label}. Run sync again with network access and retry.`);
+      }
+      const fffEntry = pathToFileURL(join(npmDir, "node_modules/@ff-labs/fff-node/dist/index.js")).href;
+      execFileSync(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(fffEntry)});`],
+        { cwd: npmDir, env: childEnv, stdio: "inherit", timeout: 120_000 });
+    }
+    if (npmNames.has("donsetch")) {
+      console.log("Verifying the platform-specific donsetch binary (downloads it if missing)...");
+      execFileSync(process.execPath, [join(npmDir, "node_modules/donsetch/bin/donsetch.js"), "--version"],
+        { cwd: npmDir, env: childEnv, stdio: "inherit", timeout: 120_000 });
+    }
+
+    execFileSync(process.execPath, [script, "--verify", pi], { cwd: root, stdio: "inherit", timeout: 300_000 });
+    rmSync(backupParent, { recursive: true, force: true });
+    console.log("Setup complete: latest Pi, packages, and extension loading verified.");
   } catch (cause) {
     try {
-      if (activated) rmSync(installed, { recursive: true, force: true });
-      if (existsSync(previous)) renameSync(previous, installed);
+      rmSync(npmDir, { recursive: true, force: true });
+      if (hadPrior) cpSync(backup, npmDir, { recursive: true, dereference: false, verbatimSymlinks: true });
     } catch (rollbackError) {
-      throw new AggregateError([cause, rollbackError], `Package setup and recovery failed. Previous packages remain at ${previous}.`);
+      throw new AggregateError([cause, rollbackError], `Package update and recovery failed. Previous packages remain at ${backup}.`);
     }
-    throw new Error("Package setup failed. Previous installed packages were preserved; fix the error above and retry.", { cause });
-  } finally {
-    if (completed || !existsSync(previous)) rmSync(stage, { recursive: true, force: true });
+    try {
+      rmSync(backupParent, { recursive: true, force: true });
+    } catch (cleanupError) {
+      throw new AggregateError([cause, cleanupError], `Package update failed; packages were restored, but backup cleanup failed at ${backupParent}.`);
+    }
+    throw new Error("Package update failed. Previous installed packages were restored; fix the error above and retry.", { cause });
   }
 }
 
@@ -217,7 +236,7 @@ function sync() {
     execFileSync("git", ["fetch", "--", remote], { cwd: root, stdio: "inherit" });
     const target = git("rev-parse", "@{upstream}^{commit}").trim();
     const incoming = paths(git("ls-tree", "-rz", "--name-only", target));
-    for (const required of [".pi-version", "settings.json", "npm/package.json", "npm/package-lock.json", "scripts/sync.mjs"]) {
+    for (const required of ["settings.json", "mcp.json", "scripts/sync.mjs"]) {
       if (!incoming.includes(required)) {
         throw new Error(`${upstream} is missing ${required}. Publish a complete sync configuration before running sync.`);
       }
@@ -247,7 +266,7 @@ function sync() {
     console.log(`Replacing tracked configuration with ${upstream} (${target.slice(0, 12)}).`);
     execFileSync("git", ["reset", "--hard", target], { cwd: root, stdio: "inherit" });
     execFileSync(process.execPath, [script, "--install"], { cwd: root, stdio: "inherit" });
-    console.log(`Sync complete. Untracked files were preserved. Backup: ${backup}`);
+    console.log(`Sync complete. Latest packages verified. Untracked files were preserved. Backup: ${backup}`);
     console.log("Restart Pi to load the synchronized configuration.");
   } finally {
     rmSync(lock, { recursive: true });

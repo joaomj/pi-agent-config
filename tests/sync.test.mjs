@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, copyFile, chmod, rm, readdir, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, copyFile, chmod, rm, readdir, symlink, realpath } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const source = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -41,7 +42,8 @@ async function fixture(t) {
     npm_config_userconfig: join(home, ".npmrc"),
     PATH: `${bin}:${process.env.PATH}`,
     FIXTURE_CALLS: join(root, "calls.jsonl"),
-    FIXTURE_NPM_FAIL: "0",
+    FIXTURE_EXTENSIONS_FAIL: "0",
+    FIXTURE_PI_UPDATE_FAIL: "0",
     FIXTURE_PI_FAIL: "0",
     FIXTURE_SDK_FAIL: "0",
   };
@@ -56,19 +58,11 @@ async function fixture(t) {
   await mkdir(join(seed, "scripts"), { recursive: true });
   await copyFile(join(source, "scripts/sync.mjs"), join(seed, "scripts/sync.mjs"));
   const settings = json({ packages: ["npm:fixture-extension@1.0.0"], enabledModels: ["fixture/*"] });
-  const manifest = { name: "fixture-packages", version: "1.0.0", private: true, dependencies: { "fixture-extension": "1.0.0" } };
   await put(seed, "settings.json", settings);
-  await put(seed, ".pi-version", "0.87.1\n");
-  await put(seed, ".gitignore", "auth.json\nsessions/\ndocs/\nnpm/node_modules/\n");
+  await put(seed, "mcp.json", json({ mcpServers: {} }));
+  await put(seed, ".gitignore", "auth.json\nsessions/\ndocs/\nuntracked.bin\nnpm/*\n!npm/.gitignore\n");
+  await put(seed, "npm/.gitignore", "*\n!.gitignore\n");
   await put(seed, "tracked.txt", "upstream tracked contents\n");
-  await put(seed, "npm/package.json", json(manifest));
-  await put(seed, "npm/package-lock.json", json({
-    name: manifest.name, version: manifest.version, lockfileVersion: 3, requires: true,
-    packages: {
-      "": { name: manifest.name, version: manifest.version, dependencies: manifest.dependencies },
-      "node_modules/fixture-extension": { version: "1.0.0" },
-    },
-  }));
   git(seed, "add", ".");
   git(seed, "commit", "-m", "Initial fixture");
   git(seed, "remote", "add", "origin", origin);
@@ -78,7 +72,7 @@ async function fixture(t) {
   await writeFile(env.FIXTURE_CALLS, "");
   const sdk = "node_modules/@earendil-works/pi-coding-agent";
   await put(bin, `${sdk}/package.json`, json({
-    name: "@earendil-works/pi-coding-agent", version: "0.87.1", type: "module", main: "index.js",
+    name: "@earendil-works/pi-coding-agent", version: "0.99.0", type: "module", main: "index.js",
   }));
   await put(bin, `${sdk}/index.js`, `export class DefaultResourceLoader {
   constructor(options) { this.options = options; }
@@ -93,40 +87,111 @@ async function fixture(t) {
   const stub = `#!${process.execPath}
 const fs = require('node:fs');
 const path = require('node:path');
+const sep = path.sep;
 const command = path.basename(process.argv[1]);
 const args = process.argv.slice(2);
-fs.appendFileSync(process.env.FIXTURE_CALLS, JSON.stringify({ command, args, cwd: process.cwd() }) + '\\n');
+const subset = {
+  PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR,
+  PI_OFFLINE: process.env.PI_OFFLINE,
+  npm_config_ignore_scripts: process.env.npm_config_ignore_scripts,
+  npm_config_min_release_age: process.env.npm_config_min_release_age,
+};
+fs.appendFileSync(process.env.FIXTURE_CALLS, JSON.stringify({ command, args, cwd: process.cwd(), env: subset }) + '\\n');
+function fail(message, code) { console.error(message); process.exit(code); }
 if (command === 'npm') {
   if (args[0] === '--version') { console.log('11.19.0'); process.exit(0); }
-  if (args[0] === 'ls') process.exit(0);
   if (args[0] === 'install' && args.includes('--global')) {
-    if (!args.includes('@earendil-works/pi-coding-agent@0.87.1')) {
-      console.error('Expected pinned Pi global install'); process.exit(93);
-    }
+    if (!args.includes('@earendil-works/pi-coding-agent@latest')) fail('Expected latest Pi global install', 93);
     const prefix = args[args.indexOf('--prefix') + 1];
-    if (prefix !== path.join(process.env.HOME, '.local')) {
-      console.error('Global install escaped fixture prefix'); process.exit(94);
-    }
+    if (prefix !== path.join(process.env.HOME, '.local')) fail('Global install escaped fixture prefix', 94);
+    if (!args.includes('--ignore-scripts')) fail('Global install must ignore scripts', 95);
     const destination = path.join(prefix, 'bin');
     fs.mkdirSync(destination, { recursive: true });
     fs.copyFileSync(process.argv[1], path.join(destination, 'pi'));
     fs.chmodSync(path.join(destination, 'pi'), 0o755);
-    fs.cpSync(path.join(path.dirname(process.argv[1]), 'node_modules'), path.join(destination, 'node_modules'), { recursive: true });
+    const srcModules = path.join(path.dirname(process.argv[1]), 'node_modules');
+    if (fs.existsSync(srcModules)) fs.cpSync(srcModules, path.join(destination, 'node_modules'), { recursive: true });
     process.exit(0);
   }
-  if (args[0] !== 'ci') { console.error('Unexpected npm arguments: ' + args.join(' ')); process.exit(91); }
-  if (process.env.FIXTURE_NPM_FAIL === '1') { console.error('fixture npm ci failure'); process.exit(42); }
-  const manifest = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  for (const [name, version] of Object.entries(manifest.dependencies)) {
-    const directory = path.join('node_modules', name);
-    fs.mkdirSync(directory, { recursive: true });
-    fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ name, version }));
-  }
+  fail('Unexpected npm arguments: ' + args.join(' '), 91);
 } else if (command === 'pi') {
-  if (args.join(' ') === '--version') { console.log('0.87.1'); process.exit(0); }
-  if (args.join(' ') !== '--offline --no-session --help') { console.error('Unexpected pi arguments: ' + args.join(' ')); process.exit(92); }
-  if (process.env.FIXTURE_PI_FAIL === '1') { console.error('fixture pi startup failure'); process.exit(43); }
-  console.log('fixture pi help');
+  if (args.join(' ') === '--version') { console.log('0.99.0'); process.exit(0); }
+  if (args[0] === 'update') {
+    if (!args.includes('--no-approve')) fail('pi update must use --no-approve', 96);
+    const agentDir = process.env.PI_CODING_AGENT_DIR || '';
+    if (agentDir && (process.cwd() === agentDir || process.cwd().startsWith(agentDir + sep))) {
+      fail('pi update must run in a neutral directory, got ' + process.cwd(), 97);
+    }
+    if (process.env.PI_OFFLINE) fail('pi update skips version lookup when PI_OFFLINE is nonempty', 98);
+    if (process.env.npm_config_ignore_scripts !== 'true') fail('pi update requires npm_config_ignore_scripts=true', 100);
+    if (process.env.npm_config_min_release_age !== '0') fail('pi update requires npm_config_min_release_age=0', 101);
+    if (args.includes('--extensions')) {
+      const npmDir = path.join(agentDir, 'npm');
+      if (process.env.FIXTURE_EXTENSIONS_FAIL === '1') {
+        fs.mkdirSync(path.join(npmDir, 'node_modules'), { recursive: true });
+        fs.writeFileSync(path.join(npmDir, 'node_modules', 'partial-marker'), 'partial\\n');
+        console.error('fixture extensions update failure');
+        process.exit(42);
+      }
+      const settings = JSON.parse(fs.readFileSync(path.join(agentDir, 'settings.json'), 'utf8'));
+      const packages = Array.isArray(settings.packages) ? settings.packages : [];
+      const deps = {};
+      fs.mkdirSync(path.join(npmDir, 'node_modules'), { recursive: true });
+      for (const entry of packages) {
+        const src = typeof entry === 'string' ? entry : entry && entry.source;
+        if (typeof src !== 'string') continue;
+        if (src.startsWith('npm:')) {
+          const rest = src.slice(4);
+          const at = rest.lastIndexOf('@');
+          let name;
+          let version;
+          if (at > 0) { name = rest.slice(0, at); version = rest.slice(at + 1); }
+          else { name = rest; version = '9.9.9'; }
+          if (!name) continue;
+          deps[name] = version;
+          if (name === '@ff-labs/pi-fff' || name === '@ff-labs/fff-node') {
+            const fffDir = path.join(npmDir, 'node_modules/@ff-labs/fff-node/dist');
+            fs.mkdirSync(fffDir, { recursive: true });
+            fs.writeFileSync(path.join(npmDir, 'node_modules/@ff-labs/fff-node/package.json'), JSON.stringify({ name: '@ff-labs/fff-node', version: '9.9.9' }));
+            fs.writeFileSync(path.join(fffDir, 'index.js'), 'export const marker = 1;\\n');
+            for (const pkg of ['@ff-labs/fff-bin-linux-x64-gnu', '@ff-labs/fff-bin-linux-x64-musl', '@ff-labs/fff-bin-linux-arm64-gnu', '@ff-labs/fff-bin-linux-arm64-musl', '@ff-labs/fff-bin-darwin-x64', '@ff-labs/fff-bin-darwin-arm64']) {
+              const d = path.join(npmDir, 'node_modules', pkg);
+              fs.mkdirSync(d, { recursive: true });
+              fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ name: pkg, version: '9.9.9' }));
+            }
+            const piFffDir = path.join(npmDir, 'node_modules/@ff-labs/pi-fff');
+            fs.mkdirSync(piFffDir, { recursive: true });
+            fs.writeFileSync(path.join(piFffDir, 'package.json'), JSON.stringify({ name: '@ff-labs/pi-fff', version }));
+          } else if (name === 'donsetch') {
+            const binDir = path.join(npmDir, 'node_modules/donsetch/bin');
+            fs.mkdirSync(binDir, { recursive: true });
+            fs.writeFileSync(path.join(npmDir, 'node_modules/donsetch/package.json'), JSON.stringify({ name: 'donsetch', version }));
+            fs.writeFileSync(path.join(binDir, 'donsetch.js'), '#!/usr/bin/env node\\nconsole.log("9.9.9");\\n');
+            try { fs.chmodSync(path.join(binDir, 'donsetch.js'), 0o755); } catch {}
+          } else {
+            const d = path.join(npmDir, 'node_modules', name);
+            fs.mkdirSync(d, { recursive: true });
+            fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ name, version }));
+          }
+        }
+      }
+      fs.writeFileSync(path.join(npmDir, 'package.json'), JSON.stringify({ name: 'pi-extensions', private: true, dependencies: deps }, null, 2) + '\\n');
+      fs.writeFileSync(path.join(npmDir, 'package-lock.json'), JSON.stringify({ name: 'pi-extensions', version: '1.0.0', lockfileVersion: 3, requires: true, packages: { '': { name: 'pi-extensions', version: '1.0.0', dependencies: deps } } }, null, 2) + '\\n');
+      console.log('fixture extensions updated');
+      process.exit(0);
+    }
+    if (process.env.FIXTURE_PI_UPDATE_FAIL === '1') { console.error('fixture pi self update failure'); process.exit(44); }
+    console.log('fixture pi self update');
+    process.exit(0);
+  }
+  if (args.join(' ') === '--offline --no-session --help') {
+    if (process.env.FIXTURE_PI_FAIL === '1') { console.error('fixture pi startup failure'); process.exit(43); }
+    console.log('fixture pi help');
+    process.exit(0);
+  }
+  fail('Unexpected pi arguments: ' + args.join(' '), 92);
+} else {
+  fail('Unknown command ' + command, 90);
 }
 `;
   for (const command of ["npm", "pi"]) {
@@ -135,8 +200,8 @@ if (command === 'npm') {
   }
   return {
     root, home, bin, seed, work, settings, git,
-    run(extraEnv = {}) {
-      const result = spawnSync(process.execPath, [join(work, "scripts/sync.mjs")], {
+    run(extraEnv = {}, extraArgs = []) {
+      const result = spawnSync(process.execPath, [join(work, "scripts/sync.mjs"), ...extraArgs], {
         cwd: work, env: { ...env, ...extraEnv }, encoding: "utf8", timeout: 30_000,
       });
       assert.ifError(result.error);
@@ -144,7 +209,8 @@ if (command === 'npm') {
       return { ...result, output: result.stdout + result.stderr };
     },
     async calls() {
-      return (await readFile(env.FIXTURE_CALLS, "utf8")).trim().split("\n").filter(Boolean).map(JSON.parse);
+      const text = await readFile(env.FIXTURE_CALLS, "utf8");
+      return text.trim().split("\n").filter(Boolean).map(JSON.parse);
     },
     publish() {
       git(seed, "add", ".");
@@ -171,31 +237,44 @@ test("sync replaces tracked changes, preserves private files, backs up, and is r
   const preserved = ["auth.json", "sessions/nested/session.jsonl", "docs/local.md", "untracked.bin"];
   const bytes = Buffer.from([0, 255, 10, 13, 65, 128]);
   for (const path of preserved) await put(f.work, path, bytes);
+  await put(f.work, "npm/node_modules/orphan-package/package.json", json({ name: "orphan-package", version: "0.0.1" }));
+  await put(f.work, "npm/package.json", json({ name: "pi-extensions", private: true, dependencies: { "orphan-package": "0.0.1" } }));
   await put(f.seed, "tracked.txt", "new upstream contents\n");
   f.publish();
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    const result = f.run();
+    const result = f.run({ PI_OFFLINE: "0" });
     assert.equal(result.status, 0, result.output);
     assert.equal(await readFile(join(f.work, "settings.json"), "utf8"), f.settings);
     assert.equal(await readFile(join(f.work, "tracked.txt"), "utf8"), "new upstream contents\n");
     for (const path of preserved) assert.deepEqual(await readFile(join(f.work, path)), bytes, path);
+    assert.match(result.output, /latest Pi, packages/);
   }
+  assert.equal(existsSync(join(f.work, "npm/node_modules/orphan-package/package.json")), false, "Clean install must remove orphan packages");
+  assert.equal(existsSync(join(f.work, ".pi-version")), false);
+  const installed = JSON.parse(await readFile(join(f.work, "npm/node_modules/fixture-extension/package.json"), "utf8"));
+  assert.equal(installed.version, "1.0.0");
+  assert.equal(await readFile(join(f.work, "npm/.gitignore"), "utf8"), "*\n!.gitignore\n");
+  assert.ok(existsSync(join(f.work, "npm/package.json")), "Native update generates runtime manifests");
   const backups = await filesBelow(join(f.home, ".pi/backups"));
   const contents = await Promise.all(backups.map((path) => readFile(path)));
   assert.ok(contents.some((content) => content.equals(Buffer.from(dirty))), "Backup must contain the original dirty settings");
   const calls = await f.calls();
-  const installs = calls.filter((call) => call.command === "npm" && call.args[0] === "ci");
-  assert.ok(installs.length >= 1, "Sync must invoke setup");
-  for (const call of installs) {
-    assert.ok(call.args.includes("--ignore-scripts"));
-    assert.ok(call.args.includes("--legacy-peer-deps"));
-    assert.notEqual(call.cwd, join(f.work, "npm"), "Install must use a staging directory");
+  const selfUpdates = calls.filter((call) => call.command === "pi" && call.args.includes("update") && !call.args.includes("--extensions"));
+  const extensionUpdates = calls.filter((call) => call.command === "pi" && call.args.includes("--extensions"));
+  assert.ok(selfUpdates.length >= 1, "Sync must update Pi itself");
+  assert.ok(extensionUpdates.length >= 1, "Sync must update packages natively");
+  for (const call of [...selfUpdates, ...extensionUpdates]) {
+    assert.ok(call.args.includes("--no-approve"), "Native update must ignore project config");
+    assert.notEqual(call.cwd, f.work, "Native update must run in a neutral directory");
+    assert.ok(!call.cwd.startsWith(`${f.work}${sep}`), "Native update must not run inside the checkout");
+    assert.equal(await realpath(call.env.PI_CODING_AGENT_DIR), await realpath(f.work));
+    assert.equal(call.env.PI_OFFLINE, undefined);
+    assert.equal(call.env.npm_config_ignore_scripts, "true");
+    assert.equal(call.env.npm_config_min_release_age, "0");
   }
-  assert.ok(calls.some((call) => call.command === "pi" && call.args.join(" ") === "--version"));
   assert.ok(calls.some((call) => call.command === "pi" && call.args.join(" ") === "--offline --no-session --help"));
-  const installed = JSON.parse(await readFile(join(f.work, "npm/node_modules/fixture-extension/package.json"), "utf8"));
-  assert.equal(installed.version, "1.0.0");
+  assert.ok(!calls.some((call) => call.command === "npm" && call.args[0] === "ci"), "Native update must not use staged npm ci");
 });
 
 test("sync refuses an untracked file that upstream newly tracks", async (t) => {
@@ -211,17 +290,26 @@ test("sync refuses an untracked file that upstream newly tracks", async (t) => {
   assert.equal(f.git(f.work, "rev-parse", "HEAD"), before);
 });
 
-test("npm ci failure preserves active node_modules and reports failure", async (t) => {
+test("native package update failure restores previous packages and preserves npm gitignore", async (t) => {
   const f = await fixture(t);
   await put(f.work, "npm/node_modules/old-install-marker", "old installation\n");
-  const result = f.run({ FIXTURE_NPM_FAIL: "1" });
+  await put(f.work, "npm/node_modules/orphan-package/package.json", json({ name: "orphan-package", version: "0.0.1" }));
+  const gitignore = "*\n!.gitignore\n# parent edit\n";
+  await put(f.seed, "npm/.gitignore", gitignore);
+  f.publish();
+  const result = f.run({ FIXTURE_EXTENSIONS_FAIL: "1" });
   assert.notEqual(result.status, 0, result.output);
-  assert.match(result.output, /fixture npm ci failure/);
+  assert.match(result.output, /fixture extensions update failure/);
   assert.equal(await readFile(join(f.work, "npm/node_modules/old-install-marker"), "utf8"), "old installation\n");
-  assert.doesNotMatch(result.output, /(?:sync|setup)\s+(?:complete|successful|succeeded)|successfully\s+(?:synced|installed|configured)/i);
+  assert.equal(await readFile(join(f.work, "npm/node_modules/orphan-package/package.json"), "utf8"), json({ name: "orphan-package", version: "0.0.1" }));
+  assert.equal(await readFile(join(f.work, "npm/.gitignore"), "utf8"), gitignore);
+  assert.equal(existsSync(join(f.work, "npm/node_modules/partial-marker")), false, "Partial update must be removed");
+  assert.doesNotMatch(result.output, /latest Pi, packages.*verified/);
+  const calls = await f.calls();
+  assert.ok(calls.some((call) => call.command === "pi" && call.args.includes("--extensions")));
 });
 
-test("first sync installs pinned Pi when no executable exists", async (t) => {
+test("first sync installs latest Pi when no executable exists", async (t) => {
   const f = await fixture(t);
   await rm(join(f.bin, "pi"));
   await symlink("/usr/bin/git", join(f.bin, "git"));
@@ -229,52 +317,77 @@ test("first sync installs pinned Pi when no executable exists", async (t) => {
   const localBin = join(f.home, ".local/bin");
   const result = f.run({ PATH: `${localBin}:${f.bin}` });
   assert.equal(result.status, 0, result.output);
+  assert.match(result.output, /Installing latest Pi/);
   const calls = await f.calls();
   const install = calls.find((call) => call.command === "npm" && call.args[0] === "install");
   assert.ok(install, "Missing Pi must trigger installation");
   assert.ok(install.args.includes("--global"));
-  assert.ok(install.args.includes("@earendil-works/pi-coding-agent@0.87.1"));
+  assert.ok(install.args.includes("@earendil-works/pi-coding-agent@latest"));
   assert.ok(install.args.includes("--ignore-scripts"));
-  assert.ok(calls.some((call) => call.command === "pi" && call.args.join(" ") === "--version"));
+  assert.ok(!install.args.some((arg) => arg.match(/@0\.\d+\.\d+/)), "Bootstrap must use latest, not a pinned version");
+  assert.ok(calls.some((call) => call.command === "pi" && call.args.includes("--extensions") && call.args.includes("--no-approve")));
   assert.ok(calls.some((call) => call.command === "pi" && call.args.join(" ") === "--offline --no-session --help"));
   assert.ok((await readFile(join(localBin, "pi"), "utf8")).startsWith("#!"));
 });
 
-test("SDK extension loading failure restores previous node_modules", async (t) => {
+test("SDK extension loading failure restores previous packages", async (t) => {
   const f = await fixture(t);
-  const marker = Buffer.from("previous installation\\0private bytes");
+  const marker = Buffer.from("previous installation\0private bytes");
   await put(f.work, "npm/node_modules/old-install-marker", marker);
+  await put(f.work, "npm/node_modules/orphan-package/package.json", json({ name: "orphan-package", version: "0.0.1" }));
   const result = f.run({ FIXTURE_SDK_FAIL: "1" });
   assert.notEqual(result.status, 0, result.output);
   assert.match(result.output, /fixture SDK loader failure/);
   assert.deepEqual(await readFile(join(f.work, "npm/node_modules/old-install-marker")), marker);
-  assert.deepEqual(await readdir(join(f.work, "npm/node_modules")), ["old-install-marker"]);
-  assert.ok((await f.calls()).some((call) => call.command === "npm" && call.args[0] === "ci"));
-  assert.doesNotMatch(result.output, /(?:sync|setup)\s+complete/i);
+  assert.equal(await readFile(join(f.work, "npm/node_modules/orphan-package/package.json"), "utf8"), json({ name: "orphan-package", version: "0.0.1" }));
+  assert.equal(existsSync(join(f.work, "npm/node_modules/fixture-extension/package.json")), false, "Partial update must be removed");
+  assert.equal(await readFile(join(f.work, "npm/.gitignore"), "utf8"), "*\n!.gitignore\n");
+  assert.ok((await f.calls()).some((call) => call.command === "pi" && call.args.includes("--extensions")));
+  assert.doesNotMatch(result.output, /latest Pi, packages.*verified/);
 });
 
-test("changed package manifest and settings mismatch fails before npm ci", async (t) => {
+test("missing configured local package fails before package updates", async (t) => {
   const f = await fixture(t);
-  const manifest = JSON.parse(await readFile(join(f.seed, "npm/package.json"), "utf8"));
-  manifest.dependencies["fixture-extension"] = "2.0.0";
-  const lock = JSON.parse(await readFile(join(f.seed, "npm/package-lock.json"), "utf8"));
-  lock.packages[""].dependencies["fixture-extension"] = "2.0.0";
-  lock.packages["node_modules/fixture-extension"].version = "2.0.0";
-  await put(f.seed, "npm/package.json", json(manifest));
-  await put(f.seed, "npm/package-lock.json", json(lock));
+  const settings = JSON.parse(await readFile(join(f.seed, "settings.json"), "utf8"));
+  settings.packages = ["./missing-local-package", "npm:fixture-extension@1.0.0"];
+  await put(f.seed, "settings.json", json(settings));
   f.publish();
   const result = f.run();
   assert.notEqual(result.status, 0, result.output);
   assert.match(result.output, /settings\.json/);
-  assert.match(result.output, /npm\/package\.json/);
-  assert.ok(!(await f.calls()).some((call) => call.command === "npm" && call.args[0] === "ci"));
+  assert.match(result.output, /missing-local-package/);
+  const calls = await f.calls();
+  assert.ok(!calls.some((call) => call.command === "pi" && call.args.includes("--extensions")), "Local check must run before mutation");
 });
 
-test("pi offline startup failure propagates through sync", async (t) => {
+test("pi offline startup failure propagates and restores previous packages", async (t) => {
   const f = await fixture(t);
+  await put(f.work, "npm/node_modules/old-install-marker", "old installation\n");
   const result = f.run({ FIXTURE_PI_FAIL: "1" });
   assert.notEqual(result.status, 0, result.output);
   assert.match(result.output, /fixture pi startup failure/);
+  assert.equal(await readFile(join(f.work, "npm/node_modules/old-install-marker"), "utf8"), "old installation\n");
+  assert.equal(existsSync(join(f.work, "npm/node_modules/fixture-extension/package.json")), false);
   const calls = await f.calls();
   assert.ok(calls.some((call) => call.command === "pi" && call.args.join(" ") === "--offline --no-session --help"));
+});
+
+test("verifies FFF native package and donsetch binary when configured", async (t) => {
+  const f = await fixture(t);
+  const settings = {
+    packages: [{ source: "npm:@ff-labs/pi-fff@0.11.0" }, { source: "npm:donsetch", extensions: [], skills: [], prompts: [] }],
+    enabledModels: ["fixture/*"],
+  };
+  await put(f.seed, "settings.json", json(settings));
+  settings.packages.push("./local-permission");
+  await put(f.seed, "settings.json", json(settings));
+  await mkdir(join(f.seed, "local-permission"), { recursive: true });
+  await put(f.seed, "local-permission/keep.txt", "keep\n");
+  f.publish();
+  const result = f.run();
+  assert.equal(result.status, 0, result.output);
+  assert.match(result.output, /Verifying FFF native package/);
+  assert.match(result.output, /donsetch/);
+  assert.ok(existsSync(join(f.work, "npm/node_modules/@ff-labs/fff-node/dist/index.js")));
+  assert.ok(existsSync(join(f.work, "npm/node_modules/donsetch/bin/donsetch.js")));
 });

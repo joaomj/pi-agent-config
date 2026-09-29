@@ -1,7 +1,7 @@
 ---
 name: explorer
 description: Locate files, symbols, and call sites. Report code locations without editing files.
-tools: read, grep, find, ls, bash
+tools: read, grep, find, ls, bash, codemode
 isolation: off
 model: meta/muse-spark-1.3-contributor
 thinking: xhigh

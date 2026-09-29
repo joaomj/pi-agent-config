@@ -9,30 +9,34 @@ Add `~/.local/bin` to your shell's `PATH`.
 Review [sync.mjs](scripts/sync.mjs) and [settings.json](settings.json) before installation.
 Extensions run with your local permissions.
 
-Clone the repository once, then run sync:
+Clone the repository once, then install the current configuration:
 
 ```bash
 git clone https://github.com/joaomj/pi-agent-config.git ~/.pi/agent
-node ~/.pi/agent/scripts/sync.mjs
+node ~/.pi/agent/scripts/sync.mjs --install
 ```
 
-If `~/.pi/agent` is already a checkout of this repository, run only the sync command.
-For a different location, clone there and set `PI_CODING_AGENT_DIR` when you run Pi.
+For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
+Check the two local package paths in `settings.json` before installation.
+Change those paths when your development checkouts are in different locations.
+Installation stops if a local package is missing; it does not substitute an npm release.
 
-Sync first detects the operating system and Node.js architecture. It supports Linux and macOS on x64 or arm64.
-On Linux, it also identifies glibc or musl. Unsupported systems stop before sync changes any files.
-It selects the FFF native package for that platform; npm skips optional binaries for other platforms.
+`settings.json` is the package list. Published packages have no version pins.
+Installation updates Pi and published packages to the latest releases through Pi's package manager.
+Local packages load from their existing source directories without an update or reset.
+Generated npm manifests, lockfiles, and installed packages stay local and outside Git.
 
-Sync installs the Pi version in [.pi-version](.pi-version) under `~/.local` if needed.
-It installs dependencies from [npm/package-lock.json](npm/package-lock.json) in a temporary directory.
-Only a successful installation replaces the active packages.
-A verification failure restores the previous packages.
-
-Sync disables npm lifecycle scripts and bypasses npm's release-age delay for this command only.
-It explicitly checks the `donsetch` binary, which downloads its platform-specific release if absent.
-The download uses the locked package version and verifies the release checksum.
+The installer supports Linux and macOS on x64 or arm64.
+On Linux, it identifies glibc or musl for the FFF native package.
+It disables npm lifecycle scripts and bypasses npm's release-age delay for this command only.
+It explicitly checks DonSeTch's binary, which downloads its release if missing.
 Global npm settings remain unchanged.
-Sync verifies the selected FFF native package, its Node.js library import, extension loading, and CLI startup without a model request.
+
+The installer backs up managed npm files before a package update.
+It then replaces generated npm manifests and packages with a fresh installation from `settings.json`.
+If installation or verification fails, it restores those files and reports the error.
+Pi's own update is separate and is not rolled back.
+Verification checks FFF, DonSeTch, extension loading, and CLI startup without a model request.
 
 ## Start
 
@@ -42,47 +46,62 @@ From your project directory, run:
 pi
 ```
 
-Run `/login` to connect a model provider, then `/model` to select a model
-you can access. See the [Pi quickstart](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/quickstart.md)
-for authentication and usage instructions.
+Run `/login` to connect a model provider, then `/model` to select a model.
+Keep Claude DirectSDK for Claude Code subscription transport.
+Native Anthropic sign-in warns that third-party use is billed from extra usage, not the plan allowance.
+[Claude compatibility](extensions/claude-codemode.ts) sends native codemode through its JSON schema for Claude DirectSDK.
+Claude uses best-effort JSON input instead of the OpenAI-only raw-code grammar.
+Other providers and strict requirements on other tools remain unchanged.
+OpenTUI remains the interactive interface.
 
-Web search, fetch, crawl, and screenshots come from the `donsetch` package:
-keyless, no accounts. To add an Exa key on top of the keyless chain, run
-`~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>`.
+### Tools and web access
+
+The model sees only `codemode`. Scripts call the underlying file, shell, search, and delegation tools.
+This also applies to the five configured subagent roles.
+Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
+Codemode can batch calls and filter results, but does not guarantee lower token use.
+
+[mcp.json](mcp.json) connects DonSeTch through Pi's native Model Context Protocol (MCP) support.
+The DonSeTch package supplies the binary; its Pi extension is disabled to prevent duplicate connections.
+Use `/mcp` to inspect or reconnect the server. Its tools are available through codemode.
+FFF and subagents remain Pi extensions; they are not external MCP servers.
+
+Web search, fetch, crawl, and screenshots need no account or API key.
+To add an Exa key, run `~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>`.
 
 ## Update
 
-Run the same command on either machine:
+To update software without replacing your configuration, run:
+
+```bash
+node ~/.pi/agent/scripts/sync.mjs --install
+```
+
+Updates happen when you run this command, not on every Pi launch.
+Latest releases can differ between computers updated on different days.
+Restart Pi after a successful update.
+
+To replace configuration with the current branch's upstream and update software, run:
 
 ```bash
 node ~/.pi/agent/scripts/sync.mjs
 ```
 
-The [sync script](scripts/sync.mjs) fetches the current branch's upstream.
-It backs up tracked configuration, Git patches, and repository history under `~/.pi/backups/`.
-It then replaces tracked configuration and local commits with the upstream revision and installs locked packages.
-The backup contains the previous files under `files/` and Git history in `repository.bundle`.
-Do not publish backups: tracked local changes can contain private values.
+**Caution:** sync replaces tracked local changes and local commits with upstream.
+It first saves tracked configuration, Git patches, and repository history under `~/.pi/backups/`.
+Do not publish backups: local changes can contain private values.
 
-Sync leaves untracked and ignored content untouched, except for generated `npm/node_modules`.
-This preserves `docs/`, credentials, sessions, and recovery data.
-It stops if an incoming tracked file would overwrite untracked content.
-Move the conflicting file outside the checkout, then retry.
-On the first update to the tracked lockfile, this can include an existing `npm/package-lock.json`.
+Sync preserves untracked and ignored content, except for managed npm files updated during installation.
+This preserves credentials, sessions, and other runtime data.
+It stops during an unfinished Git operation or when incoming files conflict with untracked content.
+An installation failure reports a nonzero exit status.
+The configuration remains at the fetched revision; fix the reported error and retry.
 
-Sync also stops during an unfinished merge or rebase.
-An installation failure returns a nonzero exit status; the previous packages remain available.
-The tracked configuration stays at the fetched revision, so retry sync after fixing the reported error.
-Restart Pi after a successful sync.
+### Troubleshooting
 
-### Upgrade versions
-
-Sync installs repository versions; it does not select the latest releases.
-To upgrade packages, change the exact versions in `npm/package.json` and `settings.json` together.
-Regenerate `npm/package-lock.json` with lifecycle scripts disabled and legacy peer resolution enabled.
-Change `.pi-version` to upgrade Pi.
-Review and verify these changes before publishing them.
-Do not use `pi update --extensions` to align machines: it bypasses the repository lockfile.
+The updater removes inherited `PI_OFFLINE` from online update commands.
+Pi's version lookup treats any nonempty value, including `0`, as offline.
+An offline verification check does not refresh software.
 
 ### Check sync behavior
 
@@ -91,18 +110,19 @@ node --test tests/sync.test.mjs
 ```
 
 These checks use temporary Git repositories and simulated npm and Pi commands.
-They cover repeatable sync, backups, private-file preservation, collisions, and failure reporting.
-They do not call model providers.
+They cover updates, backups, private-file preservation, collisions, and failure recovery.
+They do not contact model providers.
 
 ## Configuration
 
-[Technical context](docs/tech-context.md) is the source of truth for engineering decisions and how this Pi instance operates.
-Use the files themselves as the implementation reference:
+[Technical context](docs/tech-context.md) describes the intended architecture and engineering decisions.
 
-- [settings.json](settings.json): defaults and installed packages.
+- [settings.json](settings.json): defaults, tool presentation, and the package list.
+- [mcp.json](mcp.json): native MCP connections, without embedded credentials.
 - [AGENTS.md](AGENTS.md): agent instructions.
 - [Permission rules](extensions/pi-permission-system/config.json): local access policy.
 - [skills/](skills/) and [prompts/](prompts/): reusable workflows.
 
-Keep authentication, sessions, logs, and other private runtime data out of Git.
+Keep authentication, sessions, logs, and generated installation records out of Git.
+Do not commit the machine-local `deviceId` or `lastChangelogVersion` from Pi settings.
 See [.gitignore](.gitignore) for exclusions.

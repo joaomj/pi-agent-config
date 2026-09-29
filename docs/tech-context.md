@@ -21,6 +21,8 @@ There is one global multi-agent configuration per computer user. We do not maint
 The repository is shared between the personal Asus Vivobook and Mac-mini. These machines are intended to use the same model/provider set.
 Other computers can have different provider access. The repository currently has no machine-specific model selection layer.
 Check provider authentication and agent model resolution when installing on another computer.
+The local package paths must point to existing development checkouts on that computer.
+Do not replace those sources with npm packages merely because the paths differ.
 
 Pi and the extension still support project-level overrides. This repository does not disable that capability; it simply does not rely on it.
 Run Pi from the project to work on that project's files while loading these global definitions.
@@ -72,9 +74,15 @@ All five definitions use `prompt_mode: append` to inherit the parent's instructi
 This is system-prompt inheritance, not automatic inheritance of the full conversation.
 The caller must provide sufficient task context; conversation inheritance is a separate option.
 
-Only Implementer has the built-in `edit` and `write` tools.
-The other roles retain shell access and are instructed not to change project state.
-That instruction is not a filesystem security boundary. Extensions also load by default; built-in tool lists do not restrict every extension tool.
+Each role enables `codemode` and retains its existing underlying tool selection.
+Global `codemode.mode: "only"` hides direct tools from the model.
+Scripts call the registered tools through codemode.
+Only Implementer lists `edit` and `write` in its role selection; other roles must not change project state.
+Only active `direct` tools are callable through codemode.
+Registered tools with `codemode` or `deferred` exposure remain callable outside the active selection.
+Inactive direct `edit` and `write` tools do not become callable merely because codemode is enabled.
+Shell access and instructions are not filesystem security boundaries.
+Permissions remain necessary for both direct and nested calls.
 
 ### Planning and review decisions
 
@@ -158,12 +166,13 @@ The documented approval policy remains applicable even when no interactive promp
 
 ## Search architecture
 
-FFF supplies local code search through [`@ff-labs/pi-fff`](../npm/package.json).
+FFF supplies local code search through `@ff-labs/pi-fff`, declared in [settings.json](../settings.json).
 Its [global configuration](../pi-fff.json) selects `tools-only`:
 
 - `fffind` discovers file paths.
 - `ffgrep` searches file contents.
-- Native Pi search tools and editor autocomplete remain available.
+- Editor autocomplete remains available.
+- Roles that enable native Pi search tools can call them through codemode.
 
 This avoids replacing autocomplete used for agent mentions and requires no separate MCP server.
 Explorer, Debugger, Planner, and Reviewer explicitly prefer FFF. The main agent inherits the same preference from `AGENTS.md`.
@@ -196,20 +205,44 @@ Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.
 
 ### Installed capabilities
 
-Exact package versions are maintained together in [settings.json](../settings.json), [npm/package.json](../npm/package.json), and [the lockfile](../npm/package-lock.json).
-Use those files for version numbers rather than a second version inventory here.
+[settings.json](../settings.json) is the authoritative package list.
+Published packages use unversioned npm sources and update to latest releases on an explicit update.
+The permission and subagent packages retain their local development sources.
+Missing local sources are errors, not reasons to substitute published packages.
+Pi generates npm manifests and lockfiles locally; these installation records are not tracked.
+Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared settings commits.
 
 | Package or local extension | Purpose |
 | --- | --- |
 | `@tintinweb/pi-subagents` | Role-based delegation, agent management, and worktree preservation |
 | `@ff-labs/pi-fff` | Indexed local code search |
-| `donsetch` | Web search, fetch, crawl, and screenshots |
+| `donsetch` | Binary for native MCP web search, fetch, crawl, and screenshots; package extension disabled |
 | `@gotgenes/pi-permission-system` | Local permission policy and approval prompts |
-| `@kiranpg/pi-sentry` | Installed Sentry integration; no instance-specific setup is described here |
+| `@kiranpg/pi-sentry` | Secret redaction for inputs, tool output, and session messages |
 | `pi-usage-meters` | Usage display integration |
 | `pi-open-tui` | Terminal UI customization through [open-tui.json](../open-tui.json) |
+| `pi-claude-directsdk` | Claude Code subscription transport; retained because native Anthropic sign-in warns of per-token extra usage |
+| [claude-codemode.ts](../extensions/claude-codemode.ts) | Request-local JSON fallback for native codemode on Claude DirectSDK only |
 | [btw.ts](../extensions/btw.ts) | `/btw`: a tool-free side question using a conversation snapshot and the selected model |
 | [exit.ts](../extensions/exit.ts) | `/exit`: alias that requests Pi shutdown |
+
+The model sees `codemode` rather than direct tool declarations.
+`defaultTools` retains `read` and `bash` underneath and enables `codemode`; `codemode.mode` is `only`.
+The five role definitions also enable codemode.
+The inline declaration budget stays at Pi's default 3,000 estimated tokens.
+Batching and output filtering can reduce conversation overhead; savings are not guaranteed.
+
+[mcp.json](../mcp.json) connects DonSeTch through Pi's built-in MCP extension.
+The launcher resolves its binary from `PI_CODING_AGENT_DIR`, or `~/.pi/agent` when unset.
+The server uses `codemode` exposure and a 620-second request timeout for long crawls.
+The package resource filters disable DonSeTch's custom extension to avoid duplicate connections and tools.
+Native tools use names such as `mcp__donsetch__web_fetch`; codemode can discover their declarations.
+FFF and subagent orchestration remain native extensions, not MCP connections.
+The MCP server manager is available through `/mcp`.
+Claude DirectSDK rejects grammar-based tools. A request-local compatibility extension replaces native codemode's OpenAI-only grammar with best-effort JSON schema input for that provider.
+The extension does not change authentication, billing, stored history, or strict requirements on other tools.
+Other providers keep native codemode's original declaration.
+MCP OAuth credentials and rotated logs are ignored by Git.
 
 The UI uses fullscreen mode. Model selection, authentication, and session management remain Pi responsibilities.
 `/btw` uses low reasoning and does not perform new tool work or continue the main task.
@@ -227,46 +260,45 @@ They do not replace agent role boundaries or approval requirements.
 3. Check runtime requirements, repository state, upstream configuration, and file collisions.
 4. Fetch upstream and back up tracked configuration, patches, and Git history under `~/.pi/backups/`.
 5. Replace tracked configuration with the upstream revision.
-6. Install the Pi version from [.pi-version](../.pi-version) if needed.
-7. Install locked packages in a temporary directory with lifecycle scripts disabled.
-8. Verify installed versions and the selected platform's FFF native package and library import.
-9. Check donsetch's platform binary, then activate the staged packages and verify extension loading and CLI startup.
-10. Restore previous packages if activation verification fails.
+6. Check that configured local package sources exist.
+7. Bootstrap the latest Pi under `~/.local` if needed, or use Pi's native self-update.
+8. Back up managed npm files and use Pi's native package update command.
+9. Check the selected FFF native package, its library import, and DonSeTch's binary.
+10. Verify extension loading and CLI startup without a model request.
+11. Restore managed npm files if package installation or verification fails.
 
-The OS-specific step selects the native package; the backup, dependency installation, and verification stages remain shared.
-Absent optional packages for other platforms are allowed. The selected FFF native package must exist and match the lockfile.
-Donsetch can download its locked release binary and verifies the release checksum.
+The installer removes inherited `PI_OFFLINE` from online update commands.
+Pi's version lookup treats any nonempty value, including `0`, as offline.
+The installer disables npm lifecycle scripts through command settings and child-process environment.
+Package updates replace generated npm manifests and installed packages with a fresh installation from `settings.json`.
+DonSeTch's binary check can download its release and verifies the release checksum.
+Pi's self-update is separate from package recovery and is not rolled back.
+Updates run only when explicitly requested; normal launches do not update installed packages.
+Machines updated on different days can use different latest releases.
 
 **Caution:** sync replaces tracked local changes and local commits with upstream after creating a backup.
-It is not a merge-based update. Untracked and ignored files remain unless they conflict with incoming tracked paths; collisions stop sync.
-Generated `npm/node_modules` is replaced by the installation process.
-A package failure preserves or restores the prior packages, but does not revert configuration already reset to upstream.
+It is not a merge-based update. Untracked and ignored files remain unless incoming paths conflict; collisions stop sync.
+A package failure restores managed npm files but does not revert configuration already reset to upstream.
 
-Use `node scripts/sync.mjs --install` to install the current local configuration without fetching or resetting tracked files.
+Use `node scripts/sync.mjs --install` to update the current local configuration without fetching or resetting tracked files.
 Use the normal sync command only when upstream replacement is intended.
-
-Change package pins and regenerate the lockfile together. Do not use `pi update --extensions` to synchronize machines; it bypasses this repository's lockfile.
 Do not change global npm settings to install this configuration.
 
 ## Verification and remaining limits
 
-Verification completed during this setup:
+Completed checks:
 
-- Agent frontmatter, model/thinking assignments, role tool lists, and isolation settings were checked.
-- Global JSON configuration, package pins, and lockfile alignment were checked.
-- Linux x64/glibc installation and repeat installation succeeded.
-- Nine extensions loaded and CLI startup completed without a model request.
-- FFF's native engine found expected files and content in this repository.
-- Three existing focused tests passed: npm failure preservation, extension-load rollback, and manifest/settings mismatch rejection.
-- Script syntax and whitespace checks passed.
+- The current setup updated successfully on macOS arm64.
+- FFF's native package and library import, DonSeTch's binary, extension loading, and CLI startup passed.
+- DonSeTch connected through native MCP with four tools and no duplicate bridge.
+- An offline SDK check showed only codemode in the model-facing tool declarations.
+- Nested codemode/read execution passed with the permission and secret-redaction extensions loaded.
+- Claude DirectSDK accepted codemode's JSON input without changing other providers or strict requirements on other tools.
+- Eight focused updater checks passed, including private-file preservation, failure recovery, and inherited offline-variable handling.
 
-Not yet verified:
+The updater checks use temporary repositories and simulated package commands.
+The compatibility checks do not send model requests.
+These results do not prove model-driven delegation, subscription billing, UI rendering, or token savings.
 
-- Installation and native search on the Mac-mini, ARM64 Linux, or musl Linux.
-- Model-driven execution of the five custom roles with their pinned models and thinking levels.
-- FFF tool availability and behavior inside a live delegated session.
-- The complete diagnosis-to-plan-to-implementation handoff and automatic preservation commit path.
-- A full test-suite run after these changes.
-
-Do not present configuration validation as proof of those runtime behaviors.
+Installation on other supported platforms and a live model-driven delegation flow remain unverified.
 Ask before adding tests or running full or slow suites, as required by `AGENTS.md`.

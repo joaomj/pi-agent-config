@@ -1,5 +1,6 @@
 # secrets - never commit
 auth.json
+mcp-auth.json
 trust.json
 
 # runtime / cache - never commit
@@ -10,6 +11,7 @@ web-search-cache/
 fff/
 web-search.json
 *.log
+mcp.log*
 *.bak*
 permission-system-config.json
 pi-permissions.jsonc
@@ -38,10 +40,8 @@ extensions/*/logs/
 # local tool binaries
 /bin/
 
-# Installed packages are reproduced from the tracked lockfile.
+# Pi manages installation records locally; settings.json declares packages.
 npm/*
-!npm/package.json
-!npm/package-lock.json
 !npm/.gitignore
 git/
 

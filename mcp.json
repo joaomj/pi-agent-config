@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "donsetch": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "exec \"${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/npm/node_modules/.bin/donsetch\" mcp --supervised"
+      ],
+      "timeout": 620,
+      "exposure": "codemode"
+    }
+  }
+}

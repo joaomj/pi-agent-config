@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Report only P0/P1 issues before opening a pull request or when the user requests review. Do not edit files.
-tools: read, grep, find, ls, bash
+tools: read, grep, find, ls, bash, codemode
 isolation: off
 model: openai-codex/gpt-6-astra
 thinking: medium

@@ -1,5 +1,4 @@
 {
-  "lastChangelogVersion": "0.87.1",
   "theme": "dark",
   "quietStartup": false,
   "enableInstallTelemetry": false,
@@ -26,16 +25,36 @@
     "openai-codex/gpt-6-astra:low"
   ],
   "packages": [
-    "npm:@ff-labs/pi-fff@0.11.0",
-    "npm:@gotgenes/pi-permission-system@35.0.0",
-    "npm:@kiranpg/pi-sentry@0.1.2",
-    "npm:donsetch@4.3.6",
-    "npm:pi-usage-meters@0.5.0",
-    "npm:@tintinweb/pi-subagents@0.19.0",
-    "npm:pi-open-tui@0.3.9"
+    "npm:@ff-labs/pi-fff",
+    "/Users/joao/projects/pi-packages/packages/pi-permission-system",
+    "npm:@kiranpg/pi-sentry",
+    {
+      "source": "npm:donsetch",
+      "extensions": [],
+      "skills": [],
+      "prompts": [],
+      "themes": []
+    },
+    "npm:pi-usage-meters",
+    "/Users/joao/projects/pi-subagents",
+    "npm:pi-open-tui",
+    "npm:pi-claude-directsdk"
   ],
   "tuiMode": "fullscreen",
   "fullscreenScrollbar": "always",
   "fullscreenExitOutput": "transcript",
-  "fullscreenCopyOnSelect": true
+  "fullscreenCopyOnSelect": true,
+  "defaultTools": [
+    "read",
+    "bash",
+    "codemode"
+  ],
+  "codemode": {
+    "mode": "only",
+    "inlineBudget": 3000
+  },
+  "npmCommand": [
+    "npm",
+    "--ignore-scripts"
+  ]
 }

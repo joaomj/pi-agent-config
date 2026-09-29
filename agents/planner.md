@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Create high-level plans focused on deliverables, user outcomes, and trade-offs. Do not implement changes.
-tools: read, grep, find, ls, bash
+tools: read, grep, find, ls, bash, codemode
 isolation: off
 model: openai-codex/gpt-6-astra
 thinking: max

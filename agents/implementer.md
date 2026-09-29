@@ -1,7 +1,7 @@
 ---
 name: implementer
 description: Make scoped code changes that follow an agreed implementation approach.
-tools: read, grep, find, ls, bash, edit, write
+tools: read, grep, find, ls, bash, edit, write, codemode
 isolation: worktree
 model: meta/muse-spark-1.3-contributor
 thinking: xhigh
