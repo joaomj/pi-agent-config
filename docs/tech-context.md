@@ -75,8 +75,8 @@ This is system-prompt inheritance, not automatic inheritance of the full convers
 The caller must provide sufficient task context; conversation inheritance is a separate option.
 
 Each role enables `codemode` and retains its existing underlying tool selection.
-Global `codemode.mode: "only"` hides direct tools from the model.
-Scripts call the registered tools through codemode.
+Global `codemode.mode: "on"` keeps direct tools visible alongside codemode.
+Each role can call its active tools directly or through codemode scripts.
 Only Implementer lists `edit` and `write` in its role selection; other roles must not change project state.
 Only active `direct` tools are callable through codemode.
 Registered tools with `codemode` or `deferred` exposure remain callable outside the active selection.
@@ -172,7 +172,7 @@ Its [global configuration](../pi-fff.json) selects `tools-only`:
 - `fffind` discovers file paths.
 - `ffgrep` searches file contents.
 - Editor autocomplete remains available.
-- Roles that enable native Pi search tools can call them through codemode.
+- Roles that enable native Pi search tools can call them directly or through codemode.
 
 This avoids replacing autocomplete used for agent mentions and requires no separate MCP server.
 Explorer, Debugger, Planner, and Reviewer explicitly prefer FFF. The main agent inherits the same preference from `AGENTS.md`.
@@ -226,8 +226,9 @@ Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared
 | [btw.ts](../extensions/btw.ts) | `/btw`: a tool-free side question using a conversation snapshot and the selected model |
 | [exit.ts](../extensions/exit.ts) | `/exit`: alias that requests Pi shutdown |
 
-The model sees `codemode` rather than direct tool declarations.
-`defaultTools` retains `read` and `bash` underneath and enables `codemode`; `codemode.mode` is `only`.
+`defaultTools: ["+codemode"]` adds codemode to Pi's default `read`, `bash`, `edit`, and `write` tools.
+`codemode.mode: "on"` keeps direct tool declarations visible.
+Direct calls handle simple actions; codemode can batch calls and filter large results.
 The five role definitions also enable codemode.
 The inline declaration budget stays at Pi's default 3,000 estimated tokens.
 Batching and output filtering can reduce conversation overhead; savings are not guaranteed.
@@ -291,7 +292,7 @@ Completed checks:
 - The current setup updated successfully on macOS arm64.
 - FFF's native package and library import, DonSeTch's binary, extension loading, and CLI startup passed.
 - DonSeTch connected through native MCP with four tools and no duplicate bridge.
-- An offline SDK check showed only codemode in the model-facing tool declarations.
+- An offline SDK check confirmed native default tools and codemode in the model-facing declarations.
 - Nested codemode/read execution passed with the permission and secret-redaction extensions loaded.
 - Claude DirectSDK accepted codemode's JSON input without changing other providers or strict requirements on other tools.
 - Eight focused updater checks passed, including private-file preservation, failure recovery, and inherited offline-variable handling.

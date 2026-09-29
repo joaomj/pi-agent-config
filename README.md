@@ -56,8 +56,9 @@ OpenTUI remains the interactive interface.
 
 ### Tools and web access
 
-The model sees only `codemode`. Scripts call the underlying file, shell, search, and delegation tools.
-This also applies to the five configured subagent roles.
+Pi's default tools (`read`, `bash`, `edit`, and `write`) remain directly available alongside `codemode`.
+Use direct tools for simple actions and codemode to batch calls or filter large results.
+Each subagent retains its role-specific tools and can also use codemode.
 Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
 Codemode can batch calls and filter results, but does not guarantee lower token use.
 

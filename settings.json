@@ -45,12 +45,10 @@
   "fullscreenExitOutput": "transcript",
   "fullscreenCopyOnSelect": true,
   "defaultTools": [
-    "read",
-    "bash",
-    "codemode"
+    "+codemode"
   ],
   "codemode": {
-    "mode": "only",
+    "mode": "on",
     "inlineBudget": 3000
   },
   "npmCommand": [
