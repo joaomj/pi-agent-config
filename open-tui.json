@@ -1,20 +1,20 @@
 {
   "enabled": true,
-  "inlineFooter": false,
+  "inlineFooter": true,
   "settingsLanguage": "en",
   "cursorStyle": "block",
   "fullscreen": {
     "wheelScrollLines": 4
   },
   "icons": {
-    "mode": "auto"
+    "mode": "unicode"
   },
   "footerSegments": {
     "cwd": true,
     "hostname": false,
     "sessionName": false,
     "gitBranch": true,
-    "gitStatus": true,
+    "gitStatus": false,
     "gitCommit": false,
     "runtime": true,
     "context": true,

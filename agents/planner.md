@@ -3,8 +3,8 @@ name: planner
 description: Create high-level plans focused on deliverables, user outcomes, and trade-offs. Do not implement changes.
 tools: read, grep, find, ls, bash, codemode
 isolation: off
-model: openai-codex/gpt-6-astra
-thinking: max
+model: openai/gpt-6.1-sol
+thinking: xhigh
 prompt_mode: append
 ---
 

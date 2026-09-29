@@ -3,7 +3,7 @@ name: debugger
 description: Investigate failures and identify bug causes without editing code. Return evidence for planning.
 tools: read, grep, find, ls, bash, codemode
 isolation: off
-model: meta/muse-spark-1.3-contributor
+model: openai/gpt-6.1-sol
 thinking: xhigh
 prompt_mode: append
 ---

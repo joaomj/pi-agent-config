@@ -4,7 +4,7 @@ description: Make scoped code changes that follow an agreed implementation appro
 tools: read, grep, find, ls, bash, edit, write, codemode
 isolation: worktree
 model: meta/muse-spark-1.3-contributor
-thinking: xhigh
+thinking: high
 prompt_mode: append
 ---
 

@@ -61,14 +61,14 @@ Reviewer is not a mandatory stage after implementation or before merging.
 
 | Role | Responsibility and output | Model | Thinking | Worktree |
 | --- | --- | --- | --- | --- |
-| [Explorer](../agents/explorer.md) | Brief code map: files, symbols, connections, and search limits | `meta/muse-spark-1.3-contributor` | `xhigh` | Off |
-| [Debugger](../agents/debugger.md) | Diagnosis: symptom, cause, evidence, impact, and uncertainty | `meta/muse-spark-1.3-contributor` | `xhigh` | Off |
-| [Planner](../agents/planner.md) | High-level structured plan: outcomes, deliverables, trade-offs, risks, and scope | `openai-codex/gpt-6-astra` | `max` | Off |
-| [Implementer](../agents/implementer.md) | Scoped implementation and outcome/verification report | `meta/muse-spark-1.3-contributor` | `xhigh` | Required |
-| [Reviewer](../agents/reviewer.md) | Substantiated P0/P1 findings with user impact first | `openai-codex/gpt-6-astra` | `medium` | Off |
+| [Explorer](../agents/explorer.md) | Brief code map: files, symbols, connections, and search limits | `meta/muse-spark-1.3-contributor` | `high` | Off |
+| [Debugger](../agents/debugger.md) | Diagnosis: symptom, cause, evidence, impact, and uncertainty | `openai/gpt-6.1-sol` | `xhigh` | Off |
+| [Planner](../agents/planner.md) | High-level structured plan: outcomes, deliverables, trade-offs, risks, and scope | `openai/gpt-6.1-sol` | `xhigh` | Off |
+| [Implementer](../agents/implementer.md) | Scoped implementation and outcome/verification report | `meta/muse-spark-1.3-contributor` | `high` | Required |
+| [Reviewer](../agents/reviewer.md) | Substantiated P0/P1 findings with user impact first | `openai/gpt-6.1-sol` | `xhigh` | Off |
 
 These assignments are user-selected cost, speed, and reasoning trade-offs. They are not comparative benchmark results.
-Muse handles exploration, diagnosis, and implementation. Astra handles planning and independent review.
+Muse handles exploration and implementation for speed. Sol handles diagnosis, planning, and independent review.
 
 All five definitions use `prompt_mode: append` to inherit the parent's instructions and approval rules.
 This is system-prompt inheritance, not automatic inheritance of the full conversation.
@@ -121,6 +121,11 @@ Report verification gaps separately; no P0/P1 findings does not mean the change 
 | `workflowsEnabled` | `false` | Keep initial orchestration simple |
 | `disableDefaultAgents` | `true` | Avoid overlap with built-in Explore, Plan, and general-purpose |
 | `fallbackSubagent` | `none` | Reject unknown types instead of silently substituting another role |
+| `defaultJoinMode` | `smart` | Send one combined notice when a turn starts several agents |
+| `scopeModels` | `true` | Check subagent models against the enabled-model list |
+| `reportUsage` | `true` | Count subagent tokens and cost in session totals |
+| `showCost` | `true` | Display estimated cost beside subagent token counts |
+| `maxSubagentDepth` | `1` | Disable nested delegation project-wide |
 
 A turn is a model response, not necessarily one tool call. The limit is not a token, time, or spending cap.
 At the limit, the extension requests a final answer and permits the grace turns before aborting.
@@ -131,7 +136,8 @@ Workflow agents use a separate pool, but workflows are disabled here.
 
 Background execution, session persistence, and output transcripts remain at extension defaults.
 Remembered agent sessions and transcripts are local runtime data, not repository artifacts.
-Model-scope enforcement is not explicitly enabled. Do not treat `enabledModels` as a hard subagent allowlist.
+Model-scope enforcement is enabled (`scopeModels: true`). A caller-supplied model outside `enabledModels` fails.
+A frontmatter pin outside the list warns but still runs.
 
 Use `/agents` to inspect agent types, running work, and actual resolved models.
 Its Settings menu writes project overrides; edit this repository's `subagents.json` for shared global decisions.
@@ -191,14 +197,14 @@ Use `/fff-mode` and `/fff-health` to inspect effective behavior after startup.
 ## Main-session configuration and extensions
 
 [settings.json](../settings.json) selects `meta/muse-spark-1.3-contributor` with `xhigh` thinking as the main-session default.
-Its enabled-model list also includes Astra at `low` and Luna at `max`.
+Its enabled-model list also includes Sol at `xhigh` and Astra at `low`.
 These main-session choices do not replace the explicit thinking levels in agent frontmatter.
 
 Agent frontmatter model and thinking values take precedence over caller overrides in pi-subagents.
 If a pinned model cannot resolve, the extension can inherit the parent model rather than fail.
 Inspect the effective model on each newly configured computer; do not assume a pin guarantees availability.
 
-[models.json](../models.json) sets local metadata overrides for all three models:
+[models.json](../models.json) sets local metadata overrides for Muse, Sol, and Astra:
 250,000 context tokens and 64,000 maximum output tokens. Muse also has a 300-second short prompt-cache value.
 These are client-side declarations, not proof that a provider accepts every requested limit.
 Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.

@@ -9,12 +9,16 @@
         }
       }
     },
-    "openai-codex": {
+    "openai": {
       "modelOverrides": {
-        "gpt-6-luna": {
+        "gpt-6.1-sol": {
           "contextWindow": 250000,
           "maxTokens": 64000
-        },
+        }
+      }
+    },
+    "openai-codex": {
+      "modelOverrides": {
         "gpt-6-astra": {
           "contextWindow": 250000,
           "maxTokens": 64000
