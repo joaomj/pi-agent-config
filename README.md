@@ -17,8 +17,8 @@ node ~/.pi/agent/scripts/sync.mjs --install
 ```
 
 For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
-Check the two local package paths in `settings.json` before installation.
-Change those paths when your development checkouts are in different locations.
+Check the local package path in `settings.json` before installation.
+Change that path when your development checkout is in a different location.
 Installation stops if a local package is missing; it does not substitute an npm release.
 
 `settings.json` is the package list. Published packages have no version pins.
@@ -58,14 +58,13 @@ OpenTUI remains the interactive interface.
 
 Pi's default tools (`read`, `bash`, `edit`, and `write`) remain directly available alongside `codemode`.
 Use direct tools for simple actions and codemode to batch calls or filter large results.
-Each subagent retains its role-specific tools and can also use codemode.
 Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
 Codemode can batch calls and filter results, but does not guarantee lower token use.
 
 [mcp.json](mcp.json) connects DonSeTch through Pi's native Model Context Protocol (MCP) support.
 The DonSeTch package supplies the binary; its Pi extension is disabled to prevent duplicate connections.
 Use `/mcp` to inspect or reconnect the server. Its tools are available through codemode.
-FFF and subagents remain Pi extensions; they are not external MCP servers.
+FFF remains a Pi extension; it is not an external MCP server.
 
 Web search, fetch, crawl, and screenshots need no account or API key.
 To add an Exa key, run `~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>`.

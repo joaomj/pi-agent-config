@@ -9,19 +9,19 @@ Executable configuration and source files implement these decisions. Links below
 If configuration and this document disagree, report the discrepancy and update both when the decision changes.
 Do not silently treat an implementation difference as a new decision.
 
-Keep this document current when changing agent responsibilities, model assignments, permissions, dependencies, or installation behavior.
+Keep this document current when changing permissions, dependencies, or installation behavior.
 Keep credentials, transcripts, temporary plans, and machine-local caches out of this document and Git.
 
 ## Operating model
 
 This repository is installed as the user's global Pi configuration, normally at `~/.pi/agent`.
-There is one global multi-agent configuration per computer user. We do not maintain project-specific agent definitions as part of this setup.
+There is one global configuration per computer user. We do not maintain project-specific definitions as part of this setup.
 `PI_CODING_AGENT_DIR` can relocate the configuration directory.
 
 The repository is shared between the personal Asus Vivobook and Mac-mini. These machines are intended to use the same model/provider set.
 Other computers can have different provider access. The repository currently has no machine-specific model selection layer.
-Check provider authentication and agent model resolution when installing on another computer.
-The local package paths must point to existing development checkouts on that computer.
+Check provider authentication and model resolution when installing on another computer.
+The local package path must point to an existing development checkout on that computer.
 Do not replace those sources with npm packages merely because the paths differ.
 
 Pi and the extension still support project-level overrides. This repository does not disable that capability; it simply does not rely on it.
@@ -40,65 +40,33 @@ Treat the user as a product manager:
 These rules do not waive approval requirements for tests, Git operations, or external changes.
 [AGENTS.md](../AGENTS.md) contains the full collaboration and engineering rules.
 
-## Main agent and delegation
+## Single-agent workflow
 
-The main agent coordinates work, supplies task context, checks delegated results, and communicates with the user.
-Subagents have narrow responsibilities. Delegation is useful when it separates independent work or contains investigation context, not for every small action.
+The main agent does all work directly and communicates with the user.
+There is no delegation, no isolated worktrees, and no scripted workflows.
 
 A typical bug-fix sequence is:
 
-1. Explorer locates relevant code when needed.
-2. Debugger establishes the symptom and cause.
-3. Planner defines deliverables, acceptance criteria, and trade-offs.
-4. Implementer applies the agreed change.
-5. The main agent checks the reported outcome and verification evidence.
-
-Handoffs return through the main agent. This sequence is a working convention, not an automatically executed pipeline.
-No custom agent enables nested delegation. Scripted workflows are disabled.
-Reviewer is not a mandatory stage after implementation or before merging.
-
-### Agent responsibilities and models
-
-| Role | Responsibility and output | Model | Thinking | Worktree |
-| --- | --- | --- | --- | --- |
-| [Explorer](../agents/explorer.md) | Brief code map: files, symbols, connections, and search limits | `meta/muse-spark-1.3-contributor` | `high` | Off |
-| [Debugger](../agents/debugger.md) | Diagnosis: symptom, cause, evidence, impact, and uncertainty | `openai/gpt-6.1-sol` | `xhigh` | Off |
-| [Planner](../agents/planner.md) | High-level structured plan: outcomes, deliverables, trade-offs, risks, and scope | `openai/gpt-6.1-sol` | `xhigh` | Off |
-| [Implementer](../agents/implementer.md) | Scoped implementation and outcome/verification report | `meta/muse-spark-1.3-contributor` | `high` | Required |
-| [Reviewer](../agents/reviewer.md) | Substantiated P0/P1 findings with user impact first | `openai/gpt-6.1-sol` | `xhigh` | Off |
-
-These assignments are user-selected cost, speed, and reasoning trade-offs. They are not comparative benchmark results.
-Muse handles exploration and implementation for speed. Sol handles diagnosis, planning, and independent review.
-
-All five definitions use `prompt_mode: append` to inherit the parent's instructions and approval rules.
-This is system-prompt inheritance, not automatic inheritance of the full conversation.
-The caller must provide sufficient task context; conversation inheritance is a separate option.
-
-Each role enables `codemode` and retains its existing underlying tool selection.
-Global `codemode.mode: "on"` keeps direct tools visible alongside codemode.
-Each role can call its active tools directly or through codemode scripts.
-Only Implementer lists `edit` and `write` in its role selection; other roles must not change project state.
-Only active `direct` tools are callable through codemode.
-Registered tools with `codemode` or `deferred` exposure remain callable outside the active selection.
-Inactive direct `edit` and `write` tools do not become callable merely because codemode is enabled.
-Shell access and instructions are not filesystem security boundaries.
-Permissions remain necessary for both direct and nested calls.
+1. Locate relevant code when needed.
+2. Establish the symptom and cause.
+3. Define deliverables, acceptance criteria, and trade-offs.
+4. Apply the agreed change.
+5. Check the outcome and verification evidence.
 
 ### Planning and review decisions
 
-Planner follows the product-oriented approach in [`/plan`](../prompts/plan.md).
-It investigates enough technical context to ground its recommendations, but does not return code-level implementation instructions by default.
-The plan is returned as structured text. A requested plan file stays local and untracked; Planner hands its content to the coordinating agent.
+Planning follows the product-oriented approach in [`/plan`](../prompts/plan.md).
+Investigate enough technical context to ground recommendations, but do not return code-level implementation instructions by default.
+The plan is returned as structured text. A requested plan file stays local and untracked.
 
-Debugger does not fix code or design the implementation plan.
-If reproduction requires changes, it reports that need rather than making the changes.
-It separates confirmed causes from hypotheses.
+Separate diagnosis from fix planning. If reproduction requires changes, report what is needed rather than making unrelated changes.
+Separate confirmed causes from hypotheses.
 
-Implementer can choose routine implementation details. It stops affected work when scope or a product decision must change.
-It reports delivered outcomes and whether observable acceptance criteria were met.
+Implementation can choose routine implementation details. Stop affected work when scope or a product decision must change.
+Report delivered outcomes and whether observable acceptance criteria were met.
 
-Reviewer runs only before opening a pull request or when the user requests review.
-Both Reviewer and [`/code-review`](../prompts/code-review.md) use these thresholds:
+Run [`/code-review`](../prompts/code-review.md) only before opening a pull request or when the user requests review.
+It uses these thresholds:
 
 - **P0:** release-blocking, catastrophic impact, such as widespread outage, irreversible data loss, or a critical security breach.
 - **P1:** urgent failure of a core user flow, or substantial security, data integrity, or availability risk.
@@ -107,58 +75,7 @@ Severity requires evidence and realistic triggering conditions. Do not inflate s
 Exclude P2/P3 findings, style preferences, refactoring suggestions, and nitpicks.
 Report verification gaps separately; no P0/P1 findings does not mean the change is risk-free.
 
-## Multi-agent runtime settings
-
-[Global subagent settings](../subagents.json) define:
-
-| Setting | Value | Decision |
-| --- | --- | --- |
-| `maxConcurrent` | `4` | Limit simultaneous ordinary background work; queue excess runs |
-| `defaultMaxTurns` | `20` | Bound prolonged runs without imposing a very small initial allowance |
-| `graceTurns` | `3` | Allow a short wrap-up period after the turn limit |
-| `showModel` | `true` | Make effective model and thinking assignments visible |
-| `worktreeIsolation` | `true` | Permit isolated implementation work |
-| `workflowsEnabled` | `false` | Keep initial orchestration simple |
-| `disableDefaultAgents` | `true` | Avoid overlap with built-in Explore, Plan, and general-purpose |
-| `fallbackSubagent` | `none` | Reject unknown types instead of silently substituting another role |
-| `defaultJoinMode` | `smart` | Send one combined notice when a turn starts several agents |
-| `scopeModels` | `true` | Check subagent models against the enabled-model list |
-| `reportUsage` | `true` | Count subagent tokens and cost in session totals |
-| `showCost` | `true` | Display estimated cost beside subagent token counts |
-| `maxSubagentDepth` | `1` | Disable nested delegation project-wide |
-
-A turn is a model response, not necessarily one tool call. The limit is not a token, time, or spending cap.
-At the limit, the extension requests a final answer and permits the grace turns before aborting.
-The 20-turn value is a default; a caller or agent definition can override it.
-
-The four-agent limit is not universal. Foreground runs have a separate limit, left at the extension's unlimited default.
-Workflow agents use a separate pool, but workflows are disabled here.
-
-Background execution, session persistence, and output transcripts remain at extension defaults.
-Remembered agent sessions and transcripts are local runtime data, not repository artifacts.
-Model-scope enforcement is enabled (`scopeModels: true`). A caller-supplied model outside `enabledModels` fails.
-A frontmatter pin outside the list warns but still runs.
-
-Use `/agents` to inspect agent types, running work, and actual resolved models.
-Its Settings menu writes project overrides; edit this repository's `subagents.json` for shared global decisions.
-Restart Pi after changes that affect registered tools or advertised agent types.
-
-## Isolation, preservation, and approvals
-
-Implementer's frontmatter pins `isolation: worktree`.
-The other four agents pin `isolation: off` so they inspect the current checkout, including uncommitted changes.
-
-A worktree starts from committed repository state. It does not include staged or uncommitted changes from the main checkout.
-Do not assume an implementation agent can see unfinished parent edits.
-
-When an implementation run finishes, pi-subagents removes its temporary worktree.
-If the run changed files, the extension preserves them in a local branch with an automatic commit.
-This automatic local preservation commit is explicitly authorized. It is not permission to push, merge, or create other commits.
-Review the returned branch and verification evidence before integrating changes. Integration still requires approval.
-
-Worktrees separate working copies; they are not security sandboxes.
-An agent with shell access can leave its assigned directory, so the prompt also prohibits changes to the original checkout.
-A preservation branch enables recovery but does not prove correctness.
+## Approvals
 
 [Permission configuration](../extensions/pi-permission-system/config.json) complements the instructions:
 
@@ -178,10 +95,10 @@ Its [global configuration](../pi-fff.json) selects `tools-only`:
 - `fffind` discovers file paths.
 - `ffgrep` searches file contents.
 - Editor autocomplete remains available.
-- Roles that enable native Pi search tools can call them directly or through codemode.
+- Native Pi search tools can be called directly or through codemode.
 
 This avoids replacing autocomplete used for agent mentions and requires no separate MCP server.
-Explorer, Debugger, Planner, and Reviewer explicitly prefer FFF. The main agent inherits the same preference from `AGENTS.md`.
+Prefer FFF as defined in `AGENTS.md`.
 
 Keep `rg` and `fd` for exact checks, unsupported searches, and fallback when FFF is unavailable.
 Read source context to verify fuzzy matches. Ranked, paginated, or incomplete results do not prove absence.
@@ -198,11 +115,6 @@ Use `/fff-mode` and `/fff-health` to inspect effective behavior after startup.
 
 [settings.json](../settings.json) selects `meta/muse-spark-1.3-contributor` with `xhigh` thinking as the main-session default.
 Its enabled-model list also includes Sol at `xhigh` and Astra at `low`.
-These main-session choices do not replace the explicit thinking levels in agent frontmatter.
-
-Agent frontmatter model and thinking values take precedence over caller overrides in pi-subagents.
-If a pinned model cannot resolve, the extension can inherit the parent model rather than fail.
-Inspect the effective model on each newly configured computer; do not assume a pin guarantees availability.
 
 [models.json](../models.json) sets local metadata overrides for Muse, Sol, and Astra:
 250,000 context tokens and 64,000 maximum output tokens. Muse also has a 300-second short prompt-cache value.
@@ -213,14 +125,13 @@ Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.
 
 [settings.json](../settings.json) is the authoritative package list.
 Published packages use unversioned npm sources and update to latest releases on an explicit update.
-The permission and subagent packages retain their local development sources.
+The permission package retains its local development source.
 Missing local sources are errors, not reasons to substitute published packages.
 Pi generates npm manifests and lockfiles locally; these installation records are not tracked.
 Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared settings commits.
 
 | Package or local extension | Purpose |
 | --- | --- |
-| `@tintinweb/pi-subagents` | Role-based delegation, agent management, and worktree preservation |
 | `@ff-labs/pi-fff` | Indexed local code search |
 | `donsetch` | Binary for native MCP web search, fetch, crawl, and screenshots; package extension disabled |
 | `@gotgenes/pi-permission-system` | Local permission policy and approval prompts |
@@ -235,7 +146,6 @@ Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared
 `defaultTools: ["+codemode"]` adds codemode to Pi's default `read`, `bash`, `edit`, and `write` tools.
 `codemode.mode: "on"` keeps direct tool declarations visible.
 Direct calls handle simple actions; codemode can batch calls and filter large results.
-The five role definitions also enable codemode.
 The inline declaration budget stays at Pi's default 3,000 estimated tokens.
 Batching and output filtering can reduce conversation overhead; savings are not guaranteed.
 
@@ -244,7 +154,7 @@ The launcher resolves its binary from `PI_CODING_AGENT_DIR`, or `~/.pi/agent` wh
 The server uses `codemode` exposure and a 620-second request timeout for long crawls.
 The package resource filters disable DonSeTch's custom extension to avoid duplicate connections and tools.
 Native tools use names such as `mcp__donsetch__web_fetch`; codemode can discover their declarations.
-FFF and subagent orchestration remain native extensions, not MCP connections.
+FFF remains a native extension, not an MCP connection.
 The MCP server manager is available through `/mcp`.
 Claude DirectSDK rejects grammar-based tools. A request-local compatibility extension replaces native codemode's OpenAI-only grammar with best-effort JSON schema input for that provider.
 The extension does not change authentication, billing, stored history, or strict requirements on other tools.
@@ -255,7 +165,7 @@ The UI uses fullscreen mode. Model selection, authentication, and session manage
 `/btw` uses low reasoning and does not perform new tool work or continue the main task.
 
 [Prompts](../prompts/) provide reusable user commands; [skills](../skills/) provide task-specific instructions.
-They do not replace agent role boundaries or approval requirements.
+They do not replace approval requirements.
 
 ## Installation and synchronization
 
@@ -305,7 +215,7 @@ Completed checks:
 
 The updater checks use temporary repositories and simulated package commands.
 The compatibility checks do not send model requests.
-These results do not prove model-driven delegation, subscription billing, UI rendering, or token savings.
+These results do not prove subscription billing, UI rendering, or token savings.
 
-Installation on other supported platforms and a live model-driven delegation flow remain unverified.
+Installation on other supported platforms remains unverified.
 Ask before adding tests or running full or slow suites, as required by `AGENTS.md`.

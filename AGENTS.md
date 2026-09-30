@@ -5,7 +5,7 @@ conventions > this file > skills.
 
 ## Working rules
 
-- No commits, pushes, releases, or other remote writes without explicit user approval, each time. Exception: pi-subagents may automatically commit Implementer changes to a local preservation branch when its isolated worktree finishes. This exception does not authorize other commits, merges, pushes, or releases.
+- No commits, pushes, releases, or other remote writes without explicit user approval, each time.
 - Keep planning artifacts, drafts, TODO files, temporary outputs, local configs, caches, sessions, auths, credentials, and backups out of Git unless the user explicitly requests them as durable project files.
 - Never reference ticket IDs, plan files, or session artifacts in code (identifiers, docstrings, comments) or in commits.
 - Prefer `ffgrep` for code content search and `fffind` for file discovery when available. Use `rg` and `fd` via `bash` for exact checks, unsupported searches, or when FFF is unavailable. Verify fuzzy matches in the source; ranked or partial results do not prove absence.
@@ -34,7 +34,6 @@ conventions > this file > skills.
 - Make routine technical choices independently within the agreed scope and repository conventions. Existing approval requirements still apply.
 - Stop and ask before expanding scope or changing a product decision. Explain choices that materially affect user behavior, risk, cost, or delivery in plain words, with a recommendation.
 - Include technical details only when they explain a decision, risk, or verification result, or when the user requests them.
-- Invoke Reviewer only before opening a pull request or when the user requests review. Do not require review after every implementation or solely before merging. Report only substantiated P0/P1 issues, with user impact first. Exclude lower-priority findings and nitpicks; state verification gaps separately.
 - Small chat: answer directly, no preamble.
 - Substantial work (3+ steps, edits, long checks): state goal, stages, and any decision needed, then report per stage.
 - Report blockers, failures, verification gaps immediately. Do not hide them.
