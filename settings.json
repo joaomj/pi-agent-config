@@ -1,5 +1,5 @@
 {
-  "theme": "system",
+  "theme": "dark",
   "quietStartup": false,
   "enableInstallTelemetry": true,
   "enableSkillCommands": true,
@@ -41,7 +41,7 @@
     "npm:pi-open-tui",
     "npm:pi-claude-directsdk"
   ],
-  "tuiMode": "fullscreen",
+  "tuiMode": "regular",
   "fullscreenScrollbar": "always",
   "fullscreenExitOutput": "resume-hint",
   "fullscreenCopyOnSelect": true,
@@ -62,5 +62,8 @@
   "npmCommand": [
     "npm",
     "--ignore-scripts"
-  ]
+  ],
+  "lastChangelogVersion": "0.99.1",
+  "doubleEscapeAction": "none",
+  "defaultProjectTrust": "always"
 }

@@ -16,11 +16,11 @@
     "gitBranch": true,
     "gitStatus": false,
     "gitCommit": false,
-    "runtime": true,
+    "runtime": false,
     "context": true,
     "tokens": true,
     "cost": true,
-    "extensionStatuses": true,
+    "extensionStatuses": false,
     "capitalizeProviderName": true
   },
   "telemetry": {
