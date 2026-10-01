@@ -138,12 +138,14 @@ Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared
 | Package or local extension | Purpose |
 | --- | --- |
 | `@ff-labs/pi-fff` | Indexed local code search |
-| `donsetch` | Binary for native MCP web search, fetch, crawl, and screenshots; package extension disabled; Exa and Parallel fallback keys live in its local store |
 | `@gotgenes/pi-permission-system` | Local permission policy and approval prompts |
 | `@kiranpg/pi-sentry` | Secret redaction for inputs, tool output, and session messages |
 | `pi-usage-meters` | Usage display integration |
 | `pi-open-tui` | Terminal UI customization through [open-tui.json](../open-tui.json) |
 | `firecrawl` via [mcp.json](../mcp.json) | Web search, scrape, crawl, and extract through account sign-in; no key in configuration |
+| `parallel` via [mcp.json](../mcp.json) | Web search and URL fetch; keychain key sent as a Bearer token |
+| `jina` via [mcp.json](../mcp.json) | Reader, web search, screenshots, and grounding APIs; keychain key sent as a Bearer token |
+| `exa` via [mcp.json](../mcp.json) | Web search, fetch, and research agent; keychain key sent as a Bearer token |
 | `visual-explainer` | HTML visualization skill, prompt commands, and native renderer for diagrams, reviews, tables, and slide decks |
 | [btw.ts](../extensions/btw.ts) | `/btw`: a tool-free side question using a conversation snapshot and the selected model |
 | [exit.ts](../extensions/exit.ts) | `/exit`: alias that requests Pi shutdown |
@@ -157,15 +159,22 @@ Direct calls handle simple actions; codemode can batch calls and filter large re
 The inline declaration budget stays at Pi's default 3,000 estimated tokens.
 Batching and output filtering can reduce conversation overhead; savings are not guaranteed.
 
-[mcp.json](../mcp.json) connects DonSeTch through Pi's built-in MCP extension.
-The launcher resolves its binary from `PI_CODING_AGENT_DIR`, or `~/.pi/agent` when unset.
-The server uses `codemode` exposure and a 620-second request timeout for long crawls.
-The package resource filters disable DonSeTch's custom extension to avoid duplicate connections and tools.
-Native tools use names such as `mcp__donsetch__web_fetch`; codemode can discover their declarations.
+[mcp.json](../mcp.json) connects four web MCP servers through Pi's built-in MCP extension: Exa, Parallel, Jina, and Firecrawl.
+All use `codemode` exposure.
+Native tools use names such as `mcp__exa__web_search_exa`; codemode can discover their declarations.
 FFF remains a native extension, not an MCP connection.
 The MCP server manager is available through `/mcp`.
 [mcp.json](../mcp.json) also connects Firecrawl through streamable HTTP at `https://mcp.firecrawl.dev/v2/mcp-oauth`.
 The entry stores no key. Sign in with `pi mcp login firecrawl`; Pi keeps the tokens in ignored `mcp-auth.json`.
+The server uses `codemode` exposure and a 300-second request timeout.
+[mcp.json](../mcp.json) also connects Parallel through streamable HTTP at `https://search.parallel.ai/mcp`.
+The entry stores no key. Pi resolves the Bearer token from the keychain at server start.
+The server uses `codemode` exposure and a 300-second request timeout.
+[mcp.json](../mcp.json) also connects Jina through streamable HTTP at `https://mcp.jina.ai/v1`.
+The entry stores no key. Pi resolves the Bearer token from the keychain at server start.
+The server uses `codemode` exposure and a 300-second request timeout.
+[mcp.json](../mcp.json) also connects Exa through streamable HTTP at `https://mcp.exa.ai/mcp`.
+The entry stores no key. Pi resolves the Bearer token from the keychain at server start.
 The server uses `codemode` exposure and a 300-second request timeout.
 MCP OAuth credentials and rotated logs are ignored by Git.
 
@@ -197,7 +206,7 @@ They do not replace approval requirements.
 6. Check that configured local package sources exist.
 7. Bootstrap the latest Pi under `~/.local` if needed, or use Pi's native self-update.
 8. Back up managed npm files and use Pi's native package update command.
-9. Check the selected FFF native package, its library import, and DonSeTch's binary.
+9. Check the selected FFF native package and its library import.
 10. Verify extension loading and CLI startup without a model request.
 11. Restore managed npm files if package installation or verification fails.
 
@@ -205,7 +214,6 @@ The installer removes inherited `PI_OFFLINE` from online update commands.
 Pi's version lookup treats any nonempty value, including `0`, as offline.
 The installer disables npm lifecycle scripts through command settings and child-process environment.
 Package updates replace generated npm manifests and installed packages with a fresh installation from `settings.json`.
-DonSeTch's binary check can download its release and verifies the release checksum.
 Pi's self-update is separate from package recovery and is not rolled back.
 Updates run only when explicitly requested; normal launches do not update installed packages.
 Machines updated on different days can use different latest releases.
@@ -223,8 +231,8 @@ Do not change global npm settings to install this configuration.
 Completed checks:
 
 - The current setup updated successfully on macOS arm64.
-- FFF's native package and library import, DonSeTch's binary, extension loading, and CLI startup passed.
-- DonSeTch connected through native MCP with four tools and no duplicate bridge.
+- FFF's native package and library import, extension loading, and CLI startup passed.
+- Exa, Parallel, Jina, and Firecrawl connected through native MCP with keychain and OAuth credentials.
 - An offline SDK check confirmed native default tools and codemode in the model-facing declarations.
 - Nested codemode/read execution passed with the permission and secret-redaction extensions loaded.
 - Eight focused updater checks passed, including private-file preservation, failure recovery, and inherited offline-variable handling.

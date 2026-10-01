@@ -29,14 +29,13 @@ Generated npm manifests, lockfiles, and installed packages stay local and outsid
 The installer supports Linux and macOS on x64 or arm64.
 On Linux, it identifies glibc or musl for the FFF native package.
 It disables npm lifecycle scripts and bypasses npm's release-age delay for this command only.
-It explicitly checks DonSeTch's binary, which downloads its release if missing.
 Global npm settings remain unchanged.
 
 The installer backs up managed npm files before a package update.
 It then replaces generated npm manifests and packages with a fresh installation from `settings.json`.
 If installation or verification fails, it restores those files and reports the error.
 Pi's own update is separate and is not rolled back.
-Verification checks FFF, DonSeTch, extension loading, and CLI startup without a model request.
+Verification checks FFF, extension loading, and CLI startup without a model request.
 
 ## Start
 
@@ -56,20 +55,30 @@ Use direct tools for simple actions and codemode to batch calls or filter large 
 Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
 Codemode can batch calls and filter results, but does not guarantee lower token use.
 
-[mcp.json](mcp.json) connects DonSeTch and Firecrawl through Pi's native Model Context Protocol (MCP) support.
-The DonSeTch package supplies the binary; its Pi extension is disabled to prevent duplicate connections.
+[mcp.json](mcp.json) connects four web MCP servers through Pi's native Model Context Protocol (MCP) support.
 Use `/mcp` to inspect or reconnect a server. Server tools are available through codemode.
 FFF remains a Pi extension; it is not an external MCP server.
 
-Keyless web search works with limits. When search results degrade, add a fallback key to DonSeTch:
+| Server | Purpose |
+| --- | --- |
+| Exa | Web search, page fetch, research agent |
+| Parallel | Web search, URL fetch |
+| Jina | Page reading, web search, screenshots, paper search |
+| Firecrawl | Search, scrape, crawl, extract, research tools |
+
+API keys live only in the macOS keychain, never in configuration files.
+Exa, Parallel, and Jina send their keychain keys as Bearer tokens.
+Store each key once (macOS prompts for the value, so it never enters shell history):
 
 ```bash
-~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>
-~/.pi/agent/npm/node_modules/.bin/donsetch keys add parallel <key>
+security add-generic-password -s pi-agent-exa -a exa -w
+security add-generic-password -s pi-agent-parallel -a parallel -w
+security add-generic-password -s pi-agent-jina -a jina -w
 ```
 
 Firecrawl uses browser sign-in instead of a stored key. Run `pi mcp login firecrawl` to connect the account.
-Jina has no MCP server. Export `JINA_API_KEY` in the shell and call the Reader or Search API directly.
+Jina connects through its remote MCP server with the keychain key as a Bearer token.
+Restart Pi after storing keys so every server picks them up.
 
 ### Visual explanations
 

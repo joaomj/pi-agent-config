@@ -1,20 +1,35 @@
 {
   "mcpServers": {
-    "donsetch": {
-      "command": "sh",
-      "args": [
-        "-c",
-        "exec \"${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}/npm/node_modules/.bin/donsetch\" mcp --supervised"
-      ],
-      "timeout": 620,
-      "exposure": "codemode"
-    },
     "firecrawl": {
       "type": "http",
       "url": "https://mcp.firecrawl.dev/v2/mcp-oauth",
       "timeout": 300,
       "exposure": "codemode",
       "description": "Firecrawl web search, scrape, crawl, and extract through account sign-in."
+    },
+    "parallel": {
+      "type": "http",
+      "url": "https://search.parallel.ai/mcp",
+      "headers": { "Authorization": "!echo Bearer $(security find-generic-password -s pi-agent-parallel -w)" },
+      "timeout": 300,
+      "exposure": "codemode",
+      "description": "Parallel web search and URL fetch, authenticated from the system keychain."
+    },
+    "jina": {
+      "type": "http",
+      "url": "https://mcp.jina.ai/v1",
+      "headers": { "Authorization": "!echo Bearer $(security find-generic-password -s pi-agent-jina -a jina -w)" },
+      "timeout": 300,
+      "exposure": "codemode",
+      "description": "Jina Reader, web search, screenshots, and grounding APIs, authenticated from the system keychain."
+    },
+    "exa": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp",
+      "headers": { "Authorization": "!echo Bearer $(security find-generic-password -s pi-agent-exa -a exa -w)" },
+      "timeout": 300,
+      "exposure": "codemode",
+      "description": "Exa web search, fetch, and research agent, authenticated from the system keychain."
     }
   }
 }

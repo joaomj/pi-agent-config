@@ -34,13 +34,6 @@
     "npm:@ff-labs/pi-fff",
     "/Users/joao/projects/pi-packages/packages/pi-permission-system",
     "npm:@kiranpg/pi-sentry",
-    {
-      "source": "npm:donsetch",
-      "extensions": [],
-      "skills": [],
-      "prompts": [],
-      "themes": []
-    },
     "npm:pi-open-tui",
     "npm:proper-compact",
     "npm:visual-explainer",
