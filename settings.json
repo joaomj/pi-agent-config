@@ -9,8 +9,10 @@
   "cacheWarming": "streaming",
   "modelThinkingLevels": {
     "meta/muse-spark-1.3-contributor": "xhigh",
-    "openai/gpt-6.1-sol": "xhigh",
-    "openai-codex/gpt-6-astra": "low"
+    "openai/gpt-6-astra": "low",
+    "openai/gpt-6-luna": "xhigh",
+    "openai/gpt-6.1-sol": "high",
+    "openrouter/deepseek/deepseek-v4.1-flash": "low"
   },
   "transport": "websocket-cached",
   "defaultTools": [
@@ -23,9 +25,10 @@
     "reserveTokens": 64000
   },
   "enabledModels": [
-    "meta/muse-spark-1.3-contributor:xhigh",
-    "openai/gpt-6.1-sol:xhigh",
-    "openai-codex/gpt-6-astra:low"
+    "openai/gpt-6-luna",
+    "openai/gpt-6-astra",
+    "openai/gpt-6.1-sol",
+    "meta/muse-spark-1.3-contributor"
   ],
   "packages": [
     "npm:@ff-labs/pi-fff",
@@ -39,7 +42,9 @@
       "themes": []
     },
     "npm:pi-open-tui",
-    "npm:pi-claude-directsdk"
+    "npm:pi-claude-directsdk",
+    "npm:proper-compact",
+    "npm:visual-explainer"
   ],
   "tuiMode": "regular",
   "fullscreenScrollbar": "always",
@@ -63,7 +68,7 @@
     "npm",
     "--ignore-scripts"
   ],
-  "lastChangelogVersion": "0.99.1",
+  "lastChangelogVersion": "0.99.2",
   "doubleEscapeAction": "none",
   "defaultProjectTrust": "always"
 }

@@ -75,6 +75,10 @@ Severity requires evidence and realistic triggering conditions. Do not inflate s
 Exclude P2/P3 findings, style preferences, refactoring suggestions, and nitpicks.
 Report verification gaps separately; no P0/P1 findings does not mean the change is risk-free.
 
+### Testing decisions
+
+Test work follows the [`test-audit`](../skills/engineering/test-audit/SKILL.md) skill: gate each new test at write time and run audits as focused sweeps. Prefer a few end-to-end black-box tests per `AGENTS.md`. Run the narrowest check that proves the change and ask before full or slow suites. In this repository, sync checks run with `node --test tests/sync.test.mjs`.
+
 ## Approvals
 
 [Permission configuration](../extensions/pi-permission-system/config.json) complements the instructions:
@@ -114,9 +118,9 @@ Use `/fff-mode` and `/fff-health` to inspect effective behavior after startup.
 ## Main-session configuration and extensions
 
 [settings.json](../settings.json) selects `meta/muse-spark-1.3-contributor` with `xhigh` thinking as the main-session default.
-Its enabled-model list also includes Sol at `xhigh` and Astra at `low`.
+Its enabled-model list also includes Sol at `high`, Luna at `xhigh`, and Astra at `low`.
 
-[models.json](../models.json) sets local metadata overrides for Muse, Sol, and Astra:
+[models.json](../models.json) sets local metadata overrides for Muse, Sol, Luna, and Astra:
 250,000 context tokens and 64,000 maximum output tokens. Muse also has a 300-second short prompt-cache value.
 These are client-side declarations, not proof that a provider accepts every requested limit.
 Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.
@@ -124,7 +128,8 @@ Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.
 ### Installed capabilities
 
 [settings.json](../settings.json) is the authoritative package list.
-Published packages use unversioned npm sources and update to latest releases on an explicit update.
+Published npm packages use unversioned sources and update to latest releases on an explicit update.
+The official [`visual-explainer` Pi package](https://pi.dev/packages/visual-explainer) uses the `npm:visual-explainer` source in [settings.json](../settings.json).
 The permission package retains its local development source.
 Missing local sources are errors, not reasons to substitute published packages.
 Pi generates npm manifests and lockfiles locally; these installation records are not tracked.
@@ -139,6 +144,7 @@ Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared
 | `pi-usage-meters` | Usage display integration |
 | `pi-open-tui` | Terminal UI customization through [open-tui.json](../open-tui.json) |
 | `pi-claude-directsdk` | Claude Code subscription transport; retained because native Anthropic sign-in warns of per-token extra usage |
+| `visual-explainer` | HTML visualization skill, prompt commands, and native renderer for diagrams, reviews, tables, and slide decks |
 | [claude-codemode.ts](../extensions/claude-codemode.ts) | Request-local JSON fallback for native codemode on Claude DirectSDK only |
 | [btw.ts](../extensions/btw.ts) | `/btw`: a tool-free side question using a conversation snapshot and the selected model |
 | [exit.ts](../extensions/exit.ts) | `/exit`: alias that requests Pi shutdown |
@@ -160,6 +166,11 @@ Claude DirectSDK rejects grammar-based tools. A request-local compatibility exte
 The extension does not change authentication, billing, stored history, or strict requirements on other tools.
 Other providers keep native codemode's original declaration.
 MCP OAuth credentials and rotated logs are ignored by Git.
+
+The `visual_explainer` render actions write HTML pages to `~/.agent/diagrams/` and open them in the browser by default.
+PPTX export is optional and best-effort. On this instance, an npm override resolves `pptxgenjs` to `4.0.0`.
+The audit still reports two high-severity denial-of-service advisories in its transitive `image-size@1.2.1` dependency (`GHSA-5p2g-fcmc-qvqq` and `GHSA-w3rx-r6r6-pgpr`).
+Do not use PPTX export with untrusted images. The override is in generated, ignored npm files and can be replaced by package updates; check the advisories again after updates.
 
 The UI uses fullscreen mode. Model selection, authentication, and session management remain Pi responsibilities.
 `/btw` uses low reasoning and does not perform new tool work or continue the main task.
