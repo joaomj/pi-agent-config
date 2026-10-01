@@ -25,6 +25,7 @@ conventions > this file > skills.
 
 ## Tests
 
+- Load the `test-audit` skill whenever writing, changing, reviewing, or sweeping tests. Apply its authoring gate before adding a test and its audit workflow for sweeps. Skill guidance never waives approval requirements.
 - Run the narrowest check that proves the change. Ask before full or slow suites, and report what stayed unverified.
 - Ask before writing tests, justifying each in plain words. Prefer a few end-to-end black-box or tracer-bullet tests that act like a real user. Avoid unit tests as much as possible.
 

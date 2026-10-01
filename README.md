@@ -69,6 +69,12 @@ FFF remains a Pi extension; it is not an external MCP server.
 Web search, fetch, crawl, and screenshots need no account or API key.
 To add an Exa key, run `~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>`.
 
+### Visual explanations
+
+The [`visual-explainer`](https://github.com/nicobailon/visual-explainer) package adds a skill, prompt commands such as `/diff-review`, `/plan-review`, `/generate-web-diagram`, and `/generate-slides`, plus the `visual_explainer` tool. Use them for diagrams, visual reviews, slide decks, and other visual explanations.
+
+The tool's render actions write HTML pages to `~/.agent/diagrams/` and open them in the browser by default. PPTX export is optional and best-effort. See [technical context](docs/tech-context.md#installed-capabilities) for its current dependency note.
+
 ## Update
 
 To update software without replacing your configuration, run:
@@ -121,7 +127,7 @@ They do not contact model providers.
 - [mcp.json](mcp.json): native MCP connections, without embedded credentials.
 - [AGENTS.md](AGENTS.md): agent instructions.
 - [Permission rules](extensions/pi-permission-system/config.json): local access policy.
-- [skills/](skills/) and [prompts/](prompts/): reusable workflows.
+- [skills/](skills/) and [prompts/](prompts/): reusable workflows, including the `test-audit` authoring gate and audit workflow.
 
 Keep authentication, sessions, logs, and generated installation records out of Git.
 Do not commit the machine-local `deviceId` or `lastChangelogVersion` from Pi settings.
