@@ -178,6 +178,8 @@ The UI uses fullscreen mode. Model selection, authentication, and session manage
 [Prompts](../prompts/) provide reusable user commands; [skills](../skills/) provide task-specific instructions.
 They do not replace approval requirements.
 
+[`skill-doctor`](../skills/tooling/skill-doctor/SKILL.md) grades recent Pi conversations for efficiency, code quality, procedure compliance, and verbosity, then drafts skill edits and a local HTML report. Run it with `/skill:skill-doctor`. It defaults to `--harness pi` with `--pi-home ~/.pi/agent`, discovers Pi skills recursively including nested category directories, and keeps transcripts on this machine. The optional diff-viewer bundle is not vendored; diffs render as plain text.
+
 ## Installation and synchronization
 
 [README.md](../README.md) contains the user-facing installation and update commands.

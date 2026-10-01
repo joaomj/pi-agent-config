@@ -127,7 +127,7 @@ They do not contact model providers.
 - [mcp.json](mcp.json): native MCP connections, without embedded credentials.
 - [AGENTS.md](AGENTS.md): agent instructions.
 - [Permission rules](extensions/pi-permission-system/config.json): local access policy.
-- [skills/](skills/) and [prompts/](prompts/): reusable workflows, including the `test-audit` authoring gate and audit workflow.
+- [skills/](skills/) and [prompts/](prompts/): reusable workflows, including the `test-audit` authoring gate and audit workflow, and the `skill-doctor` conversation grader.
 
 Keep authentication, sessions, logs, and generated installation records out of Git.
 Do not commit the machine-local `deviceId` or `lastChangelogVersion` from Pi settings.
