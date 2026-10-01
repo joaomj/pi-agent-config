@@ -162,12 +162,6 @@ if (command === 'npm') {
             const piFffDir = path.join(npmDir, 'node_modules/@ff-labs/pi-fff');
             fs.mkdirSync(piFffDir, { recursive: true });
             fs.writeFileSync(path.join(piFffDir, 'package.json'), JSON.stringify({ name: '@ff-labs/pi-fff', version }));
-          } else if (name === 'donsetch') {
-            const binDir = path.join(npmDir, 'node_modules/donsetch/bin');
-            fs.mkdirSync(binDir, { recursive: true });
-            fs.writeFileSync(path.join(npmDir, 'node_modules/donsetch/package.json'), JSON.stringify({ name: 'donsetch', version }));
-            fs.writeFileSync(path.join(binDir, 'donsetch.js'), '#!/usr/bin/env node\\nconsole.log("9.9.9");\\n');
-            try { fs.chmodSync(path.join(binDir, 'donsetch.js'), 0o755); } catch {}
           } else {
             const d = path.join(npmDir, 'node_modules', name);
             fs.mkdirSync(d, { recursive: true });
@@ -372,10 +366,10 @@ test("pi offline startup failure propagates and restores previous packages", asy
   assert.ok(calls.some((call) => call.command === "pi" && call.args.join(" ") === "--offline --no-session --help"));
 });
 
-test("verifies FFF native package and donsetch binary when configured", async (t) => {
+test("verifies FFF native package when configured", async (t) => {
   const f = await fixture(t);
   const settings = {
-    packages: [{ source: "npm:@ff-labs/pi-fff@0.11.0" }, { source: "npm:donsetch", extensions: [], skills: [], prompts: [] }],
+    packages: [{ source: "npm:@ff-labs/pi-fff@0.11.0" }],
     enabledModels: ["fixture/*"],
   };
   await put(f.seed, "settings.json", json(settings));
@@ -387,7 +381,5 @@ test("verifies FFF native package and donsetch binary when configured", async (t
   const result = f.run();
   assert.equal(result.status, 0, result.output);
   assert.match(result.output, /Verifying FFF native package/);
-  assert.match(result.output, /donsetch/);
   assert.ok(existsSync(join(f.work, "npm/node_modules/@ff-labs/fff-node/dist/index.js")));
-  assert.ok(existsSync(join(f.work, "npm/node_modules/donsetch/bin/donsetch.js")));
 });

@@ -186,12 +186,6 @@ function install() {
       execFileSync(process.execPath, ["--input-type=module", "-e", `await import(${JSON.stringify(fffEntry)});`],
         { cwd: npmDir, env: childEnv, stdio: "inherit", timeout: 120_000 });
     }
-    if (npmNames.has("donsetch")) {
-      console.log("Verifying the platform-specific donsetch binary (downloads it if missing)...");
-      execFileSync(process.execPath, [join(npmDir, "node_modules/donsetch/bin/donsetch.js"), "--version"],
-        { cwd: npmDir, env: childEnv, stdio: "inherit", timeout: 120_000 });
-    }
-
     execFileSync(process.execPath, [script, "--verify", pi], { cwd: root, stdio: "inherit", timeout: 300_000 });
     rmSync(backupParent, { recursive: true, force: true });
     console.log("Setup complete: latest Pi, packages, and extension loading verified.");
