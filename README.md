@@ -47,11 +47,6 @@ pi
 ```
 
 Run `/login` to connect a model provider, then `/model` to select a model.
-Keep Claude DirectSDK for Claude Code subscription transport.
-Native Anthropic sign-in warns that third-party use is billed from extra usage, not the plan allowance.
-[Claude compatibility](extensions/claude-codemode.ts) sends native codemode through its JSON schema for Claude DirectSDK.
-Claude uses best-effort JSON input instead of the OpenAI-only raw-code grammar.
-Other providers and strict requirements on other tools remain unchanged.
 OpenTUI remains the interactive interface.
 
 ### Tools and web access
@@ -61,13 +56,20 @@ Use direct tools for simple actions and codemode to batch calls or filter large 
 Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
 Codemode can batch calls and filter results, but does not guarantee lower token use.
 
-[mcp.json](mcp.json) connects DonSeTch through Pi's native Model Context Protocol (MCP) support.
+[mcp.json](mcp.json) connects DonSeTch and Firecrawl through Pi's native Model Context Protocol (MCP) support.
 The DonSeTch package supplies the binary; its Pi extension is disabled to prevent duplicate connections.
-Use `/mcp` to inspect or reconnect the server. Its tools are available through codemode.
+Use `/mcp` to inspect or reconnect a server. Server tools are available through codemode.
 FFF remains a Pi extension; it is not an external MCP server.
 
-Web search, fetch, crawl, and screenshots need no account or API key.
-To add an Exa key, run `~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>`.
+Keyless web search works with limits. When search results degrade, add a fallback key to DonSeTch:
+
+```bash
+~/.pi/agent/npm/node_modules/.bin/donsetch keys add exa <key>
+~/.pi/agent/npm/node_modules/.bin/donsetch keys add parallel <key>
+```
+
+Firecrawl uses browser sign-in instead of a stored key. Run `pi mcp login firecrawl` to connect the account.
+Jina has no MCP server. Export `JINA_API_KEY` in the shell and call the Reader or Search API directly.
 
 ### Visual explanations
 

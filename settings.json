@@ -42,9 +42,10 @@
       "themes": []
     },
     "npm:pi-open-tui",
-    "npm:pi-claude-directsdk",
     "npm:proper-compact",
-    "npm:visual-explainer"
+    "npm:visual-explainer",
+    "npm:@joaomj/pi-attention-span@0.8.0",
+    "npm:pi-background-run"
   ],
   "tuiMode": "regular",
   "fullscreenScrollbar": "always",

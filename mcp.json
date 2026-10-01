@@ -8,6 +8,13 @@
       ],
       "timeout": 620,
       "exposure": "codemode"
+    },
+    "firecrawl": {
+      "type": "http",
+      "url": "https://mcp.firecrawl.dev/v2/mcp-oauth",
+      "timeout": 300,
+      "exposure": "codemode",
+      "description": "Firecrawl web search, scrape, crawl, and extract through account sign-in."
     }
   }
 }

@@ -138,16 +138,18 @@ Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared
 | Package or local extension | Purpose |
 | --- | --- |
 | `@ff-labs/pi-fff` | Indexed local code search |
-| `donsetch` | Binary for native MCP web search, fetch, crawl, and screenshots; package extension disabled |
+| `donsetch` | Binary for native MCP web search, fetch, crawl, and screenshots; package extension disabled; Exa and Parallel fallback keys live in its local store |
 | `@gotgenes/pi-permission-system` | Local permission policy and approval prompts |
 | `@kiranpg/pi-sentry` | Secret redaction for inputs, tool output, and session messages |
 | `pi-usage-meters` | Usage display integration |
 | `pi-open-tui` | Terminal UI customization through [open-tui.json](../open-tui.json) |
-| `pi-claude-directsdk` | Claude Code subscription transport; retained because native Anthropic sign-in warns of per-token extra usage |
+| `firecrawl` via [mcp.json](../mcp.json) | Web search, scrape, crawl, and extract through account sign-in; no key in configuration |
 | `visual-explainer` | HTML visualization skill, prompt commands, and native renderer for diagrams, reviews, tables, and slide decks |
-| [claude-codemode.ts](../extensions/claude-codemode.ts) | Request-local JSON fallback for native codemode on Claude DirectSDK only |
 | [btw.ts](../extensions/btw.ts) | `/btw`: a tool-free side question using a conversation snapshot and the selected model |
 | [exit.ts](../extensions/exit.ts) | `/exit`: alias that requests Pi shutdown |
+| `npm:@joaomj/pi-attention-span@0.8.0` | Attention output styles (Attention-kind, Spartan, Rundown) and `/tldr` |
+| `pi-background-run` | Detached shell jobs with log files and wake on completion; use for commands past 30 seconds or 100 lines |
+| [session-responsiveness.ts](../extensions/session-responsiveness.ts) | Caps foreground shell calls at 60 seconds and steers a progress report after 5 silent minutes |
 
 `defaultTools: ["+codemode"]` adds codemode to Pi's default `read`, `bash`, `edit`, and `write` tools.
 `codemode.mode: "on"` keeps direct tool declarations visible.
@@ -162,9 +164,9 @@ The package resource filters disable DonSeTch's custom extension to avoid duplic
 Native tools use names such as `mcp__donsetch__web_fetch`; codemode can discover their declarations.
 FFF remains a native extension, not an MCP connection.
 The MCP server manager is available through `/mcp`.
-Claude DirectSDK rejects grammar-based tools. A request-local compatibility extension replaces native codemode's OpenAI-only grammar with best-effort JSON schema input for that provider.
-The extension does not change authentication, billing, stored history, or strict requirements on other tools.
-Other providers keep native codemode's original declaration.
+[mcp.json](../mcp.json) also connects Firecrawl through streamable HTTP at `https://mcp.firecrawl.dev/v2/mcp-oauth`.
+The entry stores no key. Sign in with `pi mcp login firecrawl`; Pi keeps the tokens in ignored `mcp-auth.json`.
+The server uses `codemode` exposure and a 300-second request timeout.
 MCP OAuth credentials and rotated logs are ignored by Git.
 
 The `visual_explainer` render actions write HTML pages to `~/.agent/diagrams/` and open them in the browser by default.
@@ -174,6 +176,8 @@ Do not use PPTX export with untrusted images. The override is in generated, igno
 
 The UI uses fullscreen mode. Model selection, authentication, and session management remain Pi responsibilities.
 `/btw` uses low reasoning and does not perform new tool work or continue the main task.
+
+[session-responsiveness.ts](../extensions/session-responsiveness.ts) enforces the responsiveness rule in code. Foreground `bash` and `powershell` calls are capped at 60 seconds; longer work must use `bgrun`. After 5 minutes without an assistant report, it steers a short progress report.
 
 [Prompts](../prompts/) provide reusable user commands; [skills](../skills/) provide task-specific instructions.
 They do not replace approval requirements.
@@ -223,7 +227,6 @@ Completed checks:
 - DonSeTch connected through native MCP with four tools and no duplicate bridge.
 - An offline SDK check confirmed native default tools and codemode in the model-facing declarations.
 - Nested codemode/read execution passed with the permission and secret-redaction extensions loaded.
-- Claude DirectSDK accepted codemode's JSON input without changing other providers or strict requirements on other tools.
 - Eight focused updater checks passed, including private-file preservation, failure recovery, and inherited offline-variable handling.
 
 The updater checks use temporary repositories and simulated package commands.
