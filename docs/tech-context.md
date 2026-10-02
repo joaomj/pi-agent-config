@@ -117,11 +117,11 @@ Use `/fff-mode` and `/fff-health` to inspect effective behavior after startup.
 
 ## Main-session configuration and extensions
 
-[settings.json](../settings.json) selects `meta/muse-spark-1.3-contributor` with `xhigh` thinking as the main-session default.
-Its enabled-model list also includes Sol at `high`, Luna at `xhigh`, and Astra at `low`.
+[settings.json](../settings.json) selects `openai/gpt-6-luna` with `xhigh` thinking as the main-session default.
+Its enabled-model list contains Luna at `xhigh` and Sol at `high`.
 
-[models.json](../models.json) sets local metadata overrides for Muse, Sol, Luna, and Astra:
-250,000 context tokens and 64,000 maximum output tokens. Muse also has a 300-second short prompt-cache value.
+[models.json](../models.json) sets local metadata overrides for Luna and Sol:
+250,000 context tokens and 64,000 maximum output tokens.
 These are client-side declarations, not proof that a provider accepts every requested limit.
 Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.
 
