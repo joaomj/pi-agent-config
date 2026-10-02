@@ -9,7 +9,7 @@
   "promptFieldMaxWidth": 400,
   "reviewLogFieldMaxWidth": 1000,
   "piInfrastructureReadPaths": [],
-  "authorizerChain": ["github-rest-read"],
+  "authorizerChain": [],
   "permission": {
     "*": "allow",
 
