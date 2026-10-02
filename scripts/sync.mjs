@@ -108,6 +108,19 @@ function checkLocalSources(settings) {
 
 function install() {
   const npmDir = join(root, "npm");
+  const progressMarker = join(npmDir, ".install-in-progress");
+  if (existsSync(progressMarker)) {
+    let detail = "";
+    try {
+      detail = ` ${readFileSync(progressMarker, "utf8").trim()}`;
+    } catch {
+      detail = "";
+    }
+    throw new Error(
+      `A previous package install did not finish.${detail} ` +
+        `Inspect ${npmDir}, restore it from a backup if needed, then delete ${progressMarker} and retry.`,
+    );
+  }
   const settings = json(join(root, "settings.json"));
   checkLocalSources(settings);
   const npmNames = configuredNpmNames(settings);
@@ -162,6 +175,11 @@ function install() {
   if (hadPrior) {
     cpSync(npmDir, backup, { recursive: true, dereference: false, verbatimSymlinks: true });
   }
+  mkdirSync(npmDir, { recursive: true });
+  writeFileSync(
+    progressMarker,
+    JSON.stringify({ startedAt: new Date().toISOString(), pid: process.pid, backup }) + "\n",
+  );
 
   try {
     for (const generated of ["package.json", "package-lock.json", "node_modules"]) {
@@ -187,12 +205,14 @@ function install() {
         { cwd: npmDir, env: childEnv, stdio: "inherit", timeout: 120_000 });
     }
     execFileSync(process.execPath, [script, "--verify", pi], { cwd: root, stdio: "inherit", timeout: 300_000 });
+    rmSync(progressMarker, { force: true });
     rmSync(backupParent, { recursive: true, force: true });
     console.log("Setup complete: latest Pi, packages, and extension loading verified.");
   } catch (cause) {
     try {
       rmSync(npmDir, { recursive: true, force: true });
       if (hadPrior) cpSync(backup, npmDir, { recursive: true, dereference: false, verbatimSymlinks: true });
+      rmSync(progressMarker, { force: true });
     } catch (rollbackError) {
       throw new AggregateError([cause, rollbackError], `Package update and recovery failed. Previous packages remain at ${backup}.`);
     }
