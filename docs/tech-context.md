@@ -18,11 +18,11 @@ This repository is installed as the user's global Pi configuration, normally at 
 There is one global configuration per computer user. We do not maintain project-specific definitions as part of this setup.
 `PI_CODING_AGENT_DIR` can relocate the configuration directory.
 
-The repository is shared between the personal Asus Vivobook and Mac-mini. These machines are intended to use the same model/provider set.
-Other computers can have different provider access. The repository currently has no machine-specific model selection layer.
+The repository ships shared defaults plus install profiles (`workstation`, `server`, `minimal`). Each machine selects a profile at install time and keeps personal overrides in untracked `settings.local.json` and `mcp.local.json`. The installer generates `settings.json` and `mcp.json` from the shared base, the profile package list, and the local overrides. Do not edit the generated files directly.
+
+Workstations use the full package set. Servers use the `server` profile, which omits telemetry and visual packages. Other computers can have different provider access. The repository currently has no machine-specific model selection layer.
 Check provider authentication and model resolution when installing on another computer.
-The local package path must point to an existing development checkout on that computer.
-Do not replace those sources with npm packages merely because the paths differ.
+A developer checkout of the permission system can replace the published package through `--local-permissions`, `PI_PERMISSIONS_SRC`, or `settings.local.json`.
 
 Pi and the extension still support project-level overrides. This repository does not disable that capability; it simply does not rely on it.
 Run Pi from the project to work on that project's files while loading these global definitions.
@@ -117,8 +117,9 @@ Use `/fff-mode` and `/fff-health` to inspect effective behavior after startup.
 
 ## Main-session configuration and extensions
 
-[settings.json](../settings.json) selects `openai/gpt-6-luna` with `xhigh` thinking as the main-session default.
-Its enabled-model list contains Luna at `xhigh` and Sol at `high`.
+[settings.base.json](../settings.base.json) selects `openai/gpt-6-luna` with `xhigh` thinking as the main-session default.
+Its enabled-model list contains Luna at `xhigh` and Sol at `low`.
+A profile supplies the package list; `settings.local.json` supplies personal overrides. The installer writes the merged result to `settings.json`, which Pi reads.
 
 [models.json](../models.json) sets local metadata overrides for Luna and Sol:
 250,000 context tokens and 64,000 maximum output tokens.
@@ -127,10 +128,9 @@ Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.
 
 ### Installed capabilities
 
-[settings.json](../settings.json) is the authoritative package list.
-Published npm packages use unversioned sources and update to latest releases on an explicit update.
-The official [`visual-explainer` Pi package](https://pi.dev/packages/visual-explainer) uses the `npm:visual-explainer` source in [settings.json](../settings.json).
-The permission package retains its local development source.
+[settings.base.json](../settings.base.json) plus the selected profile is the authoritative package list.
+Unpinned published sources resolve to [versions.lock](../versions.lock) at install time unless `--latest` is passed.
+A local permission-system checkout can replace the published package (see the operating model).
 Missing local sources are errors, not reasons to substitute published packages.
 Pi generates npm manifests and lockfiles locally; these installation records are not tracked.
 Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared settings commits.
@@ -143,14 +143,16 @@ Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared
 | `pi-usage-meters` | Usage display integration |
 | `pi-open-tui` | Terminal UI customization through [open-tui.json](../open-tui.json) |
 | `firecrawl` via [mcp.json](../mcp.json) | Web search, scrape, crawl, and extract through account sign-in; no key in configuration |
-| `parallel` via [mcp.json](../mcp.json) | Web search and URL fetch; keychain key sent as a Bearer token |
-| `jina` via [mcp.json](../mcp.json) | Reader, web search, screenshots, and grounding APIs; keychain key sent as a Bearer token |
-| `exa` via [mcp.json](../mcp.json) | Web search, fetch, and research agent; keychain key sent as a Bearer token |
+| `parallel` via [mcp.base.json](../mcp.base.json) | Web search and URL fetch; key resolved from the environment, the macOS keychain, or Linux libsecret |
+| `jina` via [mcp.base.json](../mcp.base.json) | Reader, web search, screenshots, and grounding APIs; key resolved from the environment, the macOS keychain, or Linux libsecret |
+| `exa` via [mcp.base.json](../mcp.base.json) | Web search, fetch, and research agent; key resolved from the environment, the macOS keychain, or Linux libsecret |
 | `visual-explainer` | HTML visualization skill, prompt commands, and native renderer for diagrams, reviews, tables, and slide decks |
 | [btw.ts](../extensions/btw.ts) | `/btw`: a tool-free side question using a conversation snapshot and the selected model |
 | [exit.ts](../extensions/exit.ts) | `/exit`: alias that requests Pi shutdown |
 | `npm:@joaomj/pi-attention-span@0.8.0` | Attention output styles (Attention-kind, Spartan, Rundown) and `/tldr` |
 | `pi-background-run` | Detached shell jobs with log files and wake on completion; use for commands past 30 seconds or 100 lines |
+| `@spences10/pi-telemetry` | Token, cost, and timing telemetry (workstation profile only) |
+| `@specode/pi-subscription-usage` | Subscription usage display (workstation profile only) |
 | [session-responsiveness.ts](../extensions/session-responsiveness.ts) | Caps foreground shell calls at 60 seconds and steers a progress report after 5 silent minutes |
 
 `defaultTools: ["+codemode"]` adds codemode to Pi's default `read`, `bash`, `edit`, and `write` tools.
@@ -168,13 +170,13 @@ The MCP server manager is available through `/mcp`.
 The entry stores no key. Sign in with `pi mcp login firecrawl`; Pi keeps the tokens in ignored `mcp-auth.json`.
 The server uses `codemode` exposure and a 300-second request timeout.
 [mcp.json](../mcp.json) also connects Parallel through streamable HTTP at `https://search.parallel.ai/mcp`.
-The entry stores no key. Pi resolves the Bearer token from the keychain at server start.
+The entry stores no key. Pi resolves the Bearer token at server start through scripts/mcp-auth.sh (environment variable, macOS keychain, or Linux libsecret).
 The server uses `codemode` exposure and a 300-second request timeout.
 [mcp.json](../mcp.json) also connects Jina through streamable HTTP at `https://mcp.jina.ai/v1`.
-The entry stores no key. Pi resolves the Bearer token from the keychain at server start.
+The entry stores no key. Pi resolves the Bearer token at server start through scripts/mcp-auth.sh (environment variable, macOS keychain, or Linux libsecret).
 The server uses `codemode` exposure and a 300-second request timeout.
 [mcp.json](../mcp.json) also connects Exa through streamable HTTP at `https://mcp.exa.ai/mcp`.
-The entry stores no key. Pi resolves the Bearer token from the keychain at server start.
+The entry stores no key. Pi resolves the Bearer token at server start through scripts/mcp-auth.sh (environment variable, macOS keychain, or Linux libsecret).
 The server uses `codemode` exposure and a 300-second request timeout.
 MCP OAuth credentials and rotated logs are ignored by Git.
 
@@ -203,12 +205,13 @@ They do not replace approval requirements.
 3. Check runtime requirements, repository state, upstream configuration, and file collisions.
 4. Fetch upstream and back up tracked configuration, patches, and Git history under `~/.pi/backups/`.
 5. Replace tracked configuration with the upstream revision.
-6. Check that configured local package sources exist.
-7. Bootstrap the latest Pi under `~/.local` if needed, or use Pi's native self-update.
-8. Back up managed npm files and use Pi's native package update command.
-9. Check the selected FFF native package and its library import.
-10. Verify extension loading and CLI startup without a model request.
-11. Restore managed npm files if package installation or verification fails.
+6. Generate `settings.json` and `mcp.json` from the shared base, the selected profile, pinned versions, and local overrides.
+7. Check that configured local package sources exist.
+8. Bootstrap the latest Pi under `~/.local` if needed, or use Pi's native self-update.
+9. Back up managed npm files and use Pi's native package update command.
+10. Check the selected FFF native package and its library import.
+11. Verify extension loading and CLI startup without a model request.
+12. Restore managed npm files if package installation or verification fails.
 
 The installer removes inherited `PI_OFFLINE` from online update commands.
 Pi's version lookup treats any nonempty value, including `0`, as offline.
@@ -216,7 +219,7 @@ The installer disables npm lifecycle scripts through command settings and child-
 Package updates replace generated npm manifests and installed packages with a fresh installation from `settings.json`.
 Pi's self-update is separate from package recovery and is not rolled back.
 Updates run only when explicitly requested; normal launches do not update installed packages.
-Machines updated on different days can use different latest releases.
+Pinned installs reproduce the versions in `versions.lock`; `--latest` takes current releases instead.
 
 **Caution:** sync replaces tracked local changes and local commits with upstream after creating a backup.
 It is not a merge-based update. Untracked and ignored files remain unless incoming paths conflict; collisions stop sync.

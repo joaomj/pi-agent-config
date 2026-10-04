@@ -1,0 +1,4 @@
+{
+  "_comment": "Personal MCP servers merged over mcp.base.json. This file is never committed. Copy from mcp.local.json.example.",
+  "mcpServers": {}
+}

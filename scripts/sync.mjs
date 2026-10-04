@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { execFileSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { accessSync, constants, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { findPackageJSON } from "node:module";
@@ -12,6 +12,142 @@ const root = resolve(dirname(script), "..");
 const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
 const paths = (text) => text.split("\0").filter(Boolean);
 const json = (path) => JSON.parse(readFileSync(path, "utf8"));
+const MACHINE_LOCAL_KEYS = ["deviceId", "lastChangelogVersion"];
+const KNOWN_PROFILES = ["workstation", "server", "minimal"];
+
+function parseArgs(argv) {
+  const options = { profile: process.env.PI_PROFILE ?? "workstation", latest: false, dryRun: false, generateOnly: false, localPermissions: process.env.PI_PERMISSIONS_SRC ?? "" };
+  const positionals = [];
+  for (let index = 0; index < argv.length; index++) {
+    const arg = argv[index];
+    if (arg === "--profile" && index + 1 < argv.length) options.profile = argv[++index];
+    else if (arg.startsWith("--profile=")) options.profile = arg.slice("--profile=".length);
+    else if (arg === "--latest") options.latest = true;
+    else if (arg === "--dry-run") options.dryRun = true;
+    else if (arg === "--generate") options.generateOnly = true;
+    else if (arg === "--local-permissions" && index + 1 < argv.length) options.localPermissions = argv[++index];
+    else if (arg.startsWith("--local-permissions=")) options.localPermissions = arg.slice("--local-permissions=".length);
+    else positionals.push(arg);
+  }
+  if (!KNOWN_PROFILES.includes(options.profile)) {
+    throw new Error(`Unknown profile ${options.profile}. Use one of: ${KNOWN_PROFILES.join(", ")}.`);
+  }
+  return { options, positionals };
+}
+
+function hasBaseLayout() {
+  return existsSync(join(root, "settings.base.json")) && existsSync(join(root, "mcp.base.json"));
+}
+
+function expandLocalPath(source) {
+  let local = source;
+  if (local.startsWith("file:")) local = local.slice("file:".length);
+  local = local.replace(/\$([A-Za-z_][A-Za-z0-9_]*)|\$\{([^}]+)\}/g, (_, simple, braced) => process.env[simple ?? braced] ?? "");
+  const resolved = local.startsWith("~/") ? join(homedir(), local.slice(2)) : resolve(root, local);
+  return { display: local, resolved };
+}
+
+function splitNpmSource(source) {
+  const remainder = source.slice("npm:".length);
+  const at = remainder.lastIndexOf("@");
+  if (at > 0) return { name: remainder.slice(0, at), version: remainder.slice(at + 1) };
+  return { name: remainder, version: "" };
+}
+
+function resolvePackages(profilePackages, { latest, permissionsSrc }) {
+  let lock = null;
+  if (!latest && existsSync(join(root, "versions.lock"))) lock = json(join(root, "versions.lock"));
+  return profilePackages.map((entry) => {
+    if (typeof entry !== "string" || !entry.startsWith("npm:")) return entry;
+    const { name, version } = splitNpmSource(entry);
+    if (name === "@gotgenes/pi-permission-system" && permissionsSrc) return permissionsSrc;
+    if (version) return entry;
+    if (lock?.packages?.[name]) return `npm:${name}@${lock.packages[name]}`;
+    console.warn(`No pinned version for ${name} in versions.lock; using latest.`);
+    return entry;
+  });
+}
+
+function resolvePermissionsSrc(cliValue) {
+  const candidates = [cliValue, join(homedir(), "projects/pi-packages/packages/pi-permission-system")];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const { resolved } = expandLocalPath(candidate);
+    if (existsSync(resolved)) return candidate;
+  }
+  if (cliValue) {
+    const { resolved } = expandLocalPath(cliValue);
+    throw new Error(`Local permission package ${cliValue} is missing at ${resolved}. Create it or omit --local-permissions to use the published package.`);
+  }
+  return "";
+}
+
+function mergeDeep(base, override) {
+  if (Array.isArray(override)) return override;
+  if (base !== null && typeof base === "object" && override !== null && typeof override === "object") {
+    const merged = { ...base };
+    for (const [key, value] of Object.entries(override)) {
+      if (key === "_comment") continue;
+      merged[key] = key in merged ? mergeDeep(merged[key], value) : value;
+    }
+    return merged;
+  }
+  return override;
+}
+
+function generate() {
+  if (!hasBaseLayout()) return null;
+  const base = json(join(root, "settings.base.json"));
+  for (const key of MACHINE_LOCAL_KEYS) {
+    if (base[key] !== undefined) throw new Error(`settings.base.json must not contain ${key}. Keep machine-local values out of shared commits.`);
+  }
+  const { options } = parseArgs(process.argv.slice(2));
+  const profilePath = join(root, "profiles", `${options.profile}.json`);
+  if (!existsSync(profilePath)) throw new Error(`Profile ${options.profile} is missing at ${profilePath}.`);
+  const profile = json(profilePath);
+  if (!Array.isArray(profile.packages)) throw new Error(`${profilePath} packages must be an array.`);
+  const permissionsSrc = resolvePermissionsSrc(options.localPermissions);
+  const packages = resolvePackages(profile.packages, { latest: options.latest, permissionsSrc });
+  let settings = mergeDeep(base, {});
+  delete settings._comment;
+  if (settings.packages === "@profile:workstation" || settings.packages === "@profile") settings.packages = packages;
+  else if (typeof settings.packages === "string") throw new Error(`settings.base.json packages placeholder ${settings.packages} is unknown. Use "@profile".`);
+  const localPath = join(root, "settings.local.json");
+  if (existsSync(localPath)) {
+    const local = json(localPath);
+    const localPermissions = typeof local.permissionsSrc === "string" && local.permissionsSrc
+      ? resolvePermissionsSrc(local.permissionsSrc)
+      : "";
+    if (localPermissions) {
+      settings.packages = settings.packages.map((entry) =>
+        typeof entry === "string" && splitNpmSource(entry).name === "@gotgenes/pi-permission-system" ? localPermissions : entry);
+    }
+    delete local.permissionsSrc;
+    settings = mergeDeep(settings, local);
+  }
+  const previous = existsSync(join(root, "settings.json")) ? json(join(root, "settings.json")) : {};
+  for (const key of MACHINE_LOCAL_KEYS) {
+    if (previous[key] !== undefined) settings[key] = previous[key];
+  }
+
+  const mcpBase = JSON.parse(readFileSync(join(root, "mcp.base.json"), "utf8").split("__AGENT_DIR__").join(root));
+  let mcp = mergeDeep(mcpBase, {});
+  delete mcp._comment;
+  const mcpLocalPath = join(root, "mcp.local.json");
+  if (existsSync(mcpLocalPath)) {
+    const local = json(mcpLocalPath);
+    mcp.mcpServers = { ...(mcp.mcpServers ?? {}), ...(local.mcpServers ?? {}) };
+    for (const [key, value] of Object.entries(local)) {
+      if (key !== "mcpServers" && key !== "_comment") mcp[key] = value;
+    }
+  }
+  return { settings, mcp, profile: options.profile, latest: options.latest };
+}
+
+function writeGenerated(generated) {
+  writeFileSync(join(root, "settings.json"), `${JSON.stringify(generated.settings, null, 2)}\n`);
+  writeFileSync(join(root, "mcp.json"), `${JSON.stringify(generated.mcp, null, 2)}\n`);
+}
 
 function detectPlatform() {
   const os = process.platform;
@@ -97,16 +233,64 @@ function checkLocalSources(settings) {
     const source = packageSource(entry);
     if (typeof source !== "string" || !source) continue;
     if (source.startsWith("npm:") || source.startsWith("git:") || source.includes("://")) continue;
-    let local = source;
-    if (local.startsWith("file:")) local = local.slice("file:".length);
-    const resolved = local.startsWith("~/") ? join(homedir(), local.slice(2)) : resolve(root, local);
+    const { display, resolved } = expandLocalPath(source);
     if (!existsSync(resolved)) {
-      throw new Error(`Local package ${source} configured in settings.json packages is missing at ${resolved}. Create it or remove it from settings.json before syncing.`);
+      throw new Error(`Local package ${display} configured in settings.json packages is missing at ${resolved}. Create it, point settings.local.json permissionsSrc at an existing checkout, or remove it before syncing.`);
     }
   }
 }
 
-function install() {
+function preflight() {
+  const failures = [];
+  const warnings = [];
+  const [major, minor] = process.versions.node.split(".").map(Number);
+  if (major < 22 || (major === 22 && minor < 19)) failures.push(`Node.js 22.19 or newer is required (found ${process.version}).`);
+  else console.log(`Node.js ${process.version}: ok.`);
+  const npm = executable("npm");
+  if (!npm) failures.push("npm is required. Install npm and add it to PATH.");
+  else {
+    const npmVersion = execFileSync(npm, ["--version"], { encoding: "utf8" }).trim();
+    if (Number(npmVersion.split(".")[0]) < 9) failures.push(`npm 9 or newer is required (found ${npmVersion}).`);
+    else console.log(`npm ${npmVersion}: ok.`);
+  }
+  const localBin = join(homedir(), ".local/bin");
+  if (!(process.env.PATH ?? "").split(delimiter).includes(localBin)) warnings.push(`Put ${localBin} in PATH so Pi runs from ~/.local.`);
+  if (!executable("pi")) warnings.push("Pi executable is missing; the installer bootstraps it under ~/.local.");
+  if (hasBaseLayout()) {
+    try {
+      const generated = generate();
+      checkLocalSources(generated.settings);
+      console.log(`Profile ${generated.profile}: ${generated.settings.packages.length} packages resolve.`);
+    } catch (cause) {
+      failures.push(cause.message);
+    }
+    for (const service of ["exa", "parallel", "jina"]) {
+      try {
+        execSync(`sh ${join(root, "scripts/mcp-auth.sh")} ${service} >/dev/null 2>&1`, { timeout: 15_000 });
+        console.log(`MCP key ${service}: found.`);
+      } catch {
+        warnings.push(`MCP key ${service} is missing; that server stays disconnected until a key is set.`);
+      }
+    }
+  }
+  for (const warning of warnings) console.warn(`Warning: ${warning}`);
+  if (failures.length) throw new Error(`Preflight failed:\n${failures.join("\n")}`);
+  console.log("Preflight passed.");
+}
+
+function install(cliOptions) {
+  const generated = generate();
+  if (generated && cliOptions.dryRun) {
+    console.log(`Profile: ${generated.profile}${generated.latest ? " (latest, lock ignored)" : " (pinned from versions.lock)"}.`);
+    console.log(`Generated settings.json packages:\n${generated.settings.packages.join("\n")}`);
+    console.log("Dry run: no files were written and no packages were updated.");
+    return;
+  }
+  if (generated) writeGenerated(generated);
+  if (cliOptions.generateOnly) {
+    console.log(`Generated settings.json and mcp.json for profile ${generated.profile}. No packages were updated.`);
+    return;
+  }
   const npmDir = join(root, "npm");
   const progressMarker = join(npmDir, ".install-in-progress");
   if (existsSync(progressMarker)) {
@@ -182,8 +366,8 @@ function install() {
   );
 
   try {
-    for (const generated of ["package.json", "package-lock.json", "node_modules"]) {
-      rmSync(join(npmDir, generated), { recursive: true, force: true });
+    for (const generatedFile of ["package.json", "package-lock.json", "node_modules"]) {
+      rmSync(join(npmDir, generatedFile), { recursive: true, force: true });
     }
     const neutral = mkdtempSync(join(tmpdir(), "pi-update-"));
     try {
@@ -225,7 +409,7 @@ function install() {
   }
 }
 
-function sync() {
+function sync(cliOptions) {
   const backupRoot = join(homedir(), ".pi", "backups");
   mkdirSync(backupRoot, { recursive: true, mode: 0o700 });
   const lock = join(backupRoot, `sync-${createHash("sha256").update(root).digest("hex").slice(0, 16)}.lock`);
@@ -249,11 +433,20 @@ function sync() {
     console.log(`Fetching ${upstream}...`);
     execFileSync("git", ["fetch", "--", remote], { cwd: root, stdio: "inherit" });
     const target = git("rev-parse", "@{upstream}^{commit}").trim();
+    const required = hasBaseLayout()
+      ? ["settings.base.json", "mcp.base.json", "profiles/workstation.json", "versions.lock", "scripts/sync.mjs"]
+      : ["settings.json", "mcp.json", "scripts/sync.mjs"];
     const incoming = paths(git("ls-tree", "-rz", "--name-only", target));
-    for (const required of ["settings.json", "mcp.json", "scripts/sync.mjs"]) {
-      if (!incoming.includes(required)) {
-        throw new Error(`${upstream} is missing ${required}. Publish a complete sync configuration before running sync.`);
+    for (const name of required) {
+      if (!incoming.includes(name)) {
+        throw new Error(`${upstream} is missing ${name}. Publish a complete sync configuration before running sync.`);
       }
+    }
+    if (cliOptions.dryRun) {
+      const ahead = git("rev-list", "--oneline", "HEAD..@{upstream}").trim();
+      console.log(ahead ? `Incoming changes:\n${ahead}` : "Already up to date; no incoming changes.");
+      console.log("Dry run: tracked files were left unchanged.");
+      return;
     }
     const untracked = paths(git("ls-files", "--others", "-z"));
     const collisions = untracked.filter((path) => incoming.some((tracked) =>
@@ -279,7 +472,7 @@ function sync() {
     }
     console.log(`Replacing tracked configuration with ${upstream} (${target.slice(0, 12)}).`);
     execFileSync("git", ["reset", "--hard", target], { cwd: root, stdio: "inherit" });
-    execFileSync(process.execPath, [script, "--install"], { cwd: root, stdio: "inherit" });
+    execFileSync(process.execPath, [script, "--install", `--profile=${cliOptions.profile}`, ...(cliOptions.latest ? ["--latest"] : [])], { cwd: root, stdio: "inherit" });
     console.log(`Sync complete. Latest packages verified. Untracked files were preserved. Backup: ${backup}`);
     console.log("Restart Pi to load the synchronized configuration.");
   } finally {
@@ -293,7 +486,9 @@ const [major, minor] = process.versions.node.split(".").map(Number);
 if (major < 22 || (major === 22 && minor < 19)) {
   throw new Error("Node.js 22.19 or newer is required. Update Node.js and retry.");
 }
-if (process.argv[2] === "--verify" && process.argv.length === 4) await verify(process.argv[3]);
-else if (process.argv[2] === "--install" && process.argv.length === 3) install();
-else if (process.argv.length === 2) sync();
-else throw new Error("Usage: node scripts/sync.mjs");
+const { options, positionals } = parseArgs(process.argv.slice(2));
+if (positionals[0] === "--verify" && positionals.length === 2) await verify(positionals[1]);
+else if (positionals[0] === "--check" && positionals.length === 1) preflight();
+else if (positionals[0] === "--install") install(options);
+else if (positionals.length === 0) sync(options);
+else throw new Error("Usage: node scripts/sync.mjs [--install] [--generate] [--profile=workstation|server|minimal] [--latest] [--dry-run] [--local-permissions=<path>]");

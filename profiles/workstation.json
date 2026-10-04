@@ -1,0 +1,14 @@
+{
+  "packages": [
+    "npm:@ff-labs/pi-fff",
+    "npm:@gotgenes/pi-permission-system",
+    "npm:@kiranpg/pi-sentry",
+    "npm:pi-open-tui",
+    "npm:proper-compact",
+    "npm:visual-explainer",
+    "npm:@joaomj/pi-attention-span@0.8.0",
+    "npm:pi-background-run",
+    "npm:@spences10/pi-telemetry@0.0.33",
+    "npm:@specode/pi-subscription-usage@1.3.1"
+  ]
+}

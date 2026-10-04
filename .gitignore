@@ -2,6 +2,9 @@
 auth.json
 mcp-auth.json
 trust.json
+.env
+settings.local.json
+mcp.local.json
 
 # runtime / cache - never commit
 sessions/

@@ -1,0 +1,7 @@
+{
+  "_comment": "Personal overrides merged over settings.base.json and the selected profile. This file is never committed. Copy from settings.local.json.example.",
+  "modelThinkingLevels": {
+    "openai/gpt-6.1-sol": "low"
+  },
+  "permissionsSrc": ""
+}
