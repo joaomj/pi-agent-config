@@ -42,6 +42,33 @@ If installation or verification fails, it restores those files and reports the e
 Pi's own update is separate and is not rolled back.
 Verification checks FFF, extension loading, and CLI startup without a model request.
 
+### Scoped GitHub access on shared machines
+
+Give each machine only the access it needs. On a VPS, use a repo-scoped
+deploy key instead of a broad account key:
+
+1. Add the deploy public key under the repository Settings, Deploy keys.
+2. Add a host alias in `~/.ssh/config` that uses only that key:
+
+```ssh-config
+Host github-pi-agent-config
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/pi-agent-config-deploy
+  IdentityAgent none
+  IdentitiesOnly yes
+```
+
+3. Point the checkout at the alias:
+
+```bash
+git remote set-url origin github-pi-agent-config:joaomj/pi-agent-config.git
+```
+
+`IdentityAgent none` keeps loaded account keys from being offered to GitHub
+for this repository. Commit signing still uses the account key; a signature
+grants no repository access.
+
 ## Start
 
 From your project directory, run:
