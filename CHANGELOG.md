@@ -2,6 +2,45 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.3.0] - 2026-10-04
+
+### Added
+
+- feat: add configuration sync command and ignore local binaries
+- feat: add independent btw side questions
+
+### Changed
+
+- Document scoped GitHub access for shared machines
+- Cover profile generation, local overrides, and permission fallback
+- Make configuration shareable with one-command install
+- Clear dangling github-rest-read authorizer link
+- Abort package install when a previous run did not finish
+- Remove Muse and Astra from model configuration
+- Remove DonSeTch binary check from installer and tests
+- Replace DonSeTch with four keyed web MCP servers
+- Remove temporary intelligence snapshots
+- Keep sessions responsive with background jobs and a report guard
+- Add skill-doctor conversation grader adapted for Pi
+- Add test-audit skill, visual-explainer docs, compact defaults
+- Set OpenAI model limits and thinking defaults
+- Record local UI and runtime preferences
+- Remove subagent delegation from configuration
+- Use Sol at xhigh for diagnosis, planning, and review; Muse high for explore and implement
+- Keep native Pi tools visible alongside codemode
+- Simplify Pi tools, MCP connections, and updates
+- Document Pi architecture and engineering decisions
+- Refine agent responsibilities and add portable FFF search
+- Configure global role-based subagents
+- Restore the exit command extension
+- Unify Pi installation and synchronization with locked packages
+- chore: enable sentry, usage-meters, subagents; swap web-access for donsetch
+- chore: remove unused prompts and pine-of-glass extension
+- Configure scoped Muse and GPT models with explicit thinking levels
+- docs: focus README on setup and first use
+- chore: update packages
+- Install pi-open-tui; keep startup minimal with on-demand extension filters
+
 ## [v0.2.0] - 2026-09-26
 
 ### Added
