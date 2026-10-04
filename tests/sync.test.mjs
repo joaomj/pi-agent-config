@@ -383,3 +383,96 @@ test("verifies FFF native package when configured", async (t) => {
   assert.match(result.output, /Verifying FFF native package/);
   assert.ok(existsSync(join(f.work, "npm/node_modules/@ff-labs/fff-node/dist/index.js")));
 });
+
+async function baseLayout(t, overrides = {}) {
+  const root = await mkdtemp(join(tmpdir(), "pi-base-test-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const home = join(root, "home");
+  await mkdir(home, { recursive: true });
+  await mkdir(join(root, "scripts"), { recursive: true });
+  await mkdir(join(root, "profiles"), { recursive: true });
+  await copyFile(join(source, "scripts/sync.mjs"), join(root, "scripts/sync.mjs"));
+  const base = {
+    theme: "dark",
+    packages: "@profile",
+    ...(overrides.base ?? {}),
+  };
+  const profiles = {
+    workstation: { packages: ["npm:alpha", "npm:@gotgenes/pi-permission-system"] },
+    server: { packages: ["npm:alpha"] },
+    minimal: { packages: ["npm:alpha"] },
+    ...(overrides.profiles ?? {}),
+  };
+  await writeFile(join(root, "settings.base.json"), json(base));
+  for (const [name, profile] of Object.entries(profiles)) {
+    await writeFile(join(root, "profiles", `${name}.json`), json(profile));
+  }
+  await writeFile(join(root, "versions.lock"), json({
+    lockVersion: 1,
+    updated: "2026-10-04",
+    packages: { alpha: "1.2.3", "@gotgenes/pi-permission-system": "9.9.9" },
+    ...(overrides.lock ?? {}),
+  }));
+  await writeFile(join(root, "mcp.base.json"), json({
+    mcpServers: {
+      probe: { url: "https://example.invalid/mcp", headers: { From: "__AGENT_DIR__" } },
+    },
+  }));
+  const env = { ...process.env, HOME: home };
+  function runSync(...args) {
+    const result = spawnSync(process.execPath, [join(root, "scripts/sync.mjs"), ...args], {
+      cwd: root, env, encoding: "utf8", timeout: 30_000,
+    });
+    assert.ifError(result.error);
+    assert.notEqual(result.status, null, `Process terminated by ${result.signal}`);
+    return { ...result, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
+  }
+  return { root, home, runSync };
+}
+
+test("profiles select package sets and pin versions from the lock", async (t) => {
+  const f = await baseLayout(t);
+  const server = f.runSync("--install", "--dry-run", "--profile=server");
+  assert.equal(server.status, 0, server.output);
+  assert.match(server.output, /npm:alpha@1\.2\.3/);
+  assert.doesNotMatch(server.output, /permission-system/);
+  const workstation = f.runSync("--install", "--dry-run", "--profile=workstation");
+  assert.equal(workstation.status, 0, workstation.output);
+  assert.match(workstation.output, /npm:alpha@1\.2\.3/);
+  assert.match(workstation.output, /npm:@gotgenes\/pi-permission-system@9\.9\.9/);
+  const latest = f.runSync("--install", "--dry-run", "--profile=minimal", "--latest");
+  assert.equal(latest.status, 0, latest.output);
+  assert.match(latest.output, /npm:alpha\n/);
+  assert.doesNotMatch(latest.output, /npm:alpha@/);
+});
+
+test("local overrides merge into generated files and stay out of the shared base", async (t) => {
+  const f = await baseLayout(t);
+  const baseBefore = await readFile(join(f.root, "settings.base.json"), "utf8");
+  await mkdir(join(f.root, "local-perm"), { recursive: true });
+  await writeFile(join(f.root, "settings.local.json"), json({
+    modelThinkingLevels: { "openai/gpt-6.1-sol": "low" },
+    permissionsSrc: "./local-perm",
+  }));
+  const result = f.runSync("--install", "--generate", "--profile=workstation");
+  assert.equal(result.status, 0, result.output);
+  const settings = JSON.parse(await readFile(join(f.root, "settings.json"), "utf8"));
+  assert.equal(settings.modelThinkingLevels["openai/gpt-6.1-sol"], "low");
+  assert.ok(settings.packages.includes("./local-perm"));
+  assert.ok(!settings.packages.some((entry) => entry.includes("permission-system")));
+  assert.equal(settings.permissionsSrc, undefined);
+  assert.equal(await readFile(join(f.root, "settings.base.json"), "utf8"), baseBefore);
+  const mcp = JSON.parse(await readFile(join(f.root, "mcp.json"), "utf8"));
+  assert.equal(mcp.mcpServers.probe.headers.From, f.root);
+});
+
+test("missing local permissions source fails with the path, absence falls back to the published package", async (t) => {
+  const f = await baseLayout(t);
+  const missing = f.runSync("--install", "--generate", "--local-permissions=./nope");
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.output, /nope/);
+  const fallback = f.runSync("--install", "--generate", "--profile=workstation");
+  assert.equal(fallback.status, 0, fallback.output);
+  const settings = JSON.parse(await readFile(join(f.root, "settings.json"), "utf8"));
+  assert.ok(settings.packages.includes("npm:@gotgenes/pi-permission-system@9.9.9"));
+});
