@@ -1,32 +1,11 @@
 {
   "mcpServers": {
-    "firecrawl": {
-      "type": "http",
-      "url": "https://mcp.firecrawl.dev/v2/mcp-oauth",
-      "timeout": 300,
-      "exposure": "codemode",
-      "description": "Firecrawl web search, scrape, crawl, and extract through account sign-in."
-    },
-    "parallel": {
-      "type": "http",
-      "url": "https://search.parallel.ai/mcp",
-      "headers": { "Authorization": "!sh __AGENT_DIR__/scripts/mcp-auth.sh parallel" },
-      "timeout": 300,
-      "exposure": "codemode",
-      "description": "Parallel web search and URL fetch, authenticated from the environment or system keychain."
-    },
-    "jina": {
-      "type": "http",
-      "url": "https://mcp.jina.ai/v1",
-      "headers": { "Authorization": "!sh __AGENT_DIR__/scripts/mcp-auth.sh jina" },
-      "timeout": 300,
-      "exposure": "codemode",
-      "description": "Jina Reader, web search, screenshots, and grounding APIs, authenticated from the environment or system keychain."
-    },
     "exa": {
       "type": "http",
       "url": "https://mcp.exa.ai/mcp",
-      "headers": { "Authorization": "!sh __AGENT_DIR__/scripts/mcp-auth.sh exa" },
+      "headers": {
+        "Authorization": "!sh __AGENT_DIR__/scripts/mcp-auth.sh exa"
+      },
       "timeout": 300,
       "exposure": "codemode",
       "description": "Exa web search, fetch, and research agent, authenticated from the environment or system keychain."

@@ -3,8 +3,7 @@
     "npm:@ff-labs/pi-fff",
     "npm:@gotgenes/pi-permission-system",
     "npm:@kiranpg/pi-sentry",
-    "npm:pi-open-tui",
-    "npm:proper-compact",
-    "npm:pi-background-run"
+    "npm:pi-background-run",
+    "git:github.com/joaomj/pi-claude-directsdk"
   ]
 }

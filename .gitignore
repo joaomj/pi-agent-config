@@ -50,3 +50,11 @@ git/
 
 # OS
 .DS_Store
+
+# Account-local telemetry preference and session recordings
+telemetry.json
+telemetry.db
+telemetry.db-*
+
+# Obsolete package pins are not shared configuration
+versions.lock

@@ -3,12 +3,11 @@
     "npm:@ff-labs/pi-fff",
     "npm:@gotgenes/pi-permission-system",
     "npm:@kiranpg/pi-sentry",
-    "npm:pi-open-tui",
-    "npm:proper-compact",
     "npm:visual-explainer",
     "npm:@joaomj/pi-attention-span",
     "npm:pi-background-run",
     "npm:@spences10/pi-telemetry",
-    "npm:@specode/pi-subscription-usage"
+    "npm:@specode/pi-subscription-usage",
+    "git:github.com/joaomj/pi-claude-directsdk"
   ]
 }

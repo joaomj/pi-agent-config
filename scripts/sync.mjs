@@ -215,7 +215,7 @@ function preflight() {
     } catch (cause) {
       failures.push(cause.message);
     }
-    for (const service of ["exa", "parallel", "jina"]) {
+    for (const service of ["exa"]) {
       try {
         execSync(`sh ${join(root, "scripts/mcp-auth.sh")} ${service} >/dev/null 2>&1`, { timeout: 15_000 });
         console.log(`MCP key ${service}: found.`);

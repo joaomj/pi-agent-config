@@ -2,7 +2,6 @@
   "packages": [
     "npm:@ff-labs/pi-fff",
     "npm:@gotgenes/pi-permission-system",
-    "npm:@kiranpg/pi-sentry",
-    "npm:proper-compact"
+    "npm:@kiranpg/pi-sentry"
   ]
 }

@@ -1,6 +1,6 @@
 # pi-agent-config
 
-Shared configuration for the [Pi coding agent](https://pi.dev). One command installs a working Pi instance.
+Shared configuration for the [Pi coding agent](https://pi.dev). Each account keeps its own software, credentials, and sessions.
 
 ## Install
 
@@ -20,12 +20,12 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/joaomj/pi-agent-config/m
 ```
 
 For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
-For a lighter setup, pass `--profile server` (no telemetry or visual packages) or `--profile minimal` (search, permissions, redaction, compaction only).
+For a lighter setup, pass `--profile server` (no telemetry or visual packages) or `--profile minimal` (search, permissions, and redaction only).
 Run `./install.sh --check-only` to verify a machine without installing.
 
 The installer generates configuration from shared templates and the selected profile.
 It installs Pi under `~/.local` only if Pi is missing. Existing software remains unchanged.
-Extension declarations use unversioned published packages; synchronization does not enforce `versions.lock`.
+Extension declarations use unversioned npm or Git sources. Configuration sync does not enforce package versions.
 
 To use a local permission-system checkout, pass `--local-permissions <path>` or set `PI_PERMISSIONS_SRC`.
 A checkout is never selected just because its directory exists.
@@ -71,7 +71,7 @@ pi
 ```
 
 Run `/login` to connect a model provider, then `/model` to select a model.
-OpenTUI remains the interactive interface.
+Pi uses its native fullscreen interface. Project-local configuration requires approval (`defaultProjectTrust: "ask"`).
 
 ### Tools and web access
 
@@ -81,35 +81,62 @@ Discover extension tools with `searchTools()` or `describeTool()`, then call the
 Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
 Codemode can batch calls and filter results, but does not guarantee lower token use.
 
-[mcp.base.json](mcp.base.json) connects four web MCP servers through Pi's native Model Context Protocol (MCP) support.
-Use `/mcp` to inspect or reconnect a server. Server tools are available through codemode.
-FFF remains a Pi extension; it is not an external MCP server.
+[mcp.base.json](mcp.base.json) enables only Exa through Pi's native Model Context Protocol (MCP) support.
+Use `/mcp` to inspect or reconnect it. Server tools are available through codemode.
+FFF remains a Pi extension; it is not an MCP server.
 
-| Server | Purpose |
-| --- | --- |
-| Exa | Web search, page fetch, research agent |
-| Parallel | Web search, URL fetch |
-| Jina | Page reading, web search, screenshots, paper search |
-| Firecrawl | Search, scrape, crawl, extract, research tools |
-
-API keys never enter configuration files.
-Each server reads its key in this order: environment variable, macOS keychain, Linux libsecret.
-Copy [.env.example](.env.example) to `.env` and set `PI_AGENT_EXA`, `PI_AGENT_PARALLEL`, and `PI_AGENT_JINA`.
-Or store each key once in the system keychain:
+Exa provides web search, page fetch, and a research agent.
+API keys never enter shared configuration. The helper reads the key from an exported `PI_AGENT_EXA` variable, the macOS keychain, or Linux libsecret, in that order.
+A populated `.env` file alone does not export a variable; the helper does not load that file.
+Store the key in the system keychain:
 
 ```bash
-# macOS (prompts for the value, so it never enters shell history)
+# macOS: prompts for the value, so it never enters shell history
 security add-generic-password -s pi-agent-exa -a exa -w
-security add-generic-password -s pi-agent-parallel -a parallel -w
-security add-generic-password -s pi-agent-jina -a jina -w
-# Linux (libsecret)
+# Linux
 secret-tool store --label 'exa MCP key' service pi-agent-exa account exa
-secret-tool store --label 'parallel MCP key' service pi-agent-parallel account parallel
-secret-tool store --label 'jina MCP key' service pi-agent-jina account jina
 ```
 
-Firecrawl uses browser sign-in instead of a stored key. Run `pi mcp login firecrawl` to connect the account.
-Restart Pi after storing keys so every server picks them up.
+Restart Pi after storing the key.
+
+### Claude subscription transport
+
+The workstation and server profiles declare [Pi Claude DirectSDK](https://github.com/joaomj/pi-claude-directsdk):
+
+```text
+git:github.com/joaomj/pi-claude-directsdk
+```
+
+This replaces machine-specific paths to a development checkout.
+The provider requires Claude Code `>=2.1.263 <2.2.0` and a Claude paid plan with CLI access.
+Install a qualifying CLI under the current account, then sign in:
+
+```bash
+npm install --global --prefix "$HOME/.local" --ignore-scripts=false @anthropic-ai/claude-code@2.1.281
+claude auth login
+```
+
+This CLI installation is a separate, explicit action. Configuration sync does not install it or manage login.
+After loading the extension, select a `claude-directsdk` model with `/model`.
+Account entitlements and additional paid usage settings determine availability and billing; see the package's documentation.
+
+### Telemetry
+
+Shared defaults disable Pi install telemetry and analytics.
+The workstation's local telemetry extension also defaults to off. Its preference and SQLite recordings stay account-local and outside Git.
+Use `/telemetry on` or `/telemetry off` to change local session recording.
+[telemetry.json.example](telemetry.json.example) documents the saved preference format.
+
+On the Mac Mini, only `joao` has local session recording enabled.
+That account also overrides `enableInstallTelemetry` in its untracked `settings.local.json`; `admin` uses the disabled shared default.
+Pi analytics remain disabled for both accounts.
+
+### Prompt commands
+
+Use `/bro` to restate the last assistant message in plain language.
+Use `/correct [mistake and scope]` to investigate and prevent a recurring mistake.
+These are prompt templates, not skills or executable extensions. Run `/reload` after changing them in an active session.
+Both are adapted from Cursor's [pstack skills](https://github.com/cursor/plugins/tree/main/pstack/skills) under the MIT license; see [prompts/LICENSE](prompts/LICENSE).
 
 ### Visual explanations
 
@@ -131,7 +158,7 @@ Installed package versions can differ between accounts.
 
 After sync, the command prints the path to a private text report under `~/.pi/reports/`.
 The report compares this account's pre-sync package declarations with the remote shared profile.
-It lists additions, removals, changed declarations, missing remote npm packages, and locally installed npm versions.
+It lists additions, removals, changed declarations, remote npm packages absent from the local manifest inventory, and locally installed npm versions.
 Personal overrides are excluded from the remote list.
 The report does not query npm for latest releases or change installed packages.
 Each sync replaces the previous report for that checkout.

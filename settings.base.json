@@ -1,7 +1,7 @@
 {
   "theme": "dark",
   "quietStartup": false,
-  "enableInstallTelemetry": true,
+  "enableInstallTelemetry": false,
   "enableSkillCommands": true,
   "defaultProvider": "openai",
   "defaultModel": "gpt-6-luna",
@@ -28,7 +28,7 @@
     "openai/gpt-6.1-sol"
   ],
   "packages": "@profile:workstation",
-  "tuiMode": "regular",
+  "tuiMode": "fullscreen",
   "fullscreenScrollbar": "always",
   "fullscreenExitOutput": "resume-hint",
   "fullscreenCopyOnSelect": true,
@@ -51,5 +51,6 @@
     "--ignore-scripts"
   ],
   "doubleEscapeAction": "none",
-  "defaultProjectTrust": "always"
+  "defaultProjectTrust": "ask",
+  "enableAnalytics": false
 }
