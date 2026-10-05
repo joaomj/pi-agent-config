@@ -8,11 +8,12 @@ conventions > this file > skills.
 - No commits, pushes, releases, or other remote writes without explicit user approval, each time.
 - Keep planning artifacts, drafts, TODO files, temporary outputs, local configs, caches, sessions, auths, credentials, and backups out of Git unless the user explicitly requests them as durable project files.
 - Never reference ticket IDs, plan files, or session artifacts in code (identifiers, docstrings, comments) or in commits.
-- Prefer `ffgrep` for code content search and `fffind` for file discovery when available. Use `rg` and `fd` via `bash` for exact checks, unsupported searches, or when FFF is unavailable. Verify fuzzy matches in the source; ranked or partial results do not prove absence.
+- Keep `read` and `bash` direct. Discover extension tools with `searchTools()` or `describeTool()` inside `codemode`, then call them through `tools`.
+- Use `fffind` first for file discovery and `ffgrep` first for content search through `codemode`. Use `rg` and `fd` via `bash` only for exact checks, unsupported searches, or when FFF is unavailable. Verify fuzzy matches in source; ranked or partial results do not prove absence.
 - Use native `git` for local ops. Use `gh` for GitHub API and repository operations.
 - If a required dependency is missing, install it (the permission prompt handles approval).
 - When I must run things you cannot (sudo, auth, secrets) or there is more than one command to run: write one temporary script (`/tmp/<name>.sh` for simple cases, `/tmp/<name>.py` for complex ones) that logs to both the terminal and a file in `/tmp`, and give me the exact command to run it. One copy-and-run step.
-- Run long agent-side commands with output to a log file so the session stays responsive. Report start, then check the log and report the outcome per stage.
+- Use `bgrun` through `codemode` for commands expected to exceed 30 seconds or 100 output lines. Name each job, then end the turn after launch. After the completion wake, use `bgtail` or `bggrep` through `codemode`; do not poll or read full logs.
 - Treat a successful git op as complete. Re-inspect only after error or when next action needs state.
 
 ## Code changes

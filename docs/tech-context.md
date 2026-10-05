@@ -99,7 +99,7 @@ Its [global configuration](../pi-fff.json) selects `tools-only`:
 - `fffind` discovers file paths.
 - `ffgrep` searches file contents.
 - Editor autocomplete remains available.
-- Native Pi search tools can be called directly or through codemode.
+- FFF tools are discovered and called through codemode. Only `read`, `bash`, and `codemode` are directly visible.
 
 This avoids replacing autocomplete used for agent mentions and requires no separate MCP server.
 Prefer FFF as defined in `AGENTS.md`.
@@ -154,11 +154,18 @@ Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared
 | `@spences10/pi-telemetry` | Token, cost, and timing telemetry (workstation profile only) |
 | `@specode/pi-subscription-usage` | Subscription usage display (workstation profile only) |
 | [session-responsiveness.ts](../extensions/session-responsiveness.ts) | Caps foreground shell calls at 60 seconds and steers a progress report after 5 silent minutes |
+| [tool-visibility.ts](../extensions/tool-visibility.ts) | Keeps `read`, `bash`, and `codemode` directly visible; hides other active declarations while preserving callable tools |
 
-`defaultTools: ["+codemode"]` adds codemode to Pi's default `read`, `bash`, `edit`, and `write` tools.
-`codemode.mode: "on"` keeps direct tool declarations visible.
-Direct calls handle simple actions; codemode can batch calls and filter large results.
-The inline declaration budget stays at Pi's default 3,000 estimated tokens.
+`defaultTools: ["read", "bash", "codemode"]` disables the default `edit` and `write` tools.
+`codemode.mode: "on"` keeps `read` and `bash` directly visible.
+[tool-visibility.ts](../extensions/tool-visibility.ts) uses `prepareLoadout()` to hide all other active tool declarations, including its internal policy tool.
+Hidden tools remain active and callable through codemode. This preserves extension execution and session tool state.
+The inline declaration budget is zero. Discover schemas with `searchTools()` or `describeTool()` inside codemode.
+This policy reduces model-facing declarations. It does not defer extension initialization.
+Keep codemode active: the policy reports an error when codemode is absent from the active loadout.
+Tools with `model-only` exposure cannot be called through codemode. Hiding them does not change that restriction.
+Permission checks and secret redaction remain enabled. Tool visibility is not a security boundary.
+Restart Pi after changing `defaultTools`; `/reload` does not disable tools removed from that setting.
 Batching and output filtering can reduce conversation overhead; savings are not guaranteed.
 
 [mcp.json](../mcp.json) connects four web MCP servers through Pi's built-in MCP extension: Exa, Parallel, Jina, and Firecrawl.
@@ -236,7 +243,8 @@ Completed checks:
 - The current setup updated successfully on macOS arm64.
 - FFF's native package and library import, extension loading, and CLI startup passed.
 - Exa, Parallel, Jina, and Firecrawl connected through native MCP with keychain and OAuth credentials.
-- An offline SDK check confirmed native default tools and codemode in the model-facing declarations.
+- An offline SDK check confirmed that the request projection contains only `read`, `bash`, and `codemode`, including after reload.
+- The offline check confirmed that FFF and background tools remain callable. After restart, the live session discovered `fffind`, `ffgrep`, `bgrun`, and `bgtail` through codemode.
 - Nested codemode/read execution passed with the permission and secret-redaction extensions loaded.
 - Eight focused updater checks passed, including private-file preservation, failure recovery, and inherited offline-variable handling.
 
@@ -245,4 +253,5 @@ The compatibility checks do not send model requests.
 These results do not prove subscription billing, UI rendering, or token savings.
 
 Installation on other supported platforms remains unverified.
+The selective tool-visibility policy has not been checked in a resumed session. The discovery check did not execute FFF searches or background jobs.
 Ask before adding tests or running full or slow suites, as required by `AGENTS.md`.

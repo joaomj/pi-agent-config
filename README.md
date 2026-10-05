@@ -82,8 +82,9 @@ OpenTUI remains the interactive interface.
 
 ### Tools and web access
 
-Pi's default tools (`read`, `bash`, `edit`, and `write`) remain directly available alongside `codemode`.
-Use direct tools for simple actions and codemode to batch calls or filter large results.
+Only `read`, `bash`, and `codemode` are directly visible to the model.
+The local tool-visibility extension keeps other active tools callable through codemode without declaring their schemas.
+Discover extension tools with `searchTools()` or `describeTool()`, then call them through `tools`.
 Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
 Codemode can batch calls and filter results, but does not guarantee lower token use.
 
