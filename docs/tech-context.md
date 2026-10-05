@@ -129,8 +129,8 @@ Automatic compaction keeps 20,000 recent tokens and reserves 64,000 tokens.
 ### Installed capabilities
 
 [settings.base.json](../settings.base.json) plus the selected profile is the authoritative package list.
-Unpinned published sources resolve to [versions.lock](../versions.lock) at install time unless `--latest` is passed.
-A local permission-system checkout can replace the published package (see the operating model).
+Shared profiles declare unversioned published packages. Configuration generation does not read `versions.lock`.
+An explicitly selected local permission-system checkout can replace the published package.
 Missing local sources are errors, not reasons to substitute published packages.
 Pi generates npm manifests and lockfiles locally; these installation records are not tracked.
 Machine-local `deviceId` and `lastChangelogVersion` values must not enter shared settings commits.
@@ -212,29 +212,27 @@ They do not replace approval requirements.
 3. Check runtime requirements, repository state, upstream configuration, and file collisions.
 4. Fetch upstream and back up tracked configuration, patches, and Git history under `~/.pi/backups/`.
 5. Replace tracked configuration with the upstream revision.
-6. Generate `settings.json` and `mcp.json` from the shared base, the selected profile, pinned versions, and local overrides.
+6. Generate `settings.json` and `mcp.json` from the shared base, selected profile, and explicit local overrides.
 7. Check that configured local package sources exist.
-8. Bootstrap the latest Pi under `~/.local` if needed, or use Pi's native self-update.
-9. Back up managed npm files and use Pi's native package update command.
-10. Check the selected FFF native package and its library import.
-11. Verify extension loading and CLI startup without a model request.
-12. Restore managed npm files if package installation or verification fails.
+8. Leave installed Pi and extensions unchanged.
+9. Write a private package-difference report under `~/.pi/reports/`.
 
-The installer removes inherited `PI_OFFLINE` from online update commands.
-Pi's version lookup treats any nonempty value, including `0`, as offline.
-The installer disables npm lifecycle scripts through command settings and child-process environment.
-Package updates replace generated npm manifests and installed packages with a fresh installation from `settings.json`.
-Pi's self-update is separate from package recovery and is not rolled back.
-Updates run only when explicitly requested; normal launches do not update installed packages.
-Pinned installs reproduce the versions in `versions.lock`; `--latest` takes current releases instead.
+[scripts/package-report.mjs](../scripts/package-report.mjs) compares pre-sync local declarations and the local npm inventory with the remote shared profile.
+The report excludes personal overrides from the remote list and does not query a package registry.
+
+Configuration sync does not read `versions.lock` or enforce installed package versions.
+A local permission-system checkout requires `--local-permissions`, `PI_PERMISSIONS_SRC`, or an explicit local setting.
+The installer bootstraps Pi under `~/.local` only when it is missing. It does not update an existing Pi installation.
+Extension updates belong to Pi's native `pi update --extensions` command, run explicitly by the user.
+Pi can install a missing declared package during startup.
 
 **Caution:** sync replaces tracked local changes and local commits with upstream after creating a backup.
 It is not a merge-based update. Untracked and ignored files remain unless incoming paths conflict; collisions stop sync.
-A package failure restores managed npm files but does not revert configuration already reset to upstream.
+A generation failure does not revert configuration already reset to upstream.
 
-Use `node scripts/sync.mjs --install` to update the current local configuration without fetching or resetting tracked files.
+Use `node scripts/sync.mjs --generate` to regenerate configuration without fetching or resetting tracked files.
 Use the normal sync command only when upstream replacement is intended.
-Do not change global npm settings to install this configuration.
+Each account keeps its own installed package versions, credentials, and sessions.
 
 ## Verification and remaining limits
 
@@ -246,9 +244,9 @@ Completed checks:
 - An offline SDK check confirmed that the request projection contains only `read`, `bash`, and `codemode`, including after reload.
 - The offline check confirmed that FFF and background tools remain callable. After restart, the live session discovered `fffind`, `ffgrep`, `bgrun`, and `bgtail` through codemode.
 - Nested codemode/read execution passed with the permission and secret-redaction extensions loaded.
-- Eight focused updater checks passed, including private-file preservation, failure recovery, and inherited offline-variable handling.
+- Historical updater checks covered private-file preservation and package recovery before configuration sync was separated from software updates.
 
-The updater checks use temporary repositories and simulated package commands.
+The configuration-sync checks use temporary repositories and reject unexpected Pi or npm calls.
 The compatibility checks do not send model requests.
 These results do not prove subscription billing, UI rendering, or token savings.
 

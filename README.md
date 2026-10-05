@@ -23,24 +23,17 @@ For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
 For a lighter setup, pass `--profile server` (no telemetry or visual packages) or `--profile minimal` (search, permissions, redaction, compaction only).
 Run `./install.sh --check-only` to verify a machine without installing.
 
-The installer pins packages to [versions.lock](versions.lock) so every machine gets the same set.
-Pass `--latest` to take latest releases instead.
+The installer generates configuration from shared templates and the selected profile.
+It installs Pi under `~/.local` only if Pi is missing. Existing software remains unchanged.
+Extension declarations use unversioned published packages; synchronization does not enforce `versions.lock`.
+
 To use a local permission-system checkout, pass `--local-permissions <path>` or set `PI_PERMISSIONS_SRC`.
-Without that flag, the installer uses `~/projects/pi-packages/packages/pi-permission-system` when that directory exists, else the published package.
+A checkout is never selected just because its directory exists.
 Forks can point `PI_AGENT_REPO_URL` at their own repository.
 
 Generated npm manifests, lockfiles, and installed packages stay local and outside Git.
-
 The installer supports Linux and macOS on x64 or arm64.
-On Linux, it identifies glibc or musl for the FFF native package.
-It disables npm lifecycle scripts and bypasses npm's release-age delay for this command only.
-Global npm settings remain unchanged.
-
-The installer backs up managed npm files before a package update.
-It then replaces generated npm manifests and packages with a fresh installation.
-If installation or verification fails, it restores those files and reports the error.
-Pi's own update is separate and is not rolled back.
-Verification checks FFF, extension loading, and CLI startup without a model request.
+Each account keeps its own configuration, installed extensions, credentials, and sessions.
 
 ### Scoped GitHub access on shared machines
 
@@ -124,41 +117,54 @@ The [`visual-explainer`](https://github.com/nicobailon/visual-explainer) package
 
 The tool's render actions write HTML pages to `~/.agent/diagrams/` and open them in the browser by default. PPTX export is optional and best-effort. See [technical context](docs/tech-context.md#installed-capabilities) for its current dependency note.
 
-## Update
+## Synchronize configuration
 
-To update software without replacing your configuration, run:
-
-```bash
-node ~/.pi/agent/scripts/sync.mjs --install
-```
-
-Updates happen when you run this command, not on every Pi launch.
-By default every machine installs the pinned versions from [versions.lock](versions.lock).
-Pass `--latest` to move to latest releases.
-Restart Pi after a successful update.
-
-To replace configuration with the current branch's upstream and update software, run:
+To replace tracked configuration with the current branch's upstream, run:
 
 ```bash
 node ~/.pi/agent/scripts/sync.mjs
 ```
 
+Sync updates configuration only. It does not install, update, or remove Pi or extensions.
+It generates `settings.json` and `mcp.json` from the synchronized templates and selected profile.
+Installed package versions can differ between accounts.
+
+After sync, the command prints the path to a private text report under `~/.pi/reports/`.
+The report compares this account's pre-sync package declarations with the remote shared profile.
+It lists additions, removals, changed declarations, missing remote npm packages, and locally installed npm versions.
+Personal overrides are excluded from the remote list.
+The report does not query npm for latest releases or change installed packages.
+Each sync replaces the previous report for that checkout.
+
 **Caution:** sync replaces tracked local changes and local commits with upstream.
 It first saves tracked configuration, Git patches, and repository history under `~/.pi/backups/`.
 Do not publish backups: local changes can contain private values.
 
-Sync preserves untracked and ignored content, except for managed npm files updated during installation.
-This preserves credentials, sessions, and other runtime data.
+Sync preserves untracked and ignored content, including installed packages, credentials, and sessions.
 It stops during an unfinished Git operation or when incoming files conflict with untracked content.
 Append `--dry-run` to preview incoming changes without applying them.
-An installation failure reports a nonzero exit status.
-The configuration remains at the fetched revision; fix the reported error and retry.
+If configuration generation fails, fix the reported error and retry; the fetched revision remains applied.
+Restart Pi after synchronization to load the configuration.
 
-### Troubleshooting
+To regenerate configuration from the current local templates without fetching upstream, run:
 
-The updater removes inherited `PI_OFFLINE` from online update commands.
-Pi's version lookup treats any nonempty value, including `0`, as offline.
-An offline verification check does not refresh software.
+```bash
+node ~/.pi/agent/scripts/sync.mjs --generate
+```
+
+## Update software
+
+Use Pi's native command to update extensions in the current account:
+
+```bash
+pi update --extensions
+```
+
+Configuration sync and the installer never invoke this command.
+Pi can install a missing declared package during startup; this is separate from updating installed extensions.
+Restart Pi after an extension update.
+
+To update Pi itself, run `pi update`.
 
 ### Check sync behavior
 
@@ -167,7 +173,6 @@ node --test tests/sync.test.mjs
 ```
 
 These checks use temporary Git repositories and simulated npm and Pi commands.
-They cover updates, backups, private-file preservation, collisions, and failure recovery.
 They do not contact model providers.
 
 ## Configuration
@@ -177,7 +182,6 @@ They do not contact model providers.
 - [settings.base.json](settings.base.json): shared defaults. The installer merges this file with a [profile](profiles/) package list and the untracked `settings.local.json` to generate [settings.json](settings.json).
 - [mcp.base.json](mcp.base.json): native MCP connections, without embedded credentials. Keys resolve through environment variables or [scripts/mcp-auth.sh](scripts/mcp-auth.sh).
 - [profiles/](profiles/): `workstation` (full), `server` (no telemetry or visual packages), `minimal` (core only). Select with `--profile`.
-- [versions.lock](versions.lock): pinned package versions for reproducible installs.
 - [AGENTS.md](AGENTS.md): agent instructions.
 - [Permission rules](extensions/pi-permission-system/config.json): local access policy.
 - [skills/](skills/) and [prompts/](prompts/): reusable workflows, including the `test-audit` authoring gate and audit workflow, and the `skill-doctor` conversation grader.

@@ -11,7 +11,6 @@
 # Options:
 #   --clone-dir <dir>       clone the repo here first (bootstrap mode)
 #   --profile <name>        workstation (default), server, or minimal
-#   --latest                ignore versions.lock and take latest packages
 #   --local-permissions <p> use a local permission-system checkout
 #   --ref <ref>             git ref to install (bootstrap mode, default main)
 set -euo pipefail
@@ -19,7 +18,6 @@ set -euo pipefail
 REPO_URL="${PI_AGENT_REPO_URL:-https://github.com/joaomj/pi-agent-config.git}"
 CLONE_DIR=""
 PROFILE="${PI_PROFILE:-workstation}"
-LATEST=0
 LOCAL_PERMISSIONS="${PI_PERMISSIONS_SRC:-}"
 REF="main"
 CHECK_ONLY=0
@@ -30,7 +28,6 @@ while [ $# -gt 0 ]; do
     --clone-dir=*) CLONE_DIR="${1#--clone-dir=}"; shift ;;
     --profile) PROFILE="$2"; shift 2 ;;
     --profile=*) PROFILE="${1#--profile=}"; shift ;;
-    --latest) LATEST=1; shift ;;
     --local-permissions) LOCAL_PERMISSIONS="$2"; shift 2 ;;
     --local-permissions=*) LOCAL_PERMISSIONS="${1#--local-permissions=}"; shift ;;
     --ref) REF="$2"; shift 2 ;;
@@ -90,11 +87,10 @@ if [ ! -f "$AGENT_DIR/settings.local.json" ] && [ -f "$AGENT_DIR/settings.local.
 fi
 
 SYNC_ARGS=(--install "--profile=$PROFILE")
-[ "$LATEST" -eq 1 ] && SYNC_ARGS+=(--latest)
 [ -n "$LOCAL_PERMISSIONS" ] && SYNC_ARGS+=(--local-permissions="$LOCAL_PERMISSIONS")
 
 log "Preflight check"
-node "$AGENT_DIR/scripts/sync.mjs" --check || {
+node "$AGENT_DIR/scripts/sync.mjs" --check "${SYNC_ARGS[@]:1}" || {
   echo "install.sh: fix the preflight errors above and retry." >&2
   exit 1
 }
@@ -104,7 +100,7 @@ if [ "$CHECK_ONLY" -eq 1 ]; then
   exit 0
 fi
 
-log "Installing profile '$PROFILE'"
+log "Configuring profile '$PROFILE'"
 node "$AGENT_DIR/scripts/sync.mjs" "${SYNC_ARGS[@]}"
 
 case ":$PATH:" in
