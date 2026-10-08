@@ -17,7 +17,7 @@ The normal configuration directory is `~/.pi/agent`; `PI_CODING_AGENT_DIR` can o
 Untracked `settings.local.json` and `mcp.local.json` supply explicit account overrides.
 The generator writes `settings.json` and `mcp.json`. Do not edit those generated files to establish shared defaults.
 
-The shared default model remains OpenAI Luna. Model access and account-specific selections can differ.
+The shared default model is OpenAI Sol. Model access and account-specific selections can differ.
 The VPS's Meta selection and local development checkout are not copied into Mac account paths.
 
 ## User interface, trust, and telemetry
