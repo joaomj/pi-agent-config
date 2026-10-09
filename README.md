@@ -20,12 +20,12 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/joaomj/pi-agent-config/m
 ```
 
 For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
-For a lighter setup, pass `--profile server` (no telemetry or visual packages) or `--profile minimal` (search, permissions, and redaction only).
+For a lighter setup, pass `--profile server` (no telemetry or visual packages) or `--profile minimal` (search, permissions, redaction, and background commands).
 Run `./install.sh --check-only` to verify a machine without installing.
 
 The installer generates configuration from shared templates and the selected profile.
 It installs Pi under `~/.local` only if Pi is missing. Existing software remains unchanged.
-Extension declarations use unversioned npm or Git sources. Configuration sync does not enforce package versions.
+Profiles declare npm and Git sources. Configuration sync does not enforce installed package versions.
 
 To use a local permission-system checkout, pass `--local-permissions <path>` or set `PI_PERMISSIONS_SRC`.
 A checkout is never selected just because its directory exists.
@@ -98,6 +98,14 @@ secret-tool store --label 'exa MCP key' service pi-agent-exa account exa
 ```
 
 Restart Pi after storing the key.
+
+### Background commands
+
+Every profile loads [durable background bash](https://github.com/joaomj/pi-extensions/tree/package/background-bash) from your GitHub fork. After 30 seconds, a command continues in the background as the same process. Use `background: true` for known long or verbose commands and end the turn after handoff. Completion wakes the owning session automatically.
+
+Inspect or cancel with `bash_process` through codemode using the returned `jobId`. Jobs survive Pi exit and reload, but cannot wake a closed session. Resume the original session to recover results.
+
+Logs keep the first **2 MiB per job** in the OS temporary directory. OS cleanup can remove recovery records; set `outputDir` in `background-bash.jsonc` when persistent storage is required. There is no total-storage cap or automatic retention policy. Do not enable another background runner or timeout-retry guard alongside it.
 
 ### Claude subscription transport
 

@@ -13,7 +13,7 @@ conventions > this file > skills.
 - Use native `git` for local ops. Use `gh` for GitHub API and repository operations.
 - If a required dependency is missing, install it (the permission prompt handles approval).
 - When I must run things you cannot (sudo, auth, secrets) or there is more than one command to run: write one temporary script (`/tmp/<name>.sh` for simple cases, `/tmp/<name>.py` for complex ones) that logs to both the terminal and a file in `/tmp`, and give me the exact command to run it. One copy-and-run step.
-- Use `bgrun` through `codemode` for commands expected to exceed 30 seconds or 100 output lines. Name each job, then end the turn after launch. After the completion wake, use `bgtail` or `bggrep` through `codemode`; do not poll or read full logs.
+- Use `bash` with `background: true` through `codemode` for commands expected to exceed 30 seconds or produce verbose output. Name each job, then end the turn after handoff. Other bash commands automatically move to the background after at most 30 seconds without being restarted. Wait for the completion notification; use `bash_process` to inspect or cancel by `jobId`, and read only the required log excerpt. Do not poll, rerun a promoted command, or read full logs.
 - Treat a successful git op as complete. Re-inspect only after error or when next action needs state.
 
 ## Code changes

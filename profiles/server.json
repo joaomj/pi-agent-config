@@ -3,7 +3,7 @@
     "npm:@ff-labs/pi-fff",
     "npm:@gotgenes/pi-permission-system",
     "npm:@kiranpg/pi-sentry",
-    "npm:pi-background-run",
+    "git:github.com/joaomj/pi-extensions@package/background-bash",
     "git:github.com/joaomj/pi-claude-directsdk"
   ]
 }

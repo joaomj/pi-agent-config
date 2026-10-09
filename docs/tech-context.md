@@ -57,15 +57,16 @@ Hidden tools remain initialized; hiding declarations is not a security boundary.
 Follow the search rules in `AGENTS.md`; use native search only for exact checks, unsupported searches, or fallback.
 FFF is a Pi extension, not an MCP server. Indexing is not a workspace sandbox.
 
-[session-responsiveness.ts](../extensions/session-responsiveness.ts) caps foreground shell calls and requests progress reports after prolonged silence.
-Use `bgrun` for commands expected to exceed 30 seconds or 100 output lines.
+Every profile loads [durable background bash](https://github.com/joaomj/pi-extensions/tree/package/background-bash). Commands automatically move to the background after 30 seconds without restarting. Use `bash` with `background: true` for known long or verbose commands, then wait for completion. Inspect or cancel through `bash_process` using the returned `jobId`.
+Logs keep the first 2 MiB per job in the OS temporary directory. Jobs survive Pi exit and reload while their records remain; OS cleanup can remove them.
+[session-responsiveness.ts](../extensions/session-responsiveness.ts) requests progress reports after prolonged silence. It does not rewrite shell timeouts or suggest rerunning commands.
 [btw.ts](../extensions/btw.ts) supplies a tool-free side question; [exit.ts](../extensions/exit.ts) supplies the shutdown alias.
 
 ## Installed capabilities
 
-Profiles declare unversioned npm and Git package sources. They do not constrain installed versions.
+Profiles declare npm and Git package sources. Configuration sync changes declarations, not installed versions.
 The workstation profile includes visualization, attention styles, background jobs, optional local telemetry, and subscription-usage display.
-The server profile omits visualization and telemetry packages. The minimal profile contains search, permissions, and secret redaction.
+The server profile omits visualization and telemetry packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
 
 The workstation and server profiles declare `git:github.com/joaomj/pi-claude-directsdk`.
 The public package source replaces a VPS-only relative path. It does not change the default model.

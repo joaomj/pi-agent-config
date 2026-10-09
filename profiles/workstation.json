@@ -5,7 +5,7 @@
     "npm:@kiranpg/pi-sentry",
     "npm:visual-explainer",
     "npm:@joaomj/pi-attention-span",
-    "npm:pi-background-run",
+    "git:github.com/joaomj/pi-extensions@package/background-bash",
     "npm:@spences10/pi-telemetry",
     "npm:@specode/pi-subscription-usage",
     "git:github.com/joaomj/pi-claude-directsdk"

@@ -1,10 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-// Guard 1: no foreground shell call runs longer than this. Longer work must
-// go through bgrun (background + log file + wake on completion).
-const BASH_CAP_SECONDS = 60;
-
-// Guard 2: maximum silence from the agent while it keeps working. A "report"
+// Maximum silence from the agent while it keeps working. A "report"
 // is an assistant message with visible text. Tool calls alone do not count.
 const TURN_TIMEOUT_MS = 5 * 60_000;
 
@@ -23,7 +19,7 @@ function reminderText(silentMs: number): string {
 	return (
 		`You have been working for ${elapsedText(silentMs)} without a user-visible report. ` +
 		`Pause and report in two or three sentences: current goal, what is done, what is next. ` +
-		`If you are waiting on a long command, run it in the background with bgrun (output to a log file) and end your turn instead of blocking or polling. ` +
+		`If a command has moved to the background, do not rerun it. End your turn and wait for its automatic completion notification. For new long commands, use bash with background: true. ` +
 		`Do not poll logs or processes in a loop.`
 	);
 }
@@ -133,30 +129,4 @@ export default function (pi: ExtensionAPI) {
 		reminderQueued = false;
 	});
 
-	pi.on("tool_call", (event) => {
-		if (event.toolName !== "bash" && event.toolName !== "powershell") return;
-		const input = event.input as { timeout?: unknown };
-		if (typeof input.timeout !== "number" || input.timeout > BASH_CAP_SECONDS) {
-			input.timeout = BASH_CAP_SECONDS;
-		}
-	});
-
-	pi.on("tool_result", (event) => {
-		if (event.toolName !== "bash" && event.toolName !== "powershell") return;
-		if (!event.isError) return;
-		const text = event.content
-			.filter((block): block is { type: "text"; text: string } => block.type === "text")
-			.map((block) => block.text)
-			.join("\n");
-		if (!text.includes("timed out after")) return;
-		return {
-			content: [
-				...event.content,
-				{
-					type: "text",
-					text: `This command hit the ${BASH_CAP_SECONDS}s foreground limit. Re-run it in the background with bgrun (output to a log file), end your turn, and continue when the wake arrives. Do not retry it in the foreground or poll for it.`,
-				},
-			],
-		};
-	});
 }

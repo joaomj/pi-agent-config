@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, writeFile, readFile, copyFile, chmod, rm, readdir, symlink, stat } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, copyFile, chmod, rm, readdir, symlink, stat, realpath } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -237,7 +237,7 @@ test("generation ignores version locks and implicit development checkouts, but h
   assert.equal((await settings(f)).permissionsSrc, undefined);
   assert.deepEqual(await readFile(join(f.work, "settings.base.json")), baseBefore);
   const mcp = JSON.parse(await readFile(join(f.work, "mcp.json"), "utf8"));
-  assert.equal(mcp.mcpServers.probe.cwd, f.work);
+  assert.equal(await realpath(mcp.mcpServers.probe.cwd), await realpath(f.work));
   const generatedBefore = await readFile(join(f.work, "settings.json"));
   const missing = f.run(["--generate", "--local-permissions=./missing"]);
   assert.notEqual(missing.status, 0, missing.output);
