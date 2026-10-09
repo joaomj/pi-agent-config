@@ -1,7 +1,7 @@
 {
   "theme": "dark",
   "quietStartup": false,
-  "enableInstallTelemetry": false,
+  "enableInstallTelemetry": true,
   "enableSkillCommands": true,
   "defaultProvider": "openai",
   "defaultModel": "gpt-6.1-sol",
@@ -12,9 +12,7 @@
   },
   "transport": "websocket-cached",
   "defaultTools": [
-    "read",
-    "bash",
-    "codemode"
+    "+codemode"
   ],
   "showCacheMissNotices": true,
   "compaction": {
@@ -26,15 +24,14 @@
     "openai/gpt-6.1-sol"
   ],
   "packages": [
-    "npm:@ff-labs/pi-fff",
-    "npm:@gotgenes/pi-permission-system",
-    "npm:@kiranpg/pi-sentry",
-    "npm:visual-explainer",
-    "npm:@joaomj/pi-attention-span",
-    "npm:pi-background-run",
-    "npm:@spences10/pi-telemetry",
-    "npm:@specode/pi-subscription-usage",
-    "git:github.com/joaomj/pi-claude-directsdk"
+    "npm:@ff-labs/pi-fff@0.11.0",
+    "npm:@gotgenes/pi-permission-system@39.0.3",
+    "npm:@kiranpg/pi-sentry@0.1.2",
+    "npm:visual-explainer@0.12.0",
+    "npm:@joaomj/pi-attention-span@0.8.0",
+    "npm:pi-background-run@0.8.0",
+    "npm:@spences10/pi-telemetry@0.0.33",
+    "npm:@specode/pi-subscription-usage@1.3.1"
   ],
   "tuiMode": "fullscreen",
   "fullscreenScrollbar": "always",
@@ -52,7 +49,7 @@
   },
   "codemode": {
     "mode": "on",
-    "inlineBudget": 0
+    "inlineBudget": 3000
   },
   "npmCommand": [
     "npm",
@@ -60,5 +57,5 @@
   ],
   "doubleEscapeAction": "none",
   "defaultProjectTrust": "ask",
-  "enableAnalytics": false
+  "lastChangelogVersion": "0.99.2"
 }
