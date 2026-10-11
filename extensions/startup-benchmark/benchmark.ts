@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { homedir } from "node:os";
 
 const TIMEOUT_MS = 30_000;
 const MAX_OUTPUT_BYTES = 2 * 1024 * 1024;
@@ -32,24 +31,11 @@ function timingGroups(text: string): TimingGroup[] | undefined {
 	return groups;
 }
 
-function report(groups: TimingGroup[], elapsed: number): string {
+function report(groups: TimingGroup[]): string {
 	const main = groups.find((group) => group.name === "main")!;
 	return [
-		`Native main total: ${main.total}ms`,
-		`External time to report: ${Math.round(elapsed)}ms`,
-		"",
-		"Fresh launch, not the footer's original startup reading.",
-		"Probe: pi --no-session in a 120-column, 40-row terminal.",
-		"Uses the current directory, inherited configuration, and network settings.",
-		"Native main includes interactiveMode.init but excludes early Node/module initialization.",
-		"External time includes PTY launch, Pi's 150ms terminal-drain wait, and output delivery.",
-		"Extension timings are nested inside main; do not add the group totals.",
-		"The probe stops after capturing the report. No model request is submitted.",
-		...groups.flatMap((group) => [
-			"",
-			`${group.name} — ${group.total}ms`,
-			...group.rows.map((row) => `  ${row.label.replaceAll(homedir(), "~")}: ${row.ms}ms`),
-		]),
+		...main.rows.map((row) => `- ${row.label}: ${row.ms}ms`),
+		`- Total (native stages): ${main.total}ms`,
 	].join("\n");
 }
 
@@ -76,7 +62,6 @@ export async function runBenchmark(cwd: string, signal: AbortSignal): Promise<st
 		: ["-q", "/dev/null", "/bin/sh", "-c", command];
 	const env: NodeJS.ProcessEnv = { ...process.env, PI_TIMING: "1", PI_STARTUP_BENCHMARK: "1", PI_TELEMETRY: "0" };
 	delete env.PI_TUI_WRITE_LOG;
-	const started = performance.now();
 
 	return await new Promise<string>((resolve, reject) => {
 		const child = spawn("script", args, { cwd, env, detached: true, stdio: ["ignore", "pipe", "pipe"] });
@@ -87,7 +72,6 @@ export async function runBenchmark(cwd: string, signal: AbortSignal): Promise<st
 		let failure: Error | undefined;
 		let captureTimer: ReturnType<typeof setTimeout> | undefined;
 		let killTimer: ReturnType<typeof setTimeout> | undefined;
-		let lastOutputAt = started;
 
 		const stop = () => {
 			try {
@@ -124,7 +108,6 @@ export async function runBenchmark(cwd: string, signal: AbortSignal): Promise<st
 				return;
 			}
 			output += chunk.toString();
-			lastOutputAt = performance.now();
 			const text = plainText(output);
 			nativePid ??= Number(text.match(new RegExp(`${marker}=(\\d+)`))?.[1]) || undefined;
 			if (captureTimer) clearTimeout(captureTimer);
@@ -132,7 +115,7 @@ export async function runBenchmark(cwd: string, signal: AbortSignal): Promise<st
 				try {
 					const groups = timingGroups(plainText(output));
 					if (!groups) return;
-					result = report(groups, lastOutputAt - started);
+					result = report(groups);
 					stop();
 				} catch (error) {
 					failure = error as Error;
@@ -158,7 +141,7 @@ export async function runBenchmark(cwd: string, signal: AbortSignal): Promise<st
 			if (!failure && result === undefined && code === 0) {
 				try {
 					const groups = timingGroups(plainText(output));
-					if (groups) result = report(groups, lastOutputAt - started);
+					if (groups) result = report(groups);
 				} catch (error) {
 					failure = error as Error;
 				}
