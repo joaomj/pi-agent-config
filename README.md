@@ -80,8 +80,6 @@ It measures elapsed time from Node.js process start to this extension's first `s
 The reading includes I/O and waits. It approximates total startup time but excludes later session-start handlers and final TUI setup.
 All durations use milliseconds. `/reload` and session changes preserve the original reading.
 
-Run `/startup-time` to open a TUI report with the reading, measurement boundaries, and exclusions.
-Pi's extension API does not expose native stage timings, so the report has no per-stage breakdown.
 Restart Pi after adding the extension. No environment variable or extra package is required.
 To launch without the native shell timing report, run `env -u PI_TIMING pi`.
 Keep `PI_TIMING=1` when you need Pi's native stage timings in the shell.
