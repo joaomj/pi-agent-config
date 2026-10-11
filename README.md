@@ -84,6 +84,21 @@ Restart Pi after adding the extension. No environment variable or extra package 
 To launch without the native shell timing report, run `env -u PI_TIMING pi`.
 Keep `PI_TIMING=1` when you need Pi's native stage timings in the shell.
 
+Run `/startup-benchmark` for an on-demand native timing breakdown in the TUI.
+The command starts a separate `pi --no-session` process with `PI_TIMING=1` and `PI_STARTUP_BENCHMARK=1`.
+It reports main stages, extension imports and factories, and `interactiveMode.init`, all in milliseconds.
+Use Up/Down, Page Up/Down, or Home/End to scroll. Press Escape to cancel or close the report.
+
+The benchmark uses your current directory, inherited configuration, and network settings in a 120-column, 40-row terminal.
+Configured extensions run their normal startup behavior again. The command submits no model request and saves no Pi session.
+It stops the probe after capturing the report; some extensions can otherwise keep the child process alive.
+The external duration measures launch to report delivery, including Pi's 150ms terminal-drain wait.
+Extension timing totals are nested inside the main total. Do not add them together.
+
+These results describe a new launch, not the footer's original reading. Caches can be warmer.
+The command requires Linux or macOS, `pi` and the system `script` command on PATH, and times out after 30000ms.
+It uses an internal benchmark flag and validates the native text report. A future Pi release can require an update.
+
 ### Tools and web access
 
 Only `read`, `bash`, and `codemode` are directly visible to the model.
