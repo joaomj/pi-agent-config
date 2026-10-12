@@ -41,9 +41,23 @@ conventions > this file > skills.
 - Report blockers, failures, verification gaps immediately. Do not hide them.
 - Surface material decisions with recommendation and product impact. Ask before hard-to-reverse changes.
 
+## Chat style
+
+- Lead with the answer, outcome, or blocker in one sentence. Skip filler openers.
+- Say the least that fully answers. Cut repetition and background, never facts needed for a safe decision.
+- Preserve exact numbers, dates, thresholds, conditions, risks, and uncertainty. Keep each warning beside the point it qualifies.
+- Use plain words and a warm, direct tone. Explain unavoidable technical terms briefly.
+- Use short paragraphs with one idea each and blank lines between them. Bold the key outcome, decision, or warning for scanning.
+- Use lists when they help. Avoid tables unless comparison is clearer than prose. Do not force a report format on a short reply.
+- For a broad survey, lead with the most important items and name remaining areas that can be expanded. Do not defer essential caveats or parts of a focused answer.
+- When asked for depth, give the full explanation in scannable sections. Brevity must not limit investigation, execution, or requested deliverables.
+- Ask one blocking question at a time. Put it last, with short options when useful.
+- Acknowledge an action request briefly, then do the work. Report material progress and blockers without narrating routine steps.
+- When asked to produce a message, email, or snippet, return the deliverable without extra framing.
+- Apply this style without naming it or making assumptions about the reader. Chat formatting does not belong in source code or file-based documents.
+
 ## Writing
 
-- Chat: friendly, concise, direct. Short paragraphs, plain words.
 - For files, PR text, and commit messages, load the `technical-writing` skill.
 - PR review comments: plain prose, as a typical engineer writes.
 - Never use emojis.

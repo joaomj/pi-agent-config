@@ -40,11 +40,12 @@ The main agent does the work directly. There are no shared agent definitions or 
 Follow [AGENTS.md](../AGENTS.md) for collaboration, approval, test, and Git rules.
 Use [/plan](../prompts/plan.md) for product-oriented planning and [/code-review](../prompts/code-review.md) for evidence-backed P0/P1 review.
 
-[/bro](../prompts/bro.md) requests a plain-language restatement.
-[/correct](../prompts/correct.md) investigates recurring mistakes and selects an appropriate enforcement mechanism.
-Both are prompt templates rather than skills. The duplicate skill copies are removed.
-Their upstream MIT notice is retained in [prompts/LICENSE](../prompts/LICENSE).
-Other skills retain their specialized responsibilities, including technical writing, research, test audit, and skill assessment.
+[/explain](../prompts/explain.md) explains a topic or restates the last response.
+Global chat style lives in [AGENTS.md](../AGENTS.md), without a style command.
+[/architecture-diagram](../prompts/architecture-diagram.md) and
+[/visual-explainer](../prompts/visual-explainer.md) are explicit artifact commands.
+The upstream MIT notice remains in [prompts/LICENSE](../prompts/LICENSE).
+Skills retain technical writing, research, test audit, and skill assessment.
 
 ## Tools and search
 
@@ -59,13 +60,12 @@ FFF is a Pi extension, not an MCP server. Indexing is not a workspace sandbox.
 
 Every profile loads [durable background bash](https://github.com/joaomj/pi-extensions/tree/package/background-bash). Commands automatically move to the background after 30 seconds without restarting. Use `bash` with `background: true` for known long or verbose commands, then wait for completion. Inspect or cancel through `bash_process` using the returned `jobId`.
 Logs keep the first 2 MiB per job in the OS temporary directory. Jobs survive Pi exit and reload while their records remain; OS cleanup can remove them.
-[session-responsiveness.ts](../extensions/session-responsiveness.ts) requests progress reports after prolonged silence. It does not rewrite shell timeouts or suggest rerunning commands.
-[btw.ts](../extensions/btw.ts) supplies a tool-free side question; [exit.ts](../extensions/exit.ts) supplies the shutdown alias.
+[exit.ts](../extensions/exit.ts) supplies the shutdown alias.
 
 ## Installed capabilities
 
 Profiles declare npm and Git package sources. Configuration sync changes declarations, not installed versions.
-The workstation profile includes visualization, attention styles, background jobs, optional local telemetry, and subscription-usage display.
+The workstation profile includes visualization, background jobs, optional local telemetry, and subscription-usage display.
 The server profile omits visualization and telemetry packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
 
 The workstation and server profiles declare `git:github.com/joaomj/pi-claude-directsdk`.
@@ -77,7 +77,9 @@ Sync does not install Claude Code, manage authentication, prove model entitlemen
 A local permission-system checkout requires explicit selection through `--local-permissions`, `PI_PERMISSIONS_SRC`, or a local setting.
 Its presence on disk does not silently replace the published package.
 
-`visual-explainer` provides HTML diagrams, reviews, and slide-related tools.
+`visual-explainer` retains its rendering extension. Package filters disable its
+bundled prompts and skill discovery. The local `/visual-explainer` command reads
+the installed guidance and references on demand.
 PPTX export is optional. Previous npm audits found denial-of-service advisories in its `image-size` dependency chain.
 Do not use PPTX export with untrusted images; inspect the current dependency audit before enabling that path.
 

@@ -1,9 +1,9 @@
 ---
-description: Review a change for P0/P1 correctness, security, and regression risks
+description: Review urgent P0/P1 defects only, not a comprehensive code review
 argument-hint: "[scope]"
 ---
 
-Review `${ARGUMENTS:-the current change}`.
+Review `${@:-the current change}`.
 
 Inspect the requested diff and enough surrounding code, tests, configuration,
 and repository guidance to verify each concern. Review correctness, security,

@@ -1,7 +1,8 @@
 ---
-description: Explain a topic in friendly, concise language
+description: Explain a topic or restate the last response in plain language
+argument-hint: "[topic, passage, or file]"
 ---
 
-Explain the last agent message in a friendly professional tone.
-
-Follow the chat voice in `AGENTS.md`. Do not use the report structure.
+Explain `${@:-the last assistant message}` in plain language.
+Use examples only when they help understanding. Preserve important conditions,
+numbers, risks, and uncertainty. Follow the chat style in `AGENTS.md`.

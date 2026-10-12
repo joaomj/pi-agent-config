@@ -5,7 +5,8 @@ argument-hint: "<incident or change>"
 
 Write a blameless Google SRE-style postmortem for `$ARGUMENTS`.
 
-Use the repository's incident template and location when they exist. Build the
+Return the postmortem in chat unless the user requests a file. When writing a
+file, use the repository's incident template and location when they exist. Build the
 record from available evidence and ask for material facts that cannot be
 recovered. Mark uncertainty; never invent times, impact, causes, or owners.
 

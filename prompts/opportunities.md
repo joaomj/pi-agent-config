@@ -6,8 +6,9 @@ argument-hint: "[focus]"
 Identify the best opportunities to improve the current project. Use `$ARGUMENTS`
 as an optional focus.
 
-Reconstruct the current project state from code, tests, documentation, recent
-history, plans, and observed behavior. Separate facts, strong inferences, stated
+Inspect code and documentation relevant to the requested focus. Use tests,
+recent history, and observed behavior when they help substantiate a candidate.
+Do not require a repository-wide inventory. Separate facts, strong inferences, stated
 intentions, and speculation.
 
 Consider user value, reliability, safety, experience, maintainability,

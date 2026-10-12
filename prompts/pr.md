@@ -8,11 +8,11 @@ instructions.
 
 1. Inspect repository guidance, worktree state, branch, remote, default branch,
    commits, changed files, verification evidence, and the repository PR
-   template. Stop on unrelated unresolved worktree changes or an invalid source
-   branch.
+   template. Stop on an invalid source branch. Exclude unrelated worktree changes; ask
+   only when they prevent reliable verification or make PR scope ambiguous.
 2. Identify untracked, unstaged, or staged planning, temporary, draft, backup,
-   local-config, and secret-looking files. Stop and ask what to do with any such
-   file; do not delete or silently include it.
+   local-config, and secret-looking files. Exclude and report these files. Ask only when their intended inclusion is
+   ambiguous; do not delete or silently include them.
 3. Determine the base branch from repository evidence. Ask only when it is
    ambiguous.
 4. Check whether the source branch can merge cleanly without modifying the
