@@ -29,10 +29,9 @@ Pi supplies compaction and session management.
 The permission extension also checks sensitive paths and mutations. Neither tool visibility nor project trust replaces the approval policy in [AGENTS.md](../AGENTS.md).
 
 Pi install telemetry and analytics are disabled in shared defaults.
-The workstation profile declares `@spences10/pi-telemetry`, whose local session recording defaults to off.
-Its `telemetry.json` preference and SQLite database are ignored by Git and preserved during sync.
-Only the Mac Mini's `joao` account has recording enabled and an explicit install-telemetry override.
-`admin` has recording disabled. Pi analytics remain disabled for both accounts.
+Shared profiles do not declare `@spences10/pi-telemetry`.
+Existing account-local `telemetry.json` preferences and SQLite databases remain ignored by Git and preserved during sync.
+Account-local overrides can change Pi install telemetry independently of the removed extension.
 
 ## Single-agent workflow and prompt commands
 
@@ -70,7 +69,7 @@ Logs keep the first 2 MiB per job in the OS temporary directory. Jobs survive Pi
 ## Installed capabilities
 
 Profiles declare npm and Git package sources. Configuration sync changes declarations, not installed versions.
-The workstation profile includes background jobs, optional local telemetry, and subscription-usage display.
+The workstation profile includes background jobs and subscription-usage display.
 The server profile omits telemetry and subscription-usage display packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
 
 The workstation and server profiles declare `git:github.com/joaomj/pi-claude-directsdk`.
