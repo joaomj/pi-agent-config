@@ -1,3 +1,4 @@
 {
-  "mode": "tools-only"
+  "mode": "tools-only",
+  "enableHomeDirScanning": false
 }
