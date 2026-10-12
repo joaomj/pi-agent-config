@@ -9,6 +9,10 @@
       "timeout": 300,
       "exposure": "codemode",
       "description": "Exa web search, fetch, and research agent, authenticated from the environment or system keychain."
+    },
+    "cloudflare-api": {
+      "url": "https://mcp.cloudflare.com/mcp",
+      "description": "Manage Cloudflare account resources with explicit approval for remote writes."
     }
   }
 }

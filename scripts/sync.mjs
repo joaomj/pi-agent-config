@@ -118,7 +118,8 @@ function generate({ localOverrides = true } = {}) {
     if (previous[key] !== undefined) settings[key] = previous[key];
   }
 
-  const mcpBase = JSON.parse(readFileSync(join(root, "mcp.base.json"), "utf8").split("__AGENT_DIR__").join(root));
+  const agentPath = root === join(homedir(), ".pi", "agent") ? "~/.pi/agent" : root;
+  const mcpBase = JSON.parse(readFileSync(join(root, "mcp.base.json"), "utf8").split("__AGENT_DIR__").join(agentPath));
   let mcp = mergeDeep(mcpBase, {});
   delete mcp._comment;
   const mcpLocalPath = join(root, "mcp.local.json");
@@ -246,11 +247,13 @@ function configure(cliOptions) {
 function install(cliOptions) {
   configure(cliOptions);
   if (cliOptions.dryRun || cliOptions.generateOnly) return;
+  const npm = executable("npm");
+  if (!npm) throw new Error("npm is required. Install npm and add it to PATH.");
+  execFileSync(npm, ["config", "set", "prefix", join(homedir(), ".local"), "--location=user"], { stdio: "inherit" });
+  console.log("Configured the user npm global prefix under ~/.local.");
   if (executable("pi")) {
     console.log("Existing Pi installation left unchanged.");
   } else {
-    const npm = executable("npm");
-    if (!npm) throw new Error("npm is required. Install npm and add it to PATH.");
     const prefix = join(homedir(), ".local");
     const neutral = mkdtempSync(join(tmpdir(), "pi-install-"));
     try {

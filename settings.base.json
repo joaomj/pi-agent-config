@@ -23,10 +23,12 @@
     "reserveTokens": 64000
   },
   "enabledModels": [
-    "openai/gpt-6.1-sol"
+    "openai/gpt-6.1-sol",
+    "claude-directsdk/claude-opus-5-5",
+    "claude-directsdk/claude-haiku-5-5"
   ],
   "packages": "@profile:workstation",
-  "tuiMode": "fullscreen",
+  "tuiMode": "regular",
   "fullscreenScrollbar": "always",
   "fullscreenExitOutput": "resume-hint",
   "fullscreenCopyOnSelect": true,
@@ -42,7 +44,7 @@
   },
   "codemode": {
     "mode": "on",
-    "inlineBudget": 0
+    "inlineBudget": 3000
   },
   "npmCommand": [
     "npm",
