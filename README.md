@@ -20,7 +20,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/joaomj/pi-agent-config/m
 ```
 
 For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
-For a lighter setup, pass `--profile server` (no telemetry or visual packages) or `--profile minimal` (search, permissions, redaction, and background commands).
+For a lighter setup, pass `--profile server` (no telemetry or subscription-usage display) or `--profile minimal` (search, permissions, redaction, and background commands).
 Run `./install.sh --check-only` to verify a machine without installing.
 
 The installer generates configuration from shared templates and the selected profile.
@@ -152,8 +152,9 @@ Pi analytics remain disabled for both accounts.
 
 ### Prompt commands
 
-Use `/explain [topic, passage, or file]` for a plain-language explanation.
-Use `/code-review [scope]` for urgent P0/P1 defects only.
+Use `/explain` to understand the last assistant message in plain terms, with
+examples, analogies, or before-and-after comparisons when useful.
+Use `/code-review [scope]` for P0–P3 defects, including adversarial and security checks.
 Use `/opportunities [focus]`, `/plan [change]`, `/postmortem [incident]`, and
 `/pr [instructions]` for their distinct project workflows.
 
@@ -161,18 +162,24 @@ Chat style is defined globally in [AGENTS.md](AGENTS.md). No style command is re
 Prompt templates are explicit commands. Run `/reload` after changing them.
 The retained upstream MIT notice is in [prompts/LICENSE](prompts/LICENSE).
 
-### Diagram and visual commands
+### Diagram and slide commands
 
 Use `/architecture-diagram <question or view>` for a focused software diagram.
 It creates equivalent HTML and SVG files unless another format is requested.
-Use `/visual-explainer <topic>` for an HTML visual explanation. Request `slides`
-or `recap` in the arguments for a deck or project recap.
+Use `/generate-slides <topic, source file, or brief>` for a
+standalone HTML slide deck that opens offline. Optional arguments can specify
+audience, duration, and output path. Slide generation belongs exclusively to
+`/generate-slides`; see its [delivery contract](docs/workflows/html-slide-decks.md).
 
-The [`visual-explainer`](https://github.com/nicobailon/visual-explainer) package
-retains its rendering extension. Its bundled prompts and automatic skill
-loading are disabled. The local command reads its supporting guidance only
-when invoked. Rendering writes to `~/.agent/diagrams/` and opens the browser by
-default. PPTX export remains optional and best-effort.
+Slide decks embed their assets and include navigation, readable fallbacks, and
+print support. The workflow checks source accuracy, offline dependencies, and
+layout. It reports browser verification gaps when preview tooling is unavailable.
+
+Diagrams and slide decks are generated directly, without a visualization package.
+Video generation is not part of the shared workflows.
+
+Technical document prose follows the STE-inspired writing skill. Chat and
+`/explain` follow `AGENTS.md`; strict STE rules do not apply to conversation.
 
 ## Synchronize configuration
 
@@ -238,7 +245,7 @@ They do not contact model providers.
 
 - [settings.base.json](settings.base.json): shared defaults. The installer merges this file with a [profile](profiles/) package list and the untracked `settings.local.json` to generate [settings.json](settings.json).
 - [mcp.base.json](mcp.base.json): native MCP connections, without embedded credentials. Keys resolve through environment variables or [scripts/mcp-auth.sh](scripts/mcp-auth.sh).
-- [profiles/](profiles/): `workstation` (full), `server` (no telemetry or visual packages), `minimal` (core only). Select with `--profile`.
+- [profiles/](profiles/): `workstation` (full), `server` (no telemetry or subscription-usage display), `minimal` (core only). Select with `--profile`.
 - [AGENTS.md](AGENTS.md): agent instructions.
 - [Permission rules](extensions/pi-permission-system/config.json): local access policy.
 - [skills/](skills/) and [prompts/](prompts/): reusable workflows, including the `test-audit` authoring gate and audit workflow, and the `skill-doctor` conversation grader.

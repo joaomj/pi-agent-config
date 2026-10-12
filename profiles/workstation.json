@@ -3,11 +3,6 @@
     "npm:@ff-labs/pi-fff",
     "npm:@gotgenes/pi-permission-system",
     "npm:@kiranpg/pi-sentry",
-    {
-      "source": "npm:visual-explainer",
-      "skills": [],
-      "prompts": []
-    },
     "git:github.com/joaomj/pi-extensions@package/background-bash",
     "npm:@spences10/pi-telemetry",
     "npm:@specode/pi-subscription-usage",

@@ -43,6 +43,9 @@ conventions > this file > skills.
 
 ## Chat style
 
+These rules govern conversation and progress updates. File-based artifacts and
+PR or commit prose use the technical-writing skill, without chat formatting.
+
 - Lead with the answer, outcome, or blocker in one sentence. Skip filler openers.
 - Say the least that fully answers. Cut repetition and background, never facts needed for a safe decision.
 - Preserve exact numbers, dates, thresholds, conditions, risks, and uncertainty. Keep each warning beside the point it qualifies.
@@ -58,6 +61,6 @@ conventions > this file > skills.
 
 ## Writing
 
-- For files, PR text, and commit messages, load the `technical-writing` skill.
+- For file-based documentation, PR text, and commit messages, load the `technical-writing` skill. It does not govern chat explanations.
 - PR review comments: plain prose, as a typical engineer writes.
 - Never use emojis.

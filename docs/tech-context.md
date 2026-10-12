@@ -38,13 +38,18 @@ Only the Mac Mini's `joao` account has recording enabled and an explicit install
 
 The main agent does the work directly. There are no shared agent definitions or delegated workflows.
 Follow [AGENTS.md](../AGENTS.md) for collaboration, approval, test, and Git rules.
-Use [/plan](../prompts/plan.md) for product-oriented planning and [/code-review](../prompts/code-review.md) for evidence-backed P0/P1 review.
+Use [/plan](../prompts/plan.md) for product-oriented planning and [/code-review](../prompts/code-review.md) for evidence-backed P0–P3 review with adversarial and security checks.
 
-[/explain](../prompts/explain.md) explains a topic or restates the last response.
+[/explain](../prompts/explain.md) explains only the last assistant message for
+an adult without subject context. It uses examples and analogies when helpful.
 Global chat style lives in [AGENTS.md](../AGENTS.md), without a style command.
-[/architecture-diagram](../prompts/architecture-diagram.md) and
-[/visual-explainer](../prompts/visual-explainer.md) are explicit artifact commands.
+[/architecture-diagram](../prompts/architecture-diagram.md) creates focused
+software diagram artifacts.
 The upstream MIT notice remains in [prompts/LICENSE](../prompts/LICENSE).
+[/generate-slides](../prompts/generate-slides.md) creates offline HTML decks.
+Slide generation belongs exclusively to `/generate-slides`. Its
+[delivery contract](workflows/html-slide-decks.md) defines design, offline
+assets, navigation, accessibility, and verification without a rendering package.
 Skills retain technical writing, research, test audit, and skill assessment.
 
 ## Tools and search
@@ -65,8 +70,8 @@ Logs keep the first 2 MiB per job in the OS temporary directory. Jobs survive Pi
 ## Installed capabilities
 
 Profiles declare npm and Git package sources. Configuration sync changes declarations, not installed versions.
-The workstation profile includes visualization, background jobs, optional local telemetry, and subscription-usage display.
-The server profile omits visualization and telemetry packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
+The workstation profile includes background jobs, optional local telemetry, and subscription-usage display.
+The server profile omits telemetry and subscription-usage display packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
 
 The workstation and server profiles declare `git:github.com/joaomj/pi-claude-directsdk`.
 The public package source replaces a VPS-only relative path. It does not change the default model.
@@ -77,11 +82,10 @@ Sync does not install Claude Code, manage authentication, prove model entitlemen
 A local permission-system checkout requires explicit selection through `--local-permissions`, `PI_PERMISSIONS_SRC`, or a local setting.
 Its presence on disk does not silently replace the published package.
 
-`visual-explainer` retains its rendering extension. Package filters disable its
-bundled prompts and skill discovery. The local `/visual-explainer` command reads
-the installed guidance and references on demand.
-PPTX export is optional. Previous npm audits found denial-of-service advisories in its `image-size` dependency chain.
-Do not use PPTX export with untrusted images; inspect the current dependency audit before enabling that path.
+Diagram and slide commands write their artifacts directly. They do not require
+an external rendering package. Video generation is outside shared scope.
+Technical writing uses adapted clarity rules for documents and PR or commit
+prose. Conversational explanations use `AGENTS.md`, not strict STE constraints.
 
 ## MCP connections
 
