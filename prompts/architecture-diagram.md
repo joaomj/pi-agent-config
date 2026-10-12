@@ -1,7 +1,12 @@
 ---
-name: architecture-diagram
-description: Generate professional software diagram files for system structure, runtime flows, integrations, data, deployment, or security boundaries. Use only when the user asks for a diagram artifact.
+description: Create an evidence-based software diagram artifact
+argument-hint: "<question or view>"
 ---
+
+Create a diagram for `$@`. If the question or audience is unclear, ask before drawing.
+Read `docs/workflows/diagram-output-contract.md` under the Pi agent configuration
+directory (`PI_CODING_AGENT_DIR`, or `~/.pi/agent` when unset), not the current project.
+
 
 # Architecture Diagram
 
@@ -24,7 +29,7 @@ audience.
 5. Show meaningful failure, retry, authorization, or asynchronous behavior when
    it is part of the question.
 6. Mark assumptions and unknowns. Do not invent participants or behavior.
-7. Read and follow `references/output-contract.md` before creating files.
+7. Read and follow the diagram output contract named below before creating files.
 
 For an inline visual response, answer directly in chat with a diagram. Do not create
 files unless the user requested a diagram artifact.

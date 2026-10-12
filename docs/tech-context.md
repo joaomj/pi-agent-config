@@ -29,22 +29,27 @@ Pi supplies compaction and session management.
 The permission extension also checks sensitive paths and mutations. Neither tool visibility nor project trust replaces the approval policy in [AGENTS.md](../AGENTS.md).
 
 Pi install telemetry and analytics are disabled in shared defaults.
-The workstation profile declares `@spences10/pi-telemetry`, whose local session recording defaults to off.
-Its `telemetry.json` preference and SQLite database are ignored by Git and preserved during sync.
-Only the Mac Mini's `joao` account has recording enabled and an explicit install-telemetry override.
-`admin` has recording disabled. Pi analytics remain disabled for both accounts.
+Shared profiles do not declare `@spences10/pi-telemetry`.
+Existing account-local `telemetry.json` preferences and SQLite databases remain ignored by Git and preserved during sync.
+Account-local overrides can change Pi install telemetry independently of the removed extension.
 
 ## Single-agent workflow and prompt commands
 
 The main agent does the work directly. There are no shared agent definitions or delegated workflows.
 Follow [AGENTS.md](../AGENTS.md) for collaboration, approval, test, and Git rules.
-Use [/plan](../prompts/plan.md) for product-oriented planning and [/code-review](../prompts/code-review.md) for evidence-backed P0/P1 review.
+Use [/plan](../prompts/plan.md) for product-oriented planning and [/code-review](../prompts/code-review.md) for evidence-backed P0–P3 review with adversarial and security checks.
 
-[/bro](../prompts/bro.md) requests a plain-language restatement.
-[/correct](../prompts/correct.md) investigates recurring mistakes and selects an appropriate enforcement mechanism.
-Both are prompt templates rather than skills. The duplicate skill copies are removed.
-Their upstream MIT notice is retained in [prompts/LICENSE](../prompts/LICENSE).
-Other skills retain their specialized responsibilities, including technical writing, research, test audit, and skill assessment.
+[/explain](../prompts/explain.md) explains only the last assistant message for
+an adult without subject context. It uses examples and analogies when helpful.
+Global chat style lives in [AGENTS.md](../AGENTS.md), without a style command.
+[/architecture-diagram](../prompts/architecture-diagram.md) creates focused
+software diagram artifacts.
+The upstream MIT notice remains in [prompts/LICENSE](../prompts/LICENSE).
+[/generate-slides](../prompts/generate-slides.md) creates offline HTML decks.
+Slide generation belongs exclusively to `/generate-slides`. Its
+[delivery contract](workflows/html-slide-decks.md) defines design, offline
+assets, navigation, accessibility, and verification without a rendering package.
+Skills retain technical writing, research, test audit, and skill assessment.
 
 ## Tools and search
 
@@ -59,14 +64,13 @@ FFF is a Pi extension, not an MCP server. Indexing is not a workspace sandbox.
 
 Every profile loads [durable background bash](https://github.com/joaomj/pi-extensions/tree/package/background-bash). Commands automatically move to the background after 30 seconds without restarting. Use `bash` with `background: true` for known long or verbose commands, then wait for completion. Inspect or cancel through `bash_process` using the returned `jobId`.
 Logs keep the first 2 MiB per job in the OS temporary directory. Jobs survive Pi exit and reload while their records remain; OS cleanup can remove them.
-[session-responsiveness.ts](../extensions/session-responsiveness.ts) requests progress reports after prolonged silence. It does not rewrite shell timeouts or suggest rerunning commands.
-[btw.ts](../extensions/btw.ts) supplies a tool-free side question; [exit.ts](../extensions/exit.ts) supplies the shutdown alias.
+[exit.ts](../extensions/exit.ts) supplies the shutdown alias.
 
 ## Installed capabilities
 
 Profiles declare npm and Git package sources. Configuration sync changes declarations, not installed versions.
-The workstation profile includes visualization, attention styles, background jobs, optional local telemetry, and subscription-usage display.
-The server profile omits visualization and telemetry packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
+The workstation profile includes background jobs and subscription-usage display.
+The server profile omits telemetry and subscription-usage display packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
 
 The workstation and server profiles declare `git:github.com/joaomj/pi-claude-directsdk`.
 The public package source replaces a VPS-only relative path. It does not change the default model.
@@ -77,9 +81,10 @@ Sync does not install Claude Code, manage authentication, prove model entitlemen
 A local permission-system checkout requires explicit selection through `--local-permissions`, `PI_PERMISSIONS_SRC`, or a local setting.
 Its presence on disk does not silently replace the published package.
 
-`visual-explainer` provides HTML diagrams, reviews, and slide-related tools.
-PPTX export is optional. Previous npm audits found denial-of-service advisories in its `image-size` dependency chain.
-Do not use PPTX export with untrusted images; inspect the current dependency audit before enabling that path.
+Diagram and slide commands write their artifacts directly. They do not require
+an external rendering package. Video generation is outside shared scope.
+Technical writing uses adapted clarity rules for documents and PR or commit
+prose. Conversational explanations use `AGENTS.md`, not strict STE constraints.
 
 ## MCP connections
 

@@ -13,4 +13,4 @@ Write for a product manager with no deep technical knowledge. Focus on deliverab
 4. Name dependencies, risks, and open decisions in plain words, plus what is out of scope.
 5. Keep technical detail to the minimum needed for scoping. Avoid file names, symbols, and commands unless they change the scope or risk.
 
-Return the plan in chat by default. If the user explicitly requests a file, keep planning artifacts local and untracked. Never stage or commit them. Do not create a branch, edit application code, commit, or push while planning.
+Return the plan in chat by default. Write a file only when explicitly requested. Keep it local and untracked unless the user requests a durable project file. Do not stage or commit it without approval. Do not create a branch, edit application code, commit, or push while planning.

@@ -20,7 +20,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/joaomj/pi-agent-config/m
 ```
 
 For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
-For a lighter setup, pass `--profile server` (no telemetry or visual packages) or `--profile minimal` (search, permissions, redaction, and background commands).
+For a lighter setup, pass `--profile server` (no telemetry or subscription-usage display) or `--profile minimal` (search, permissions, redaction, and background commands).
 Run `./install.sh --check-only` to verify a machine without installing.
 
 The installer generates configuration from shared templates and the selected profile.
@@ -83,19 +83,6 @@ All durations use milliseconds. `/reload` and session changes preserve the origi
 Restart Pi after adding the extension. No environment variable or extra package is required.
 To launch without the native shell timing report, run `env -u PI_TIMING pi`.
 Keep `PI_TIMING=1` when you need Pi's native stage timings in the shell.
-
-Run `/startup-benchmark` for a compact bullet list of native main stages and their total, all in milliseconds.
-The list includes `interactiveMode.init`, but excludes extension details and external process timing.
-It uses Pi's built-in notification display, like `/usage`, with no custom overlay.
-The footer shows `benchmarking startup...` while the probe runs; the original startup reading stays unchanged.
-
-The command probes a fresh `pi --no-session` launch, not the footer's original reading. Caches can be warmer.
-It uses your current directory, inherited configuration, and network settings in a 120-column, 40-row terminal.
-Configured extensions run their normal startup behavior again. The command submits no model request and saves no Pi session.
-Native main timing excludes early Node/module initialization. The probe stops after the timing report arrives.
-
-The command requires Linux or macOS, `pi` and the system `script` command on PATH, and times out after 30000ms.
-It uses an internal benchmark flag and validates the native text report. A future Pi release can require an update.
 
 ### Tools and web access
 
@@ -165,16 +152,34 @@ Pi analytics remain disabled for both accounts.
 
 ### Prompt commands
 
-Use `/bro` to restate the last assistant message in plain language.
-Use `/correct [mistake and scope]` to investigate and prevent a recurring mistake.
-These are prompt templates, not skills or executable extensions. Run `/reload` after changing them in an active session.
-Both are adapted from Cursor's [pstack skills](https://github.com/cursor/plugins/tree/main/pstack/skills) under the MIT license; see [prompts/LICENSE](prompts/LICENSE).
+Use `/explain` to understand the last assistant message in plain terms, with
+examples, analogies, or before-and-after comparisons when useful.
+Use `/code-review [scope]` for P0–P3 defects, including adversarial and security checks.
+Use `/opportunities [focus]`, `/plan [change]`, `/postmortem [incident]`, and
+`/pr [instructions]` for their distinct project workflows.
 
-### Visual explanations
+Chat style is defined globally in [AGENTS.md](AGENTS.md). No style command is required.
+Prompt templates are explicit commands. Run `/reload` after changing them.
+The retained upstream MIT notice is in [prompts/LICENSE](prompts/LICENSE).
 
-The [`visual-explainer`](https://github.com/nicobailon/visual-explainer) package adds a skill, prompt commands such as `/diff-review`, `/plan-review`, `/generate-web-diagram`, and `/generate-slides`, plus the `visual_explainer` tool. Use them for diagrams, visual reviews, slide decks, and other visual explanations.
+### Diagram and slide commands
 
-The tool's render actions write HTML pages to `~/.agent/diagrams/` and open them in the browser by default. PPTX export is optional and best-effort. See [technical context](docs/tech-context.md#installed-capabilities) for its current dependency note.
+Use `/architecture-diagram <question or view>` for a focused software diagram.
+It creates equivalent HTML and SVG files unless another format is requested.
+Use `/generate-slides <topic, source file, or brief>` for a
+standalone HTML slide deck that opens offline. Optional arguments can specify
+audience, duration, and output path. Slide generation belongs exclusively to
+`/generate-slides`; see its [delivery contract](docs/workflows/html-slide-decks.md).
+
+Slide decks embed their assets and include navigation, readable fallbacks, and
+print support. The workflow checks source accuracy, offline dependencies, and
+layout. It reports browser verification gaps when preview tooling is unavailable.
+
+Diagrams and slide decks are generated directly, without a visualization package.
+Video generation is not part of the shared workflows.
+
+Technical document prose follows the STE-inspired writing skill. Chat and
+`/explain` follow `AGENTS.md`; strict STE rules do not apply to conversation.
 
 ## Synchronize configuration
 
@@ -240,7 +245,7 @@ They do not contact model providers.
 
 - [settings.base.json](settings.base.json): shared defaults. The installer merges this file with a [profile](profiles/) package list and the untracked `settings.local.json` to generate [settings.json](settings.json).
 - [mcp.base.json](mcp.base.json): native MCP connections, without embedded credentials. Keys resolve through environment variables or [scripts/mcp-auth.sh](scripts/mcp-auth.sh).
-- [profiles/](profiles/): `workstation` (full), `server` (no telemetry or visual packages), `minimal` (core only). Select with `--profile`.
+- [profiles/](profiles/): `workstation` (full), `server` (no telemetry or subscription-usage display), `minimal` (core only). Select with `--profile`.
 - [AGENTS.md](AGENTS.md): agent instructions.
 - [Permission rules](extensions/pi-permission-system/config.json): local access policy.
 - [skills/](skills/) and [prompts/](prompts/): reusable workflows, including the `test-audit` authoring gate and audit workflow, and the `skill-doctor` conversation grader.
