@@ -50,10 +50,10 @@ def cases(settings):
         "no-context": {"args": ["--no-context-files"]},
         "no-extensions-diagnostic": {"args": ["--no-extensions"]},
         "optional-integrations-and-fff-off": {"remove": [
-            "pi-sentry", "pi-telemetry", "pi-subscription-usage", "pi-claude-directsdk", "pi-fff",
+            "pi-sentry", "pi-telemetry", "pi-claude-directsdk", "pi-fff",
         ]},
         "optional-integrations-off": {"remove": [
-            "pi-sentry", "pi-telemetry", "pi-subscription-usage", "pi-claude-directsdk",
+            "pi-sentry", "pi-telemetry", "pi-claude-directsdk",
         ]},
     }
     for package in settings.get("packages", []):
