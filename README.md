@@ -110,6 +110,11 @@ secret-tool store --label 'exa MCP key' service pi-agent-exa account exa
 
 Restart Pi after storing the key.
 
+For Proton Pass-backed credentials on Ubuntu, follow
+[Exa authentication through Proton Pass](docs/proton-pass-exa.md).
+This opt-in setup uses a local MCP override and GNOME Keyring; shared defaults
+keep their existing environment/keychain lookup. The API key is never committed.
+
 ### Background commands
 
 Every profile loads [durable background bash](https://github.com/joaomj/pi-extensions/tree/package/background-bash) from your GitHub fork. After 30 seconds, a command continues in the background as the same process. Use `background: true` for known long or verbose commands and end the turn after handoff. Completion wakes the owning session automatically.

@@ -58,3 +58,6 @@ telemetry.db-*
 
 # Obsolete package pins are not shared configuration
 versions.lock
+
+# Account-local Pi runtime
+/install/

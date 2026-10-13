@@ -1,0 +1,11 @@
+# Anything with a shebang must keep LF endings or it breaks on macOS and Linux
+# with an unhelpful "bad interpreter: no such file or directory".
+*.sh text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
+
+# Extensionless scripts with a shebang need the same LF treatment as *.sh.
+bin/pass-cli text eol=lf
+# Batch files are the opposite: cmd.exe wants CRLF.
+*.cmd text eol=crlf
