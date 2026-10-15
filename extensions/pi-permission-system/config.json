@@ -146,6 +146,8 @@
       "git stash clear": "ask",
       "git filter-branch*": "ask",
       "git commit*": "ask",
+      "*git add *PLAN-*.md*": { "action": "deny", "reason": "Plan files (PLAN-*.md) are temporary and must not be committed." },
+      "*git commit *PLAN-*.md*": { "action": "deny", "reason": "Plan files (PLAN-*.md) are temporary and must not be committed." },
       "git push*": "ask",
       "git tag *": "ask",
       "git tag -d*": "ask",

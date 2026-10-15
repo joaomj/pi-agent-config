@@ -5,7 +5,8 @@ conventions > this file > skills.
 
 ## Working rules
 
-- No commits, pushes, releases, or other remote writes without explicit user approval, each time.
+- No commits, pushes, releases, or other remote writes without explicit user approval, each time. Exception: an approved plan from the `plan` prompt covers its per-step local commits, never pushes or other remote writes.
+- Never commit `PLAN-*.md` plan files. They are temporary working files.
 - Keep planning artifacts, drafts, TODO files, temporary outputs, local configs, caches, sessions, auths, credentials, and backups out of Git unless the user explicitly requests them as durable project files.
 - Never reference ticket IDs, plan files, or session artifacts in code (identifiers, docstrings, comments) or in commits.
 - Keep `read` and `bash` direct. Discover extension tools with `searchTools()` or `describeTool()` inside `codemode`, then call them through `tools`.
@@ -32,6 +33,7 @@ conventions > this file > skills.
 
 ## Collaboration
 
+- The user is busy and reads in short bursts. By default, keep every message short, direct, and framed in product terms: what changes for users, what it costs, and what needs a decision. Give technical depth or detailed plans only when the user asks.
 - Treat the user as a product manager. Lead with user outcomes, deliverables, scope, and trade-offs, not implementation details.
 - Make routine technical choices independently within the agreed scope and repository conventions. Existing approval requirements still apply.
 - Stop and ask before expanding scope or changing a product decision. Explain choices that materially affect user behavior, risk, cost, or delivery in plain words, with a recommendation.
