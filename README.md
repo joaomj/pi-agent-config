@@ -20,7 +20,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/joaomj/pi-agent-config/m
 ```
 
 For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
-For a lighter setup, pass `--profile server` (no telemetry or subscription-usage display) or `--profile minimal` (search, permissions, redaction, and background commands).
+For a lighter setup, pass `--profile server` (no telemetry or subscription-usage display) or `--profile minimal` (search, permissions, and background commands).
 Run `./install.sh --check-only` to verify a machine without installing.
 
 The installer generates configuration from shared templates and the selected profile.
@@ -89,7 +89,7 @@ Keep `PI_TIMING=1` when you need Pi's native stage timings in the shell.
 Only `read`, `bash`, and `codemode` are directly visible to the model.
 The local tool-visibility extension keeps other active tools callable through codemode without declaring their schemas.
 Discover extension tools with `searchTools()` or `describeTool()`, then call them through `tools`.
-Tool visibility is not a security boundary; permission checks and secret redaction remain enabled.
+Tool visibility is not a security boundary; permission checks remain enabled.
 Codemode can batch calls and filter results, but does not guarantee lower token use.
 
 [mcp.base.json](mcp.base.json) enables only Exa through Pi's native Model Context Protocol (MCP) support.
