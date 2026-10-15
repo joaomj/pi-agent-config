@@ -5,6 +5,8 @@ conventions > this file > skills.
 
 ## Working rules
 
+- Always verify before you ask or act. Check the current state yourself first: read the files, configs, logs, and installed versions, and run read-only commands. Ask the user only what you cannot find out yourself. Base every claim, plan, and change on what you verified, and say what you could not verify.
+- For coding tasks, deployed code is the source of truth. Deployed code means the repository's default branch on the remote: fetch it and read it there, not from a local checkout that may be behind. Local, unmerged, or feature-branch code ranks below it. Confluence, Jira, local docs, and Slack describe intent and can be stale; never let them override what the deployed code does. When they conflict, report the conflict and trust the deployed code. If you cannot reach the remote, say so and name the commit you used instead.
 - No commits, pushes, releases, or other remote writes without explicit user approval, each time. Exception: an approved plan from the `plan` prompt covers its per-step local commits, never pushes or other remote writes.
 - Never commit `PLAN-*.md` plan files. They are temporary working files.
 - Keep planning artifacts, drafts, TODO files, temporary outputs, local configs, caches, sessions, auths, credentials, and backups out of Git unless the user explicitly requests them as durable project files.
