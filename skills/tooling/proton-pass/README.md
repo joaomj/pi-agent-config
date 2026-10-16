@@ -15,8 +15,6 @@ it, then use `/skill:proton-pass` when explicit invocation is useful.
 Install [Proton Pass CLI](https://protonpass.github.io/pass-cli/get-started/installation/)
 separately. This adaptation was checked against CLI 2.4.2.
 
-For Ubuntu desktop authentication and Exa MCP, follow
-[the setup guide](../../../docs/proton-pass-exa.md).
 Read [Ubuntu/Pi notes](references/ubuntu-pi.md) before changing key storage.
 
 ## Included resources

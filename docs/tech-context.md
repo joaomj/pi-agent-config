@@ -1,141 +1,35 @@
-# Technical context and engineering decisions
+# Workflow scope
 
-## Purpose and authority
+## Shared resources
 
-This repository defines shared Pi configuration, not shared installed package versions.
-Executable templates and source files implement the decisions below. Update this document when those decisions change.
-Credentials, transcripts, caches, backups, and account-local preferences do not belong in Git.
+This repository distributes agent instructions, prompt templates, skills, and workflow documentation.
+It does not manage a Pi installation or synchronize personal runtime configuration.
 
-## Account separation
+[AGENTS.md](../AGENTS.md) defines collaboration and approval rules.
+[Prompt templates](../prompts/) provide explicit commands for planning, review,
+explanation, diagrams, slide decks, and other project workflows.
+[Skills](../skills/) provide reusable guidance and supporting tools.
 
-Each computer user has independent Node.js, npm, Pi, installed extensions, credentials, and sessions.
-On the Mac Mini, private binaries resolve through `~/.local/bin`, npm global packages use `~/.local`, and each account has its own npm cache.
-The shared Homebrew-prefix Pi installation was removed.
+## Personal resources
 
-The normal configuration directory is `~/.pi/agent`; `PI_CODING_AGENT_DIR` can override it.
-[settings.base.json](../settings.base.json) supplies defaults. A [profile](../profiles/) supplies package declarations.
-Untracked `settings.local.json` and `mcp.local.json` supply explicit account overrides.
-The generator writes `settings.json` and `mcp.json`. Do not edit those generated files to establish shared defaults.
+Keep provider and model settings, MCP servers, extension code, package declarations,
+permission policies, credentials, sessions, and caches outside Git.
+Install and configure optional packages yourself using the [extension catalog](extensions.md).
+No profile or installer selects them for you.
 
-The shared default model is OpenAI Sol. Model access and account-specific selections can differ.
-The VPS's Meta selection and local development checkout are not copied into Mac account paths.
+Some instructions assume indexed search, interactive questions, or durable background commands.
+Those capabilities depend on separately installed extensions. Adapt the instructions
+if your setup does not provide them. Permission checks require your own policy;
+installing an extension does not reproduce the maintainer's access rules.
 
-## User interface, trust, and telemetry
+## Workflow outputs
 
-Pi uses its native fullscreen interface. `pi-open-tui`, `proper-compact`, and `open-tui.json` are no longer shared configuration.
-Pi supplies compaction and session management.
+Diagrams follow the [diagram output contract](workflows/diagram-output-contract.md).
+Slide decks follow the [HTML slide deck contract](workflows/html-slide-decks.md).
+These workflows generate artifacts directly rather than requiring a shared rendering extension.
 
-`defaultProjectTrust: "ask"` requires approval before Pi loads project-local configuration and resources.
-The permission extension also checks sensitive paths and mutations. Neither tool visibility nor project trust replaces the approval policy in [AGENTS.md](../AGENTS.md).
+## Updates
 
-Pi install telemetry and analytics are disabled in shared defaults.
-Shared profiles do not declare `@spences10/pi-telemetry`.
-Existing account-local `telemetry.json` preferences and SQLite databases remain ignored by Git and preserved during sync.
-Account-local overrides can change Pi install telemetry independently of the removed extension.
-
-## Single-agent workflow and prompt commands
-
-The main agent does the work directly. There are no shared agent definitions or delegated workflows.
-Follow [AGENTS.md](../AGENTS.md) for collaboration, approval, test, and Git rules.
-Use [/plan](../prompts/plan.md) for product-oriented planning and [/code-review](../prompts/code-review.md) for evidence-backed P0–P3 review with adversarial and security checks.
-
-[/explain](../prompts/explain.md) explains only the last assistant message for
-an adult without subject context. It uses examples and analogies when helpful.
-Global chat style lives in [AGENTS.md](../AGENTS.md), without a style command.
-[/architecture-diagram](../prompts/architecture-diagram.md) creates focused
-software diagram artifacts.
-The upstream MIT notice remains in [prompts/LICENSE](../prompts/LICENSE).
-[/generate-slides](../prompts/generate-slides.md) creates offline HTML decks.
-Slide generation belongs exclusively to `/generate-slides`. Its
-[delivery contract](workflows/html-slide-decks.md) defines design, offline
-assets, navigation, accessibility, and verification without a rendering package.
-Skills retain technical writing, research, test audit, and skill assessment.
-
-## Tools and search
-
-The model directly sees `read`, `bash`, and `codemode`.
-[tool-visibility.ts](../extensions/tool-visibility.ts) hides other active declarations while preserving their availability through codemode.
-Discover schemas with `searchTools()` or `describeTool()` and call extension tools through `tools`.
-Hidden tools remain initialized; hiding declarations is not a security boundary.
-
-`@ff-labs/pi-fff` supplies indexed local search through `fffind` and `ffgrep`.
-Follow the search rules in `AGENTS.md`; use native search only for exact checks, unsupported searches, or fallback.
-FFF is a Pi extension, not an MCP server. Indexing is not a workspace sandbox.
-
-Every profile loads [durable background bash](https://github.com/joaomj/pi-extensions/tree/package/background-bash). Commands automatically move to the background after 30 seconds without restarting. Use `bash` with `background: true` for known long or verbose commands, then wait for completion. Inspect or cancel through `bash_process` using the returned `jobId`.
-Logs keep the first 2 MiB per job in the OS temporary directory. Jobs survive Pi exit and reload while their records remain; OS cleanup can remove them.
-[exit.ts](../extensions/exit.ts) supplies the shutdown alias.
-
-## Installed capabilities
-
-Profiles declare npm and Git package sources. Configuration sync changes declarations, not installed versions.
-The workstation profile includes background jobs and subscription-usage display.
-The server profile omits telemetry and subscription-usage display packages. The minimal profile contains search, permissions, secret redaction, and durable background commands.
-
-The workstation and server profiles declare `git:github.com/joaomj/pi-claude-directsdk`.
-The public package source replaces a VPS-only relative path. It does not change the default model.
-Claude DirectSDK uses a qualifying Claude Code CLI and that account's Claude login as its subscription transport.
-The qualified CLI range is `>=2.1.263 <2.2.0`; see the [package README](https://github.com/joaomj/pi-claude-directsdk#requirements).
-Sync does not install Claude Code, manage authentication, prove model entitlement, or guarantee billing behavior.
-
-A local permission-system checkout requires explicit selection through `--local-permissions`, `PI_PERMISSIONS_SRC`, or a local setting.
-Its presence on disk does not silently replace the published package.
-
-Diagram and slide commands write their artifacts directly. They do not require
-an external rendering package. Video generation is outside shared scope.
-Technical writing uses adapted clarity rules for documents and PR or commit
-prose. Conversational explanations use `AGENTS.md`, not strict STE constraints.
-
-## MCP connections
-
-[mcp.base.json](../mcp.base.json) enables only Exa through Pi's built-in MCP support.
-The server uses `codemode` exposure and a 300-second timeout.
-Exa supplies web search, fetch, and research tools. Use `/mcp` to inspect the connection.
-
-[scripts/mcp-auth.sh](../scripts/mcp-auth.sh) resolves the Exa Authorization header from an exported variable, macOS keychain, or Linux libsecret.
-Shared files contain no API key. The helper does not source a `.env` file.
-Optional account-local MCP entries are explicit overrides, not shared defaults.
-
-## Configuration synchronization
-
-[README.md](../README.md#synchronize-configuration) documents the user command:
-
-```bash
-node ~/.pi/agent/scripts/sync.mjs
-```
-
-[scripts/sync.mjs](../scripts/sync.mjs) performs these operations:
-
-1. Validate the platform, Git state, upstream layout, and untracked-file collisions.
-2. Fetch upstream and back up tracked configuration, patches, and Git history under `~/.pi/backups/`.
-3. Replace tracked files with the upstream revision.
-4. Generate configuration from shared templates, the selected profile, and explicit local overrides.
-5. Leave installed Pi and extensions unchanged.
-6. Write a private package-difference report under `~/.pi/reports/`.
-
-[scripts/package-report.mjs](../scripts/package-report.mjs) compares pre-sync local declarations and the local npm manifest inventory with the remote shared profile.
-It excludes personal overrides from the remote list and does not query a registry for latest versions.
-The report supports user decisions about package removal and updates; it does not perform those actions.
-
-**Caution:** sync replaces tracked local changes and commits after creating a backup. It is not a merge.
-Untracked and ignored files remain unless an incoming path conflicts, in which case sync stops.
-A generation failure does not revert the fetched configuration revision.
-
-`--dry-run` previews incoming changes. `--generate` regenerates configuration without fetching or replacing tracked files.
-The installer bootstraps Pi under `~/.local` only when missing; it leaves existing Pi and extensions unchanged.
-
-## Software updates and verification limits
-
-Only the user invokes extension updates:
-
-```bash
-pi update --extensions
-```
-
-Pi can install a missing declared package during startup. That behavior is separate from updating installed extensions.
-Update Pi itself with `pi update`. Restart Pi after configuration or extension changes.
-
-Focused sync checks use temporary repositories and reject unexpected Pi or npm calls.
-Deployment verification compares installed-package metadata and the Pi executable before and after synchronization.
-These checks do not send model requests or prove UI rendering, provider authentication, model entitlement, billing, or live MCP connectivity.
-Ask before adding tests or running broad or slow suites, as required by `AGENTS.md`.
+Review upstream workflow changes before copying them into an active configuration.
+Update Pi and optional extensions independently using their supported commands.
+The former repository installer, profiles, and configuration sync scripts are no longer shared or maintained here.

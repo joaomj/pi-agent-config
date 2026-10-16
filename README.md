@@ -1,263 +1,58 @@
 # pi-agent-config
 
-Shared configuration for the [Pi coding agent](https://pi.dev). Each account keeps its own software, credentials, and sessions.
+Reusable instructions, prompt templates, and skills for the [Pi coding agent](https://pi.dev).
 
-## Install
+This repository shares workflows, not a ready-made personal installation.
+Provider choices, model settings, MCP connections, extension code, permission rules,
+and package declarations stay local. There is no shared installer or configuration sync command.
 
-Use Git, Node.js 22.19 or newer, and npm 9 or newer on Ubuntu or macOS.
+## Use the workflows
 
-One step on a new machine:
-
-```bash
-git clone https://github.com/joaomj/pi-agent-config.git ~/.pi/agent
-~/.pi/agent/install.sh
-```
-
-Or without cloning first:
+Install Pi using its official instructions, then clone this repository outside your active Pi configuration:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/joaomj/pi-agent-config/main/install.sh)" -- --clone-dir ~/.pi/agent
+git clone https://github.com/joaomj/pi-agent-config.git ~/pi-agent-config
 ```
 
-For a different location, set `PI_CODING_AGENT_DIR` when you run Pi.
-For a lighter setup, pass `--profile server` (no telemetry or subscription-usage display) or `--profile minimal` (search, permissions, and background commands).
-Run `./install.sh --check-only` to verify a machine without installing.
+Review the files before using them. Copy the prompt templates and skills you want
+into your Pi agent directory (normally `~/.pi/agent`), under `prompts/` and `skills/`.
+Merge the instructions you want from [AGENTS.md](AGENTS.md) into your own agent instructions;
+do not overwrite existing instructions without reviewing them.
 
-The installer generates configuration from shared templates and the selected profile.
-It installs Pi under `~/.local` only if Pi is missing. Existing software remains unchanged.
-Profiles declare npm and Git sources. Configuration sync does not enforce installed package versions.
+Run `/reload` after copying resources. Prompt templates become explicit commands,
+such as `/explain`, `/code-review`, `/plan`, and `/generate-slides`.
+Some workflows expect optional tools. Install those separately or adapt the instructions to your setup.
 
-To use a local permission-system checkout, pass `--local-permissions <path>` or set `PI_PERMISSIONS_SRC`.
-A checkout is never selected just because its directory exists.
-Forks can point `PI_AGENT_REPO_URL` at their own repository.
+## Choose extensions
 
-Generated npm manifests, lockfiles, and installed packages stay local and outside Git.
-The installer supports Linux and macOS on x64 or arm64.
-Each account keeps its own configuration, installed extensions, credentials, and sessions.
+[Extensions in use](docs/extensions.md) lists our configured packages, installation
+commands, and local-only helpers. Nothing in this repository installs them automatically.
+Review each package before installing: extensions execute code with your local permissions.
 
-### Scoped GitHub access on shared machines
+Configure providers through Pi's `/login` and `/model` commands.
+Configure MCP connections separately for your own services and credentials.
+This repository does not supply provider or MCP configuration.
 
-Give each machine only the access it needs. On a VPS, use a repo-scoped
-deploy key instead of a broad account key:
+## Shared resources
 
-1. Add the deploy public key under the repository Settings, Deploy keys.
-2. Add a host alias in `~/.ssh/config` that uses only that key:
+- [AGENTS.md](AGENTS.md): collaboration, approval, Git, and testing instructions.
+- [prompts/](prompts/): planning, review, explanation, diagrams, slide decks, and other explicit workflows.
+- [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, and skill assessment.
+- [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
+- [Diagram output contract](docs/workflows/diagram-output-contract.md).
+- [HTML slide deck contract](docs/workflows/html-slide-decks.md).
 
-```ssh-config
-Host github-pi-agent-config
-  HostName github.com
-  User git
-  IdentityFile ~/.ssh/pi-agent-config-deploy
-  IdentityAgent none
-  IdentitiesOnly yes
-```
+Retain the license notices when copying resources, including [prompts/LICENSE](prompts/LICENSE).
 
-3. Point the checkout at the alias:
+## Existing checkouts
 
-```bash
-git remote set-url origin github-pi-agent-config:joaomj/pi-agent-config.git
-```
+Personal configuration and extension files are now ignored, rather than shared.
+The former installer and sync machinery are no longer maintained by this repository.
+Do not run an old local copy of those scripts to update this setup.
 
-`IdentityAgent none` keeps loaded account keys from being offered to GitHub
-for this repository. Commit signing still uses the account key; a signature
-grants no repository access.
+Before updating an existing checkout, back up your active configuration and local extensions outside the repository.
+Git can remove previously tracked files when applying their removal from the repository.
+Restore your personal files from that backup afterward; keep them untracked.
 
-## Start
-
-From your project directory, run:
-
-```bash
-pi
-```
-
-Run `/login` to connect a model provider, then `/model` to select a model.
-Pi uses its native fullscreen interface. Project-local configuration requires approval (`defaultProjectTrust: "ask"`).
-
-### Startup time
-
-[The startup-time extension](extensions/startup-time.ts) shows `startup 1240ms` in the TUI footer.
-It measures elapsed time from Node.js process start to this extension's first `session_start` handler.
-The reading includes I/O and waits. It approximates total startup time but excludes later session-start handlers and final TUI setup.
-All durations use milliseconds. `/reload` and session changes preserve the original reading.
-
-Restart Pi after adding the extension. No environment variable or extra package is required.
-To launch without the native shell timing report, run `env -u PI_TIMING pi`.
-Keep `PI_TIMING=1` when you need Pi's native stage timings in the shell.
-
-### Tools and web access
-
-Only `read`, `bash`, and `codemode` are directly visible to the model.
-The local tool-visibility extension keeps other active tools callable through codemode without declaring their schemas.
-Discover extension tools with `searchTools()` or `describeTool()`, then call them through `tools`.
-Tool visibility is not a security boundary; permission checks remain enabled.
-Codemode can batch calls and filter results, but does not guarantee lower token use.
-
-[mcp.base.json](mcp.base.json) enables only Exa through Pi's native Model Context Protocol (MCP) support.
-Use `/mcp` to inspect or reconnect it. Server tools are available through codemode.
-FFF remains a Pi extension; it is not an MCP server.
-
-Exa provides web search, page fetch, and a research agent.
-API keys never enter shared configuration. The helper reads the key from an exported `PI_AGENT_EXA` variable, the macOS keychain, or Linux libsecret, in that order.
-A populated `.env` file alone does not export a variable; the helper does not load that file.
-Store the key in the system keychain:
-
-```bash
-# macOS: prompts for the value, so it never enters shell history
-security add-generic-password -s pi-agent-exa -a exa -w
-# Linux
-secret-tool store --label 'exa MCP key' service pi-agent-exa account exa
-```
-
-Restart Pi after storing the key.
-
-For Proton Pass-backed credentials on Ubuntu, follow
-[Exa authentication through Proton Pass](docs/proton-pass-exa.md).
-This opt-in setup uses a local MCP override and GNOME Keyring; shared defaults
-keep their existing environment/keychain lookup. The API key is never committed.
-
-### Background commands
-
-Every profile loads [durable background bash](https://github.com/joaomj/pi-extensions/tree/package/background-bash) from your GitHub fork. After 30 seconds, a command continues in the background as the same process. Use `background: true` for known long or verbose commands and end the turn after handoff. Completion wakes the owning session automatically.
-
-Inspect or cancel with `bash_process` through codemode using the returned `jobId`. Jobs survive Pi exit and reload, but cannot wake a closed session. Resume the original session to recover results.
-
-Logs keep the first **2 MiB per job** in the OS temporary directory. OS cleanup can remove recovery records; set `outputDir` in `background-bash.jsonc` when persistent storage is required. There is no total-storage cap or automatic retention policy. Do not enable another background runner or timeout-retry guard alongside it.
-
-### Claude subscription transport
-
-The workstation and server profiles declare [Pi Claude DirectSDK](https://github.com/joaomj/pi-claude-directsdk):
-
-```text
-git:github.com/joaomj/pi-claude-directsdk
-```
-
-This replaces machine-specific paths to a development checkout.
-The provider requires Claude Code `>=2.1.263 <2.2.0` and a Claude paid plan with CLI access.
-Install a qualifying CLI under the current account, then sign in:
-
-```bash
-npm install --global --prefix "$HOME/.local" --ignore-scripts=false @anthropic-ai/claude-code@2.1.281
-claude auth login
-```
-
-This CLI installation is a separate, explicit action. Configuration sync does not install it or manage login.
-After loading the extension, select a `claude-directsdk` model with `/model`.
-Account entitlements and additional paid usage settings determine availability and billing; see the package's documentation.
-
-### Telemetry
-
-Shared defaults disable Pi install telemetry and analytics.
-The workstation's local telemetry extension also defaults to off. Its preference and SQLite recordings stay account-local and outside Git.
-Use `/telemetry on` or `/telemetry off` to change local session recording.
-[telemetry.json.example](telemetry.json.example) documents the saved preference format.
-
-On the Mac Mini, only `joao` has local session recording enabled.
-That account also overrides `enableInstallTelemetry` in its untracked `settings.local.json`; `admin` uses the disabled shared default.
-Pi analytics remain disabled for both accounts.
-
-### Prompt commands
-
-Use `/explain` to understand the last assistant message in plain terms, with
-examples, analogies, or before-and-after comparisons when useful.
-Use `/code-review [scope]` for P0–P3 defects, including adversarial and security checks.
-Use `/opportunities [focus]`, `/plan [change]`, `/postmortem [incident]`, and
-`/pr [instructions]` for their distinct project workflows.
-
-Chat style is defined globally in [AGENTS.md](AGENTS.md). No style command is required.
-Prompt templates are explicit commands. Run `/reload` after changing them.
-The retained upstream MIT notice is in [prompts/LICENSE](prompts/LICENSE).
-
-### Diagram and slide commands
-
-Use `/architecture-diagram <question or view>` for a focused software diagram.
-It creates equivalent HTML and SVG files unless another format is requested.
-Use `/generate-slides <topic, source file, or brief>` for a
-standalone HTML slide deck that opens offline. Optional arguments can specify
-audience, duration, and output path. Slide generation belongs exclusively to
-`/generate-slides`; see its [delivery contract](docs/workflows/html-slide-decks.md).
-
-Slide decks embed their assets and include navigation, readable fallbacks, and
-print support. The workflow checks source accuracy, offline dependencies, and
-layout. It reports browser verification gaps when preview tooling is unavailable.
-
-Diagrams and slide decks are generated directly, without a visualization package.
-Video generation is not part of the shared workflows.
-
-Technical document prose follows the STE-inspired writing skill. Chat and
-`/explain` follow `AGENTS.md`; strict STE rules do not apply to conversation.
-
-## Synchronize configuration
-
-To replace tracked configuration with the current branch's upstream, run:
-
-```bash
-node ~/.pi/agent/scripts/sync.mjs
-```
-
-Sync updates configuration only. It does not install, update, or remove Pi or extensions.
-It generates `settings.json` and `mcp.json` from the synchronized templates and selected profile.
-Installed package versions can differ between accounts.
-
-After sync, the command prints the path to a private text report under `~/.pi/reports/`.
-The report compares this account's pre-sync package declarations with the remote shared profile.
-It lists additions, removals, changed declarations, remote npm packages absent from the local manifest inventory, and locally installed npm versions.
-Personal overrides are excluded from the remote list.
-The report does not query npm for latest releases or change installed packages.
-Each sync replaces the previous report for that checkout.
-
-**Caution:** sync replaces tracked local changes and local commits with upstream.
-It first saves tracked configuration, Git patches, and repository history under `~/.pi/backups/`.
-Do not publish backups: local changes can contain private values.
-
-Sync preserves untracked and ignored content, including installed packages, credentials, and sessions.
-It stops during an unfinished Git operation or when incoming files conflict with untracked content.
-Append `--dry-run` to preview incoming changes without applying them.
-If configuration generation fails, fix the reported error and retry; the fetched revision remains applied.
-Restart Pi after synchronization to load the configuration.
-
-To regenerate configuration from the current local templates without fetching upstream, run:
-
-```bash
-node ~/.pi/agent/scripts/sync.mjs --generate
-```
-
-## Update software
-
-Use Pi's native command to update extensions in the current account:
-
-```bash
-pi update --extensions
-```
-
-Configuration sync and the installer never invoke this command.
-Pi can install a missing declared package during startup; this is separate from updating installed extensions.
-Restart Pi after an extension update.
-
-To update Pi itself, run `pi update`.
-
-### Check sync behavior
-
-```bash
-node --test tests/sync.test.mjs
-```
-
-These checks use temporary Git repositories and simulated npm and Pi commands.
-They do not contact model providers.
-
-## Configuration
-
-[Technical context](docs/tech-context.md) describes the intended architecture and engineering decisions.
-
-- [settings.base.json](settings.base.json): shared defaults. The installer merges this file with a [profile](profiles/) package list and the untracked `settings.local.json` to generate [settings.json](settings.json).
-- [mcp.base.json](mcp.base.json): native MCP connections, without embedded credentials. Keys resolve through environment variables or [scripts/mcp-auth.sh](scripts/mcp-auth.sh).
-- [profiles/](profiles/): `workstation` (full), `server` (no telemetry or subscription-usage display), `minimal` (core only). Select with `--profile`.
-- [AGENTS.md](AGENTS.md): agent instructions.
-- [Permission rules](extensions/pi-permission-system/config.json): local access policy.
-- [skills/](skills/) and [prompts/](prompts/): reusable workflows, including the `test-audit` authoring gate and audit workflow, and the `skill-doctor` conversation grader.
-
-Do not edit `settings.json` or `mcp.json` directly: the installer regenerates both on every install.
-Put personal overrides in `settings.local.json` (copy [settings.local.json.example](settings.local.json.example)) and extra servers in `mcp.local.json`.
-Before installing, review `defaultProjectTrust` and the permission rules: extensions run with local permissions.
-Keep authentication, sessions, logs, and generated installation records out of Git.
-Machine-local `deviceId` and `lastChangelogVersion` stay in the generated files and never enter shared commits.
-See [.gitignore](.gitignore) for exclusions.
+These boundaries apply to the current repository tree. Earlier configuration and
+extension files remain accessible in Git history. This change does not erase history.

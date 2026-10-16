@@ -1,7 +1,0 @@
-{
-  "packages": [
-    "npm:@ff-labs/pi-fff",
-    "npm:@gotgenes/pi-permission-system",
-    "git:github.com/joaomj/pi-extensions@package/background-bash"
-  ]
-}

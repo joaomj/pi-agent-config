@@ -61,3 +61,24 @@ versions.lock
 
 # Account-local Pi runtime
 /install/
+
+# Personal Pi configuration and extensions stay on this machine.
+/settings*.json
+/settings*.json.example
+/mcp*.json
+/mcp*.json.example
+/models.json
+/profiles/
+/extensions/
+/pi-fff.json
+/telemetry.json.example
+/.env.example
+/install.sh
+/scripts/sync.mjs
+/scripts/package-report.mjs
+/scripts/mcp-auth.sh
+/scripts/startup-experiment/
+/tests/
+/docs/startup/
+/docs/proton-pass-exa.md
+/docs/ROADMAP.md
