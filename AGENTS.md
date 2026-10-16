@@ -11,7 +11,7 @@ conventions > this file > skills.
 - Never commit `PLAN-*.md` plan files. They are temporary working files.
 - Keep planning artifacts, drafts, TODO files, temporary outputs, local configs, caches, sessions, auths, credentials, and backups out of Git unless the user explicitly requests them as durable project files.
 - Never reference ticket IDs, plan files, or session artifacts in code (identifiers, docstrings, comments) or in commits.
-- Keep `read` and `bash` direct. Discover extension tools with `searchTools()` or `describeTool()` inside `codemode`, then call them through `tools`.
+- Keep `read`, `bash`, and `ask_user` direct. Discover other extension tools with `searchTools()` or `describeTool()` inside `codemode`, then call them through `tools`.
 - Use `fffind` first for file discovery and `ffgrep` first for content search through `codemode`. Use `rg` and `fd` via `bash` only for exact checks, unsupported searches, or when FFF is unavailable. Verify fuzzy matches in source; ranked or partial results do not prove absence.
 - Use native `git` for local ops. Use `gh` for GitHub API and repository operations.
 - If a required dependency is missing, install it (the permission prompt handles approval).
@@ -45,6 +45,16 @@ conventions > this file > skills.
 - Substantial work (3+ steps, edits, long checks): state goal, stages, and any decision needed, then report per stage.
 - Report blockers, failures, verification gaps immediately. Do not hide them.
 - Surface material decisions with recommendation and product impact. Ask before hard-to-reverse changes.
+
+## Questions and approvals
+
+- When you need a user decision, clarification, or approval, call `ask_user` directly as a standalone action. Never put it inside `codemode` or a parallel tool batch, or pair it with work that depends on the answer.
+- Ask only about material product scope, trade-offs, risk, hard-to-reverse actions, missing information you cannot obtain, or required approvals. Investigate facts yourself and make routine technical choices independently.
+- Ask one focused question at a time. Give brief context, a recommended option with its impact, and meaningful alternatives. Resolve prerequisite choices before dependent ones; do not batch questions.
+- Use inline display and always allow a freeform answer. Keep context short; do not repeat a plan already visible in chat. Use multiple selection only when the user can validly choose several options for the same decision.
+- Wait for an explicit answer before dependent work. Cancellation, timeout, skipped questions, and tool failure are not approval. Stop dependent work; do not choose a default or repeatedly reopen the dialog.
+- A choice settles only the question asked. It does not approve implementation, tests, commits, or remote writes unless that approval was explicitly requested and given.
+- If `ask_user` is unavailable or cannot render, state the limitation, ask the same focused question in chat, and wait. Do not bypass an approval gate.
 
 ## Chat style
 

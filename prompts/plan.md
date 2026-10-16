@@ -48,7 +48,11 @@ Keep the product summary to at most 180 words, then add the sections below. The 
 
 ### Close and wait
 
-If a decision blocks approval, end with one question naming the choice, your recommendation, and its impact. Ask one blocking question at a time, with prerequisite choices first. Otherwise, ask for approval.
+If a decision blocks approval, use `ask_user` to ask one question naming the choice, your recommendation, and its impact. Ask one blocking question at a time, with prerequisite choices first. Resolving a choice does not approve the plan; update the proposal before requesting approval.
+
+Otherwise, request plan approval through `ask_user` with options to approve and start, request changes, or stop. Call it directly as a standalone action, use inline display, and allow a freeform answer. Keep the question short and refer to the proposal above instead of repeating it. In default mode, the proposal and approval prompt together must stay within 180 words.
+
+Cancellation, timeout, or an unclear answer does not approve the plan. Stop dependent work. If the tool is unavailable or cannot render, ask in chat and wait for an explicit answer.
 
 Do not create a branch, write files, edit code, publish tickets, or commit in this phase. Do not turn a request for discussion into implementation.
 
