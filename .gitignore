@@ -70,7 +70,6 @@ versions.lock
 /models.json
 /profiles/
 /extensions/
-/pi-fff.json
 /telemetry.json.example
 /.env.example
 /install.sh
