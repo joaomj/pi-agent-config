@@ -81,3 +81,4 @@ versions.lock
 /docs/startup/
 /docs/proton-pass-exa.md
 /docs/ROADMAP.md
+!/docs/ROADMAP.md
