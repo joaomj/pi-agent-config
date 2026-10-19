@@ -39,6 +39,7 @@ This repository does not supply provider or MCP configuration.
 - [prompts/](prompts/): planning, review, explanation, diagrams, slide decks, and other explicit workflows.
 - [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, and skill assessment.
 - [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
+- [Model setup reference](docs/model-setup.md): default and cycling models, shared limits, and cache behavior.
 - [Diagram output contract](docs/workflows/diagram-output-contract.md).
 - [HTML slide deck contract](docs/workflows/html-slide-decks.md).
 
