@@ -88,16 +88,6 @@ injections). On-demand commands only; it adds nothing to the model context.
 pi install npm:pi-context-view
 ```
 
-### Visible task list
-
-[`@juicesharp/rpiv-todo`](https://pi.dev/packages/@juicesharp/rpiv-todo) adds a `todo`
-tool, a `/todos` command, and a live panel above the editor. The list survives
-`/reload` and compaction.
-
-```bash
-pi install npm:@juicesharp/rpiv-todo
-```
-
 ### Minimal-code guidance, on demand only
 
 [`@dietrichgebert/ponytail`](https://pi.dev/packages/@dietrichgebert/ponytail)
