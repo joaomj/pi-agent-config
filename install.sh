@@ -60,15 +60,17 @@ die() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
 need() { command -v "$1" >/dev/null 2>&1 || die "$1 is required. Install it, then retry."; }
 
 # confirm <question> <default y|n>
+# Asks only when stdin is a terminal. A failed or missing answer is a no, so
+# nothing installs silently.
 confirm() {
   local question="$1" default="${2:-n}" answer
   if [ "$ASSUME_YES" -eq 1 ]; then
     [ "$default" = "y" ]
     return
   fi
-  [ -t 0 ] || { [ "$default" = "y" ]; return; }
+  [ -t 0 ] || return 1
   printf '%s [%s] ' "$question" "$default"
-  read -r answer
+  read -r answer || return 1
   case "${answer:-$default}" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
 
@@ -138,12 +140,14 @@ fi
 # --- 2. Optionally move the current configuration aside ---------------------
 RESET_DIR=""
 if [ "$RESET" -eq 1 ]; then
-  if [ "$ASSUME_YES" -ne 1 ] && [ -t 0 ]; then
-    printf 'Move your current Pi configuration aside (backup: %s)? [y/N] ' "$BACKUP"
-    read -r answer
-    case "$answer" in y|Y|yes|YES) ;; *) die "aborted; the backup is at $BACKUP" ;; esac
-  elif [ "$ASSUME_YES" -ne 1 ]; then
-    die "--reset needs --yes when stdin is not a terminal"
+  if [ "$ASSUME_YES" -ne 1 ]; then
+    if [ -t 0 ]; then
+      printf 'Move your current Pi configuration aside (backup: %s)? [y/N] ' "$BACKUP"
+      read -r answer || answer=""
+      case "$answer" in y|Y|yes|YES) ;; *) die "aborted; the backup is at $BACKUP" ;; esac
+    else
+      die "--reset needs --yes when no terminal is available"
+    fi
   fi
   RESET_DIR="$BACKUP_DIR/pi-agent-aside-$STAMP"
   mkdir -p "$RESET_DIR"
@@ -180,14 +184,25 @@ else
   [ -n "$candidate" ] && [ -f "$candidate/package.json" ] && PKG_DIR="$candidate"
 fi
 
+if [ -n "$STEPS" ] && [ "$ASSUME_YES" -ne 1 ] && [ ! -t 0 ]; then
+  log "No terminal available, so nothing above that needs an answer will run."
+  log "Rerun with --yes to accept the defaults, or run the script in a terminal."
+  STEPS=""
+fi
+
 printf '\n'
 
 # --- 4. Configure -----------------------------------------------------------
 if has_step packages; then
   log "Third-party packages. Each one is optional and runs with your permissions."
   # source|description|default
-  while IFS='|' read -r pkg desc default; do
-    [ -n "$pkg" ] || continue
+  packages=(
+    "npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y"
+    "npm:@gotgenes/pi-permission-system|tool permission checks|y"
+    "npm:@joaomj/pi-background-bash|durable background commands|y"
+  )
+  for entry in "${packages[@]}"; do
+    IFS='|' read -r pkg desc default <<< "$entry"
     if pi list 2>/dev/null | grep -Fq "$pkg"; then
       log "Already installed: $pkg"
       continue
@@ -197,11 +212,7 @@ if has_step packages; then
     else
       log "Skipped: $pkg"
     fi
-  done <<'PACKAGES'
-npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y
-npm:@gotgenes/pi-permission-system|tool permission checks|y
-npm:@joaomj/pi-background-bash|durable background commands|y
-PACKAGES
+  done
 fi
 
 if has_step claude; then
