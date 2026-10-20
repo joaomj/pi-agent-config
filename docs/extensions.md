@@ -2,7 +2,7 @@
 
 This catalog records packages configured in the maintainer's local Pi settings.
 It is a reference, not an automatically installed bundle or a guarantee of identical
-behavior. The `/bootstrap` prompt offers these installations one at a time.
+behavior. `install.sh` offers these installations one at a time.
 Provider settings, MCP connections, credentials, and permission policies are not shared.
 
 ## Installable packages

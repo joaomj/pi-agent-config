@@ -35,10 +35,20 @@ The package adds the prompt templates in [prompts/](prompts/) and the skills in
 `skills/documentation/` and `skills/engineering/`. It contains no extension code.
 It does not change providers, models, MCP servers, permission rules, or `AGENTS.md`.
 
-Start Pi and run `/bootstrap`. That guided session installs the third-party
-packages you pick, asks about each MCP server, and helps you merge `AGENTS.md`
-and the reference permission policy. It stages both files in `/tmp` first,
-inspects the machine before it writes, and reports each change.
+After the install, the same script walks the parts a package cannot ship:
+
+- `packages` offers each third-party package with a yes/no question.
+- `agents` copies `AGENTS.md` when you have none, or appends the shared rules
+  once, between markers, when you do.
+- `permissions` copies the reference policy when you have none. When you have
+  your own, it writes `config.json.proposed` beside it and prints the diff.
+  Nothing is overwritten.
+- `mcp` adds the Exa server only when `EXA_API_KEY` is set, and only after you
+  agree.
+- `verify` prints the installed packages and counts the shared prompts and skills.
+
+Run a single step with `--only packages`, skip them all with `--no-configure`,
+and accept every default with `--yes`.
 
 Prompt templates become explicit commands, such as `/explain`, `/code-review`,
 `/plan`, and `/generate-slides`.
@@ -72,20 +82,20 @@ those separately or adapt the instructions.
 ## Choose extensions
 
 [Extensions in use](docs/extensions.md) lists our configured packages, installation
-commands, and local-only helpers. `/bootstrap` offers the installable ones one at a
-time; nothing installs automatically. Review each package before you install it:
-extensions execute code with your local permissions.
+commands, and local-only helpers. `install.sh` offers the installable ones one at
+a time; nothing installs automatically. Review each package before you install
+it: extensions execute code with your local permissions.
 
 Configure providers through Pi's `/login` and `/model` commands.
 Configure MCP connections separately for your own services and credentials.
-This repository supplies no provider credentials and no MCP keys. `/bootstrap`
-offers the Exa server so that you can add it with your own key.
+This repository supplies no provider credentials and no MCP keys. `install.sh`
+adds the Exa server only from your own `EXA_API_KEY` environment variable.
 
 ## Shared resources
 
 - [AGENTS.md](AGENTS.md): collaboration, approval, Git, and testing instructions.
 - [prompts/](prompts/): planning, review, explanation, diagrams, slide decks, and other explicit workflows.
-- [prompts/bootstrap.md](prompts/bootstrap.md): the `/bootstrap` session that adapts a machine to the shared setup.
+- [install.sh](install.sh): the backup-first installer and setup steps.
 - [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, and skill assessment.
 - [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
 - [Model setup reference](docs/model-setup.md): default and cycling models, shared limits, and cache behavior.

@@ -1,28 +1,32 @@
 #!/usr/bin/env bash
-# Install the shared Pi package.
+# Install and configure the shared Pi package.
 #
-# The script backs up the Pi configuration before it changes anything.
-# Restore it with the tarball path the script prints.
+# The script backs up the Pi configuration before it changes anything, then
+# installs the package and walks the settings a package cannot ship.
 #
-#   install.sh                      back up, then install the package
-#   install.sh --reset              back up, move the current configuration aside, then install
-#   install.sh --reset --drop-auth  also move the provider login aside
-#   install.sh --backup-only        back up and stop
+#   install.sh                      back up, install, then configure
+#   install.sh --only packages      run selected configure steps only
+#   install.sh --no-configure       back up and install only
+#   install.sh --reset              move the current configuration aside first
+#   install.sh --backup-only        stop after the backup
+#
+# Configure steps: packages, agents, permissions, mcp, verify
 #
 # Options:
 #   --ref <ref>         git ref to install (default: main)
 #   --source <source>   package source instead of the git URL, for testing
-#   --backup-dir <dir>  where to write the backup (default: $HOME)
+#   --backup-dir <dir>  where to write the backup and the moved-aside copy (default: $HOME)
 #   --reset             move the existing configuration aside before installing
-#   --drop-auth         with --reset, move auth.json aside too
+#   --drop-auth         with --reset, move the provider login aside too
 #   --backup-only       stop after the backup
-#   --yes               run without confirmation prompts
+#   --yes               accept the default answer for every question
 set -euo pipefail
 
 REPO="git:github.com/joaomj/pi-agent-config"
 REF="main"
 SOURCE_OVERRIDE=""
 BACKUP_DIR="${HOME}"
+STEPS="packages,agents,permissions,mcp,verify"
 RESET=0
 DROP_AUTH=0
 BACKUP_ONLY=0
@@ -36,30 +40,54 @@ while [ $# -gt 0 ]; do
     --source=*) SOURCE_OVERRIDE="${1#--source=}"; shift ;;
     --backup-dir) BACKUP_DIR="${2:?--backup-dir needs a value}"; shift 2 ;;
     --backup-dir=*) BACKUP_DIR="${1#--backup-dir=}"; shift ;;
+    --only) STEPS="${2:?--only needs a value}"; shift 2 ;;
+    --only=*) STEPS="${1#--only=}"; shift ;;
+    --no-configure) STEPS=""; shift ;;
     --reset) RESET=1; shift ;;
     --drop-auth) DROP_AUTH=1; shift ;;
     --backup-only) BACKUP_ONLY=1; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
-    -h|--help) sed -n '2,20p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) echo "install.sh: unknown option $1" >&2; exit 2 ;;
   esac
 done
 
 log() { printf '==> %s\n' "$*"; }
 die() { printf 'install.sh: %s\n' "$*" >&2; exit 1; }
-
 need() { command -v "$1" >/dev/null 2>&1 || die "$1 is required. Install it, then retry."; }
+
+# confirm <question> <default y|n>
+confirm() {
+  local question="$1" default="${2:-n}" answer
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    [ "$default" = "y" ]
+    return
+  fi
+  [ -t 0 ] || { [ "$default" = "y" ]; return; }
+  printf '%s [%s] ' "$question" "$default"
+  read -r answer
+  case "${answer:-$default}" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
+
+has_step() {
+  [ -n "$STEPS" ] || return 1
+  case ",$STEPS," in *",$1,"*) return 0 ;; *) return 1 ;; esac
+}
+
+MARK_START="<!-- pi-agent-config: shared rules -->"
+MARK_END="<!-- pi-agent-config: end shared rules -->"
+
 need pi
 need tar
 need git
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 AGENT_DIR="${AGENT_DIR%/}"
 AGENT_PARENT="$(dirname "$AGENT_DIR")"
 AGENT_BASE="$(basename "$AGENT_DIR")"
 
-if [ -d "$AGENT_DIR" ] && [ -n "$(command -v realpath >/dev/null 2>&1 && realpath "$AGENT_DIR")" ] \
-   && [ "$(realpath "$AGENT_DIR")" = "$(realpath "$(dirname "$0")")" ]; then
+if [ "$(realpath "$SCRIPT_DIR" 2>/dev/null || echo "$SCRIPT_DIR")" = "$(realpath "$AGENT_DIR" 2>/dev/null || echo "$AGENT_DIR")" ]; then
   die "Run this script from a clone, not from inside $AGENT_DIR."
 fi
 
@@ -70,6 +98,7 @@ log "Config directory: $AGENT_DIR"
 mkdir -p "$BACKUP_DIR" || die "cannot create $BACKUP_DIR"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 BACKUP="$BACKUP_DIR/pi-agent-backup-$STAMP.tar.gz"
+RESTORE_HINT=""
 
 if [ -d "$AGENT_DIR" ]; then
   log "Backing up configuration to $BACKUP"
@@ -87,14 +116,9 @@ if [ -d "$AGENT_DIR" ]; then
   COUNT="$(tar tzf "$BACKUP" | wc -l | tr -d ' ')"
   [ "$COUNT" -gt 0 ] || die "backup is empty; nothing was changed"
   log "Backup contains $COUNT entries"
+  RESTORE_HINT="tar xzf \"$BACKUP\" -C \"$AGENT_PARENT\""
 else
   log "No configuration at $AGENT_DIR yet; nothing to back up"
-  BACKUP=""
-fi
-
-RESTORE_HINT=""
-if [ -n "$BACKUP" ]; then
-  RESTORE_HINT="tar xzf \"$BACKUP\" -C \"$AGENT_PARENT\""
 fi
 
 if [ "$BACKUP_ONLY" -eq 1 ]; then
@@ -106,14 +130,12 @@ fi
 # --- 2. Optionally move the current configuration aside ---------------------
 RESET_DIR=""
 if [ "$RESET" -eq 1 ]; then
-  if [ "$ASSUME_YES" -ne 1 ]; then
-    if [ -t 0 ]; then
-      printf 'Move your current Pi configuration aside (backup: %s)? [y/N] ' "$BACKUP"
-      read -r answer
-      case "$answer" in y|Y|yes|YES) ;; *) die "aborted; the backup is at $BACKUP" ;; esac
-    else
-      die "--reset needs --yes when stdin is not a terminal"
-    fi
+  if [ "$ASSUME_YES" -ne 1 ] && [ -t 0 ]; then
+    printf 'Move your current Pi configuration aside (backup: %s)? [y/N] ' "$BACKUP"
+    read -r answer
+    case "$answer" in y|Y|yes|YES) ;; *) die "aborted; the backup is at $BACKUP" ;; esac
+  elif [ "$ASSUME_YES" -ne 1 ]; then
+    die "--reset needs --yes when stdin is not a terminal"
   fi
   RESET_DIR="$BACKUP_DIR/pi-agent-aside-$STAMP"
   mkdir -p "$RESET_DIR"
@@ -132,29 +154,127 @@ if [ "$RESET" -eq 1 ]; then
     mv "$entry" "$RESET_DIR/" || die "could not move $entry; restore with: $RESTORE_HINT"
   done
   shopt -u nullglob dotglob
-  log "Kept: $(ls -A "$AGENT_DIR" | tr '\n' ' ')"
 fi
 
 # --- 3. Install the package -------------------------------------------------
 SOURCE="${SOURCE_OVERRIDE:-$REPO@$REF}"
 log "Installing $SOURCE"
 pi install "$SOURCE" || die "pi install failed; restore with: $RESTORE_HINT"
+pi list 2>/dev/null | grep -q "pi-agent-config" \
+  || die "the package is not listed after install; restore with: $RESTORE_HINT"
 
-if ! pi list 2>/dev/null | grep -q "pi-agent-config"; then
-  die "the package is not listed after install; restore with: $RESTORE_HINT"
+# Resolve the package files: prefer this checkout, fall back to pi list.
+PKG_DIR=""
+if [ -f "$SCRIPT_DIR/package.json" ] && grep -q '"pi"' "$SCRIPT_DIR/package.json"; then
+  PKG_DIR="$SCRIPT_DIR"
+else
+  candidate="$(pi list 2>/dev/null | grep -A1 'pi-agent-config' | tail -1 | sed 's/^ *//')"
+  [ -n "$candidate" ] && [ -f "$candidate/package.json" ] && PKG_DIR="$candidate"
 fi
 
-# --- 4. Report --------------------------------------------------------------
-printf '\nInstalled.\n'
-[ -n "$BACKUP" ] && printf '  Backup:     %s\n' "$BACKUP"
-[ -n "$RESTORE_HINT" ] && printf '  Restore:    %s\n' "$RESTORE_HINT"
+printf '\n'
+
+# --- 4. Configure -----------------------------------------------------------
+if has_step packages; then
+  log "Third-party packages. Each one is optional and runs with your permissions."
+  # source|description|default
+  while IFS='|' read -r pkg desc default; do
+    [ -n "$pkg" ] || continue
+    if pi list 2>/dev/null | grep -Fq "$pkg"; then
+      log "Already installed: $pkg"
+      continue
+    fi
+    if confirm "Install $pkg ($desc)?" "$default"; then
+      pi install "$pkg" || printf 'install.sh: %s failed to install; continue without it\n' "$pkg" >&2
+    else
+      log "Skipped: $pkg"
+    fi
+  done <<'PACKAGES'
+npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y
+npm:@gotgenes/pi-permission-system|tool permission checks|y
+npm:@joaomj/pi-background-bash|durable background commands|y
+git:github.com/joaomj/pi-claude-directsdk|Claude subscription transport|n
+PACKAGES
+fi
+
+if has_step agents; then
+  if [ -z "$PKG_DIR" ] || [ ! -f "$PKG_DIR/AGENTS.md" ]; then
+    log "No AGENTS.md in the package sources; skipping"
+  else
+    target="$AGENT_DIR/AGENTS.md"
+    if [ ! -f "$target" ]; then
+      if confirm "Create $target from the shared rules?" y; then
+        mkdir -p "$AGENT_DIR"
+        cp "$PKG_DIR/AGENTS.md" "$target"
+        log "Created $target"
+      fi
+    elif grep -qF "$MARK_START" "$target"; then
+      log "Shared rules already present in $target"
+    else
+      if confirm "Append the shared rules block to $target?" n; then
+        { printf '\n%s\n' "$MARK_START"; cat "$PKG_DIR/AGENTS.md"; printf '%s\n' "$MARK_END"; } >> "$target"
+        log "Appended the shared rules block; review the diff before you rely on it"
+      fi
+    fi
+  fi
+fi
+
+if has_step permissions; then
+  src="$PKG_DIR/extensions/pi-permission-system/config.json"
+  target="$AGENT_DIR/extensions/pi-permission-system/config.json"
+  if [ -z "$PKG_DIR" ] || [ ! -f "$src" ]; then
+    log "No reference permission policy in the package sources; skipping"
+  elif [ ! -f "$target" ]; then
+    if confirm "Install the reference permission policy at $target?" y; then
+      mkdir -p "$(dirname "$target")"
+      cp "$src" "$target"
+      log "Installed the reference policy; review it in your editor"
+    fi
+  elif cmp -s "$src" "$target"; then
+    log "Permission policy already matches the reference"
+  else
+    proposed="$target.proposed"
+    cp "$src" "$proposed"
+    log "Your policy differs. The reference is at $proposed; nothing was overwritten."
+    diff -u "$target" "$proposed" | head -40 || true
+    printf 'Merge what you want by hand, then delete %s\n' "$proposed"
+  fi
+fi
+
+if has_step mcp; then
+  if [ -n "${EXA_API_KEY:-}" ]; then
+    if confirm "Add the Exa MCP server using EXA_API_KEY?" n; then
+      pi mcp add exa --url https://mcp.exa.ai/mcp \
+        --bearer-token-env-var EXA_API_KEY \
+        --exposure codemode \
+        --description "Web search, fetch, and research" \
+        || printf 'install.sh: could not add the Exa server\n' >&2
+    fi
+  else
+    log "Skipping the Exa MCP server: export EXA_API_KEY first, then rerun --only mcp"
+  fi
+  log "Other MCP servers stay yours: pi mcp add, then pi mcp login for OAuth servers"
+fi
+
+if has_step verify; then
+  log "Installed packages"
+  pi list 2>/dev/null | sed 's/^/    /'
+  if [ -n "$PKG_DIR" ]; then
+    prompts="$(find "$PKG_DIR/prompts" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
+    skills="$(find "$PKG_DIR/skills" -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')"
+    log "Package resources: $prompts prompt templates, $skills skills"
+    log "Review or disable any of them with: pi config"
+  fi
+fi
+
+# --- 5. Report --------------------------------------------------------------
+printf '\nDone.\n'
+[ -n "$RESTORE_HINT" ] && printf '  Backup:      %s\n  Restore:     %s\n' "$BACKUP" "$RESTORE_HINT"
 [ -n "$RESET_DIR" ] && printf '  Moved aside: %s\n' "$RESET_DIR"
 cat <<'MSG'
 
 Next steps:
-  1. Start Pi and run /bootstrap.
-     It installs the third-party packages you choose, asks about each MCP
-     server, and merges AGENTS.md and the permission policy from /tmp.
-  2. Run /login and /model if this machine has no provider yet.
+  1. Run /login and /model if this machine has no provider yet.
+  2. Start Pi and check /help for the shared templates.
   3. Update later with: pi update --extensions
 MSG

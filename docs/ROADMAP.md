@@ -21,17 +21,17 @@ The distribution channel is the repository itself,
 
 | Resource | Status |
 | --- | --- |
-| `prompts/` | All templates, including `/bootstrap`. |
+| `prompts/` | All templates. |
 | `skills/` | Every skill, including `tooling/proton-pass` and `tooling/skill-doctor`. The user decides what to keep. |
-| `extensions/pi-permission-system/config.json` | Shipped as a reference policy. `/bootstrap` adapts it to the user's own file. |
+| `extensions/pi-permission-system/config.json` | Shipped as a reference policy. The installer copies it, or writes `config.json.proposed` and prints a diff. |
 | `extensions/` runtime code | Nothing. Extensions ship as third-party packages. |
-| `AGENTS.md` | Shipped as the canonical text. `/bootstrap` stages it in `/tmp` and merges only the rules the user accepts. |
-| MCP servers | Not shippable. `/bootstrap` asks about each server separately. |
+| `AGENTS.md` | Shipped as the canonical text. The installer copies it when absent, or appends it once between markers. |
+| MCP servers | Not shippable. The installer asks about the Exa server and needs `EXA_API_KEY`; other servers stay per user. |
 
-The `/bootstrap` prompt installs the third-party packages listed in
+`install.sh` installs the third-party packages listed in
 [Extensions in use](extensions.md) one at a time, asks about each MCP server,
-and guides the `AGENTS.md` and permission-policy merge from `/tmp`. It inspects
-the machine first and reports what it changed.
+and handles `AGENTS.md` and the permission policy. It backs up first, inspects
+before it writes, and reports what it changed.
 
 ## Decisions
 
@@ -41,11 +41,12 @@ the machine first and reports what it changed.
   of deleting it. Nothing writes to a user's configuration before a backup
   exists.
 
-- **Third-party packages are installed by `/bootstrap`.** Pi documents package
-  dependencies for npm tarballs. A git-installed package that depends on other Pi
-  packages is fragile, and the user cannot choose what to install.
+- **The installer, not an agent session, performs setup.** Setup is a checklist,
+  so bash does it deterministically, cheaply, and over SSH. Pi documents package
+  dependencies for npm tarballs only; a git-installed package that depends on
+  other Pi packages is fragile, and the user cannot choose what to install.
 - **Pi itself is not shippable.** No package field pins the Pi version.
-  `/bootstrap` reports the installed version and recommends `pi update`.
+  The installer reports the installed version and recommends `pi update`.
 - **No registry.** The git source is enough. A user who needs a fixed version
   installs a tag.
 - **Personal machines keep the full clone** at `~/.pi/agent` and load resources
@@ -70,9 +71,8 @@ the machine first and reports what it changed.
 
 ## Next steps
 
-1. Install the package on a clean machine and run `/bootstrap`. Confirm that
-   prompts and skills appear, that the backup restores, and that no personal file
-   changed.
+1. Run the installer on a clean machine. Confirm that prompts and skills appear,
+   that the backup restores, and that no personal file changed.
 2. Confirm that `pi update --extensions` updates the package.
 3. Confirm the collision behavior on a machine that already has `/plan` or
    `/code-review`.
