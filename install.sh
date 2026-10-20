@@ -69,7 +69,7 @@ confirm() {
     return
   fi
   [ -t 0 ] || return 1
-  printf '%s [%s] ' "$question" "$default"
+  printf '%s [y/n] ' "$question"
   read -r answer || return 1
   case "${answer:-$default}" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
 }
@@ -180,14 +180,13 @@ PKG_DIR=""
 if [ -f "$SCRIPT_DIR/package.json" ] && grep -q '"pi"' "$SCRIPT_DIR/package.json"; then
   PKG_DIR="$SCRIPT_DIR"
 else
-  candidate="$(pi list 2>/dev/null | grep -A1 'pi-agent-config' | tail -1 | sed 's/^ *//')"
+  candidate="$(pi list 2>/dev/null | grep -A1 'pi-agent-config' | tail -1 | sed 's/^ *//' || true)"
   [ -n "$candidate" ] && [ -f "$candidate/package.json" ] && PKG_DIR="$candidate"
 fi
 
 if [ -n "$STEPS" ] && [ "$ASSUME_YES" -ne 1 ] && [ ! -t 0 ]; then
-  log "No terminal available, so nothing above that needs an answer will run."
-  log "Rerun with --yes to accept the defaults, or run the script in a terminal."
-  STEPS=""
+  log "No terminal: steps that need an answer will be skipped. Use --yes for defaults"
+  log "or run the script in a terminal."
 fi
 
 printf '\n'
@@ -220,22 +219,21 @@ if has_step claude; then
   CLAUDE_RANGE_MAX="2.2.0"
   CLAUDE_PIN="2.1.281"
 
+  cli_version_of() { claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true; }
+  cli_qualified() {
+    [ -n "$1" ] && version_ge "$1" "$CLAUDE_RANGE_MIN" && ! version_ge "$1" "$CLAUDE_RANGE_MAX"
+  }
+
   if pi list 2>/dev/null | grep -Fq "pi-claude-directsdk"; then
     log "Claude transport already installed"
   elif [ "$WITH_CLAUDE" -eq 1 ] || confirm "Set up the Claude subscription transport? It needs a paid Claude plan and a Claude Code login." n; then
-    node_major="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1)"
+    node_major="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1 || true)"
     if [ -n "$node_major" ] && [ "$node_major" -lt 20 ]; then
       printf 'install.sh: Node 20 or later is required for this transport; found %s\n' "$(node -v)" >&2
     fi
 
-    cli_version="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-    cli_ok=0
-    if [ -n "$cli_version" ] && version_ge "$cli_version" "$CLAUDE_RANGE_MIN" \
-       && ! version_ge "$cli_version" "$CLAUDE_RANGE_MAX"; then
-      cli_ok=1
-    fi
-
-    if [ "$cli_ok" -eq 1 ]; then
+    cli_version="$(cli_version_of || true)"
+    if cli_qualified "$cli_version"; then
       log "Claude Code CLI $cli_version is inside the qualified range"
     else
       if [ -n "$cli_version" ]; then
@@ -243,33 +241,35 @@ if has_step claude; then
       else
         log "Claude Code CLI not found"
       fi
-      if confirm "Install the qualified Claude Code CLI ($CLAUDE_PIN) globally with npm?" n; then
-        npm install -g --ignore-scripts=false "@anthropic-ai/claude-code@$CLAUDE_PIN" \
-          || printf 'install.sh: the global install failed (a permissions error usually means npm needs a writable prefix). Install it yourself, then rerun --only claude\n' >&2
-        cli_version="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
-        if [ -n "$cli_version" ] && version_ge "$cli_version" "$CLAUDE_RANGE_MIN" \
-           && ! version_ge "$cli_version" "$CLAUDE_RANGE_MAX"; then
-          cli_ok=1
+      log "The qualified version is $CLAUDE_PIN."
+      if confirm "Install it globally with npm now?" y; then
+        log "Running: npm install -g --ignore-scripts=false @anthropic-ai/claude-code@$CLAUDE_PIN"
+        if npm install -g --ignore-scripts=false "@anthropic-ai/claude-code@$CLAUDE_PIN"; then
+          log "CLI install finished"
+        else
+          printf 'install.sh: the global install failed. A permissions error usually means npm needs a writable prefix.\n' >&2
+        fi
+        cli_version="$(cli_version_of || true)"
+      fi
+    fi
+
+    if ! cli_qualified "$cli_version"; then
+      log "Claude transport not installed: the CLI is missing or outside the qualified range."
+      printf '  Fix it with:\n    npm install -g --ignore-scripts=false @anthropic-ai/claude-code@%s\n  Then rerun:\n    %s --only claude\n' "$CLAUDE_PIN" "$0" >&2
+    else
+      if claude auth status --json 2>/dev/null | grep -Eq '"loggedIn"[[:space:]]*:[[:space:]]*true'; then
+        log "Claude Code is signed in"
+      else
+        log "Claude Code is not signed in"
+        if [ -t 0 ] && confirm "Run claude auth login now? It opens a browser." y; then
+          claude auth login || printf 'install.sh: claude auth login did not finish; run it yourself, then rerun --only claude\n' >&2
         fi
       fi
-    fi
-
-    if claude auth status --json 2>/dev/null | grep -Eq '"loggedIn"[[:space:]]*:[[:space:]]*true'; then
-      log "Claude Code is signed in"
-    elif [ -t 0 ]; then
-      if confirm "Run claude auth login now? It opens a browser." y; then
-        claude auth login || printf 'install.sh: claude auth login did not finish; run it yourself, then rerun --only claude\n' >&2
-      fi
-    else
-      log "Claude Code is not signed in: run 'claude auth login' as the user that runs Pi"
-    fi
-
-    if [ "$cli_ok" -eq 1 ]; then
       if pi list 2>/dev/null | grep -Fq "pi-claude-directsdk"; then
         log "Claude transport already installed"
       else
-        pi install npm:pi-claude-directsdk \
-          || printf 'install.sh: could not install the Claude transport; rerun --only claude\n' >&2
+        log "Installing npm:pi-claude-directsdk"
+        pi install npm:pi-claude-directsdk || printf 'install.sh: could not install the transport; rerun --only claude\n' >&2
       fi
       cat <<'CLAUDE'
   One step stays interactive: restart Pi, open /model, wait for the DirectSDK
@@ -277,8 +277,6 @@ if has_step claude; then
   check the account. This transport uses the Claude Code login, not Pi's
   Anthropic login.
 CLAUDE
-    else
-      printf 'install.sh: Claude transport not installed; the CLI is missing or outside the qualified range.\n' >&2
     fi
   else
     log "Skipped the Claude transport"
@@ -348,8 +346,8 @@ if has_step verify; then
   log "Installed packages"
   pi list 2>/dev/null | sed 's/^/    /'
   if [ -n "$PKG_DIR" ]; then
-    prompts="$(find "$PKG_DIR/prompts" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')"
-    skills="$(find "$PKG_DIR/skills" -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')"
+    prompts="$(find "$PKG_DIR/prompts" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ' || true)"
+    skills="$(find "$PKG_DIR/skills" -name SKILL.md 2>/dev/null | wc -l | tr -d ' ' || true)"
     log "Package resources: $prompts prompt templates, $skills skills"
     log "Review or disable any of them with: pi config"
   fi
