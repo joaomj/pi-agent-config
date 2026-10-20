@@ -50,7 +50,9 @@ keep working from their local copy but cannot update; switch them to the npm pac
 ### Claude subscription transport
 
 [Pi Claude DirectSDK](https://github.com/joaomj/pi-claude-directsdk) is an optional provider extension.
-Read its current requirements for Claude Code, authentication, and account access before installing.
+`install.sh --only claude` checks the qualified CLI range, offers the pinned CLI
+install, runs the CLI login, and then installs the package. Read its current
+requirements for Claude Code, authentication, and account access first.
 Installing the package alone does not configure or authenticate a provider.
 It intentionally stays a standalone repository (stars, issues, and tag-driven
 releases) and is not part of the monorepo below.
@@ -58,6 +60,9 @@ releases) and is not part of the monorepo below.
 ```bash
 pi install git:github.com/joaomj/pi-claude-directsdk
 ```
+
+The installer uses the npm source, `npm:pi-claude-directsdk`. Keep one source
+only; remove the other with `pi remove` before switching.
 
 ### Interactive questions
 

@@ -38,6 +38,10 @@ It does not change providers, models, MCP servers, permission rules, or `AGENTS.
 After the install, the same script walks the parts a package cannot ship:
 
 - `packages` offers each third-party package with a yes/no question.
+- `claude` offers the Claude subscription transport. When you accept, it checks
+  Node and the qualified Claude Code CLI range (`>=2.1.263 <2.2.0`), offers the
+  pinned CLI install, runs `claude auth login` in a terminal, and installs the
+  transport package. Choosing a model stays interactive, in `/model`.
 - `agents` copies `AGENTS.md` when you have none, or appends the shared rules
   once, between markers, when you do.
 - `permissions` copies the reference policy when you have none. When you have
@@ -48,7 +52,8 @@ After the install, the same script walks the parts a package cannot ship:
 - `verify` prints the installed packages and counts the shared prompts and skills.
 
 Run a single step with `--only packages`, skip them all with `--no-configure`,
-and accept every default with `--yes`.
+accept every default with `--yes`, and take the Claude transport without being
+asked with `--claude`.
 
 Prompt templates become explicit commands, such as `/explain`, `/code-review`,
 `/plan`, and `/generate-slides`.

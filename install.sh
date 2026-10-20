@@ -10,7 +10,7 @@
 #   install.sh --reset              move the current configuration aside first
 #   install.sh --backup-only        stop after the backup
 #
-# Configure steps: packages, agents, permissions, mcp, verify
+# Configure steps: packages, claude, agents, permissions, mcp, verify
 #
 # Options:
 #   --ref <ref>         git ref to install (default: main)
@@ -19,6 +19,7 @@
 #   --reset             move the existing configuration aside before installing
 #   --drop-auth         with --reset, move the provider login aside too
 #   --backup-only       stop after the backup
+#   --claude            set up the Claude subscription transport without asking
 #   --yes               accept the default answer for every question
 set -euo pipefail
 
@@ -26,7 +27,8 @@ REPO="git:github.com/joaomj/pi-agent-config"
 REF="main"
 SOURCE_OVERRIDE=""
 BACKUP_DIR="${HOME}"
-STEPS="packages,agents,permissions,mcp,verify"
+STEPS="packages,claude,agents,permissions,mcp,verify"
+WITH_CLAUDE=0
 RESET=0
 DROP_AUTH=0
 BACKUP_ONLY=0
@@ -46,6 +48,7 @@ while [ $# -gt 0 ]; do
     --reset) RESET=1; shift ;;
     --drop-auth) DROP_AUTH=1; shift ;;
     --backup-only) BACKUP_ONLY=1; shift ;;
+    --claude) WITH_CLAUDE=1; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
     -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) echo "install.sh: unknown option $1" >&2; exit 2 ;;
@@ -67,6 +70,11 @@ confirm() {
   printf '%s [%s] ' "$question" "$default"
   read -r answer
   case "${answer:-$default}" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
+
+# version_ge A B -> true when A >= B
+version_ge() {
+  awk -v a="$1" -v b="$2" 'BEGIN{n=split(a,x,".");split(b,y,".");for(i=1;i<=3;i++){if(x[i]+0>y[i]+0)exit 0;if(x[i]+0<y[i]+0)exit 1}exit 0}'
 }
 
 has_step() {
@@ -193,8 +201,77 @@ if has_step packages; then
 npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y
 npm:@gotgenes/pi-permission-system|tool permission checks|y
 npm:@joaomj/pi-background-bash|durable background commands|y
-git:github.com/joaomj/pi-claude-directsdk|Claude subscription transport|n
 PACKAGES
+fi
+
+if has_step claude; then
+  CLAUDE_RANGE_MIN="2.1.263"
+  CLAUDE_RANGE_MAX="2.2.0"
+  CLAUDE_PIN="2.1.281"
+
+  if pi list 2>/dev/null | grep -Fq "pi-claude-directsdk"; then
+    log "Claude transport already installed"
+  elif [ "$WITH_CLAUDE" -eq 1 ] || confirm "Set up the Claude subscription transport? It needs a paid Claude plan and a Claude Code login." n; then
+    node_major="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1)"
+    if [ -n "$node_major" ] && [ "$node_major" -lt 20 ]; then
+      printf 'install.sh: Node 20 or later is required for this transport; found %s\n' "$(node -v)" >&2
+    fi
+
+    cli_version="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+    cli_ok=0
+    if [ -n "$cli_version" ] && version_ge "$cli_version" "$CLAUDE_RANGE_MIN" \
+       && ! version_ge "$cli_version" "$CLAUDE_RANGE_MAX"; then
+      cli_ok=1
+    fi
+
+    if [ "$cli_ok" -eq 1 ]; then
+      log "Claude Code CLI $cli_version is inside the qualified range"
+    else
+      if [ -n "$cli_version" ]; then
+        log "Claude Code CLI $cli_version is outside the qualified range $CLAUDE_RANGE_MIN <= v < $CLAUDE_RANGE_MAX"
+      else
+        log "Claude Code CLI not found"
+      fi
+      if confirm "Install the qualified Claude Code CLI ($CLAUDE_PIN) globally with npm?" n; then
+        npm install -g --ignore-scripts=false "@anthropic-ai/claude-code@$CLAUDE_PIN" \
+          || printf 'install.sh: the global install failed (a permissions error usually means npm needs a writable prefix). Install it yourself, then rerun --only claude\n' >&2
+        cli_version="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)"
+        if [ -n "$cli_version" ] && version_ge "$cli_version" "$CLAUDE_RANGE_MIN" \
+           && ! version_ge "$cli_version" "$CLAUDE_RANGE_MAX"; then
+          cli_ok=1
+        fi
+      fi
+    fi
+
+    if claude auth status --json 2>/dev/null | grep -Eq '"loggedIn"[[:space:]]*:[[:space:]]*true'; then
+      log "Claude Code is signed in"
+    elif [ -t 0 ]; then
+      if confirm "Run claude auth login now? It opens a browser." y; then
+        claude auth login || printf 'install.sh: claude auth login did not finish; run it yourself, then rerun --only claude\n' >&2
+      fi
+    else
+      log "Claude Code is not signed in: run 'claude auth login' as the user that runs Pi"
+    fi
+
+    if [ "$cli_ok" -eq 1 ]; then
+      if pi list 2>/dev/null | grep -Fq "pi-claude-directsdk"; then
+        log "Claude transport already installed"
+      else
+        pi install npm:pi-claude-directsdk \
+          || printf 'install.sh: could not install the Claude transport; rerun --only claude\n' >&2
+      fi
+      cat <<'CLAUDE'
+  One step stays interactive: restart Pi, open /model, wait for the DirectSDK
+  catalog refresh, then choose a DirectSDK model. Start with the haiku model to
+  check the account. This transport uses the Claude Code login, not Pi's
+  Anthropic login.
+CLAUDE
+    else
+      printf 'install.sh: Claude transport not installed; the CLI is missing or outside the qualified range.\n' >&2
+    fi
+  else
+    log "Skipped the Claude transport"
+  fi
 fi
 
 if has_step agents; then
