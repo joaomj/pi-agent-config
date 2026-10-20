@@ -22,17 +22,24 @@ The distribution channel is the repository itself,
 | Resource | Status |
 | --- | --- |
 | `prompts/` | All templates, including `/bootstrap`. |
-| `skills/documentation/`, `skills/engineering/` | Included. |
-| `skills/tooling/proton-pass/`, `skills/tooling/skill-doctor/` | Excluded. They expect host tools and local session history. |
-| `extensions/` | Nothing. Extensions ship as third-party packages. |
-| `AGENTS.md`, permission policy, MCP servers | Not shippable. `/bootstrap` adapts each one with the user. |
+| `skills/` | Every skill, including `tooling/proton-pass` and `tooling/skill-doctor`. The user decides what to keep. |
+| `extensions/pi-permission-system/config.json` | Shipped as a reference policy. `/bootstrap` adapts it to the user's own file. |
+| `extensions/` runtime code | Nothing. Extensions ship as third-party packages. |
+| `AGENTS.md` | Shipped as the canonical text. `/bootstrap` stages it in `/tmp` and merges only the rules the user accepts. |
+| MCP servers | Not shippable. `/bootstrap` asks about each server separately. |
 
 The `/bootstrap` prompt installs the third-party packages listed in
-[Extensions in use](extensions.md), offers the Exa MCP server, and guides the
-`AGENTS.md` and permission-policy merge. It inspects the machine first and reports
-what it changed.
+[Extensions in use](extensions.md) one at a time, asks about each MCP server,
+and guides the `AGENTS.md` and permission-policy merge from `/tmp`. It inspects
+the machine first and reports what it changed.
 
 ## Decisions
+
+- **The installer backs up first.** `install.sh` writes a tarball of the Pi
+  configuration before it installs anything, prints the restore command, and
+  stops if the backup fails. `--reset` moves the old configuration aside instead
+  of deleting it. Nothing writes to a user's configuration before a backup
+  exists.
 
 - **Third-party packages are installed by `/bootstrap`.** Pi documents package
   dependencies for npm tarballs. A git-installed package that depends on other Pi
@@ -43,26 +50,29 @@ what it changed.
   installs a tag.
 - **Personal machines keep the full clone** at `~/.pi/agent` and load resources
   directly. They must not also install the package, or resources load twice.
-- **Excluded from the package:** `proton-pass` and `skill-doctor`. A package
-  filter cannot add them back, because it only narrows what the manifest
-  declares. A user who wants one copies the skill into their own `skills/`
-  directory, or reuses this repository as a plain clone.
+- **Every skill ships.** The package does not judge which skills a user needs.
+  `pi config` switches off any single shared prompt or skill.
+- **No `APPEND.md`.** Pi loads only `AGENTS.md` and `CLAUDE.md` automatically;
+  `--append-system-prompt` is a per-invocation flag. There is no append file to
+  ship, and the package must not invent one.
 
 ## Risks
 
 - **Name collisions.** Pi keeps the first discovered skill and prints a warning.
-  The prompt-template and skill precedence between scopes is not documented.
-  Users can disable a shared resource with `pi config`, or with a package filter
-  such as `"prompts": ["!prompts/plan.md"]`.
-- **The manifest lists resources explicitly.** A new skill category under
-  `skills/` does not ship until it is added to the manifest.
+  The comparison uses the declared `name` in `SKILL.md`, not the folder, so
+  moving the package skills into a subfolder changes nothing. Precedence between
+  scopes is not documented. Users can disable a shared resource with `pi config`,
+  or with a package filter such as `"prompts": ["!prompts/plan.md"]`.
+- **The manifest lists resource roots explicitly.** `skills` covers the whole
+  tree; a new top-level resource kind still needs a manifest entry.
 - **Permission and instruction merges stay manual.** Automating them can widen
   access without the user noticing.
 
 ## Next steps
 
 1. Install the package on a clean machine and run `/bootstrap`. Confirm that
-   prompts and skills appear, and that no personal file changed.
+   prompts and skills appear, that the backup restores, and that no personal file
+   changed.
 2. Confirm that `pi update --extensions` updates the package.
 3. Confirm the collision behavior on a machine that already has `/plan` or
    `/code-review`.

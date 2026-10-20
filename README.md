@@ -8,7 +8,24 @@ connections, permission rules, and `AGENTS.md` stay local and unchanged.
 
 ## Install
 
-Install Pi using its official instructions, then add this repository as a Pi package:
+Install Pi using its official instructions, then run the installer:
+
+```bash
+git clone https://github.com/joaomj/pi-agent-config.git ~/pi-agent-config
+~/pi-agent-config/install.sh
+```
+
+The installer writes a backup of `~/.pi/agent` to
+`~/pi-agent-backup-<UTC timestamp>.tar.gz` before it changes anything, prints
+the restore command, and then installs the package. Session history, download
+caches, and binaries stay out of the backup.
+
+- `--reset` moves the existing configuration aside before installing. It keeps
+  `sessions/`, `bin/`, and the provider login, and moves everything else to
+  `~/pi-agent-aside-<timestamp>/`. Add `--drop-auth` to move the login too.
+- `--backup-only` stops after the backup.
+
+To install the package without the backup step:
 
 ```bash
 pi install git:github.com/joaomj/pi-agent-config
@@ -19,9 +36,9 @@ The package adds the prompt templates in [prompts/](prompts/) and the skills in
 It does not change providers, models, MCP servers, permission rules, or `AGENTS.md`.
 
 Start Pi and run `/bootstrap`. That guided session installs the third-party
-packages you pick, offers the Exa MCP server, and helps you merge `AGENTS.md` and
-your permission policy. It inspects the machine before it writes, and reports
-each change.
+packages you pick, asks about each MCP server, and helps you merge `AGENTS.md`
+and the reference permission policy. It stages both files in `/tmp` first,
+inspects the machine before it writes, and reports each change.
 
 Prompt templates become explicit commands, such as `/explain`, `/code-review`,
 `/plan`, and `/generate-slides`.
@@ -32,9 +49,10 @@ Maintain the installation with these commands:
 - `pi config` disables a single shared prompt or skill, for example after a name collision.
 - `pi install git:github.com/joaomj/pi-agent-config@v1` stays on a released tag.
 
-The package leaves out the `proton-pass` and `skill-doctor` skills. They expect
-host tools and local session history. Copy either one into your own `skills/`
-directory if you need it.
+Every skill in `skills/` is included, including `proton-pass` and
+`skill-doctor`. Turn off any prompt or skill you do not want with `pi config`.
+Skill collisions are matched on the declared `name` in `SKILL.md`, not on the
+folder, so a separate folder does not avoid a clash.
 
 ## Or copy files by hand
 

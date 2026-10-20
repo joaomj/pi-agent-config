@@ -9,8 +9,12 @@
     "url": "git+https://github.com/joaomj/pi-agent-config.git"
   },
   "pi": {
-    "prompts": ["prompts/*.md"],
-    "skills": ["skills/documentation", "skills/engineering"],
+    "prompts": [
+      "prompts/*.md"
+    ],
+    "skills": [
+      "skills"
+    ],
     "extensions": []
   }
 }

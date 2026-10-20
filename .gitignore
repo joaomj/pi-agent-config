@@ -72,7 +72,6 @@ versions.lock
 /extensions/
 /telemetry.json.example
 /.env.example
-/install.sh
 /scripts/sync.mjs
 /scripts/package-report.mjs
 /scripts/mcp-auth.sh
