@@ -27,7 +27,7 @@ The distribution channel is the repository itself,
 | `extensions/` runtime code | Nothing. Extensions ship as third-party packages. |
 | `AGENTS.md` | Shipped as the canonical text. The installer copies it when absent, or appends it once between markers. |
 | MCP servers | Not shippable. The installer asks about the Exa server and needs `EXA_API_KEY`; other servers stay per user. |
-| Claude transport | Offered as a step. The installer checks Node and the qualified Claude Code CLI range, offers the pinned CLI install, runs the CLI login, and installs the package. Model selection stays interactive in `/model`. |
+| Claude transport | Offered as a step. The installer checks Node and the qualified Claude Code CLI range and offers the pinned CLI install. It offers the CLI login and installs the package only when a qualified CLI is present; otherwise it prints the fix command and installs nothing. Model selection stays interactive in `/model`. |
 
 `install.sh` installs the third-party packages listed in
 [Extensions in use](extensions.md) one at a time, asks about each MCP server,
@@ -54,6 +54,12 @@ before it writes, and reports what it changed.
   directly. They must not also install the package, or resources load twice.
 - **Every skill ships.** The package does not judge which skills a user needs.
   `pi config` switches off any single shared prompt or skill.
+- **Questions fail closed.** Every question shows `[y/n]` and the installer
+  answers no when no terminal is available and `--yes` was not passed. Setup
+  never installs or edits anything on a default that a user did not confirm.
+  The script also treats an empty probe (missing binary, missing file) as a
+  normal result instead of an error, so a missing optional tool cannot end the
+  run early.
 - **The Claude transport is a first-class step, not a dependency.** It needs the
   qualified CLI range and a separate Claude Code login, so the installer checks
   both before it installs the package, and it never installs the CLI without
