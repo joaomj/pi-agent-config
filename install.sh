@@ -136,6 +136,58 @@ sys.exit(1)
 DECLARED
 }
 
+# find_chrome mirrors how pi-browser-use resolves a browser: CHROME_PATH, the
+# executablePath setting, then the standard install paths.
+find_chrome() {
+  local candidate configured="" settings="$AGENT_DIR/settings.json"
+  [ -n "${CHROME_PATH:-}" ] && [ -x "${CHROME_PATH}" ] && return 0
+  if [ -f "$settings" ] && command -v python3 >/dev/null 2>&1; then
+    configured="$(python3 - "$settings" <<'CHROME' || true
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+except (OSError, json.JSONDecodeError):
+    sys.exit(0)
+value = (data.get("pi-browser-use") or {}).get("executablePath")
+print(value if isinstance(value, str) else "")
+CHROME
+)"
+    [ -n "$configured" ] && [ -x "$configured" ] && return 0
+  fi
+  for candidate in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+                   "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+                   /usr/bin/google-chrome-stable /usr/bin/google-chrome \
+                   /usr/bin/chromium /usr/bin/chromium-browser /snap/bin/chromium; do
+    [ -x "$candidate" ] && return 0
+  done
+  for candidate in google-chrome google-chrome-stable chromium chromium-browser; do
+    command -v "$candidate" >/dev/null 2>&1 && return 0
+  done
+  return 1
+}
+
+# missing_prerequisite prints what a package needs and returns 0 when it is
+# missing, so the caller can skip the install instead of breaking the session.
+missing_prerequisite() {
+  local major
+  case "$1" in
+    node24)
+      major="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1 || true)"
+      if [ -z "$major" ] || [ "$major" -lt 24 ]; then
+        printf 'Node 24 or later (found %s)' "${major:+v$major}"
+        return 0
+      fi
+      ;;
+    chrome)
+      if ! find_chrome; then
+        printf 'Google Chrome or Chromium'
+        return 0
+      fi
+      ;;
+  esac
+  return 1
+}
+
 # rules_already_in reports whether every non-empty line of the second file
 # already appears in the first.
 rules_already_in() {
@@ -294,10 +346,22 @@ if has_step packages; then
     "npm:@joaomj/pi-claude-usage|Claude subscription quota in the footer|y|"
     "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills="
     "npm:pi-context-view|inspect what fills the context window|y|"
-    "npm:pi-browser-use|managed browser automation tools|y|"
+    "npm:pi-browser-use|managed browser automation tools|y||node24,chrome"
   )
   for entry in "${packages[@]}"; do
-    IFS='|' read -r pkg desc default filter <<< "$entry"
+    IFS='|' read -r pkg desc default filter requires <<< "$entry"
+    if [ -n "$requires" ]; then
+      missing=""
+      IFS=',' read -ra needs <<< "$requires"
+      for need in "${needs[@]}"; do
+        reason="$(missing_prerequisite "$need" || true)"
+        [ -n "$reason" ] && missing="${missing:+$missing, }$reason"
+      done
+      if [ -n "$missing" ]; then
+        log "Skipped $pkg: needs $missing"
+        continue
+      fi
+    fi
     if existing="$(declared_source "$(package_identity "$pkg")")"; then
       if [ "$existing" = "$pkg" ]; then
         log "Already installed: $pkg"

@@ -96,6 +96,30 @@ injections). On-demand commands only; it adds nothing to the model context.
 pi install npm:pi-context-view
 ```
 
+### Claude usage footer
+
+[Claude usage](https://github.com/joaomj/pi-extensions/tree/main/extensions/claude-usage)
+shows remaining Claude subscription quota (5-hour and weekly windows) in the footer,
+with a `/claude-account` picker when several Claude logins exist on the machine:
+
+```bash
+pi install npm:@joaomj/pi-claude-usage
+```
+
+### Browser automation
+
+[`pi-browser-use`](https://pi.dev/packages/pi-browser-use) provides the `browser_*`
+tools on a managed headless browser:
+
+```bash
+pi install npm:pi-browser-use
+```
+
+It requires Node.js 24 or later and a Chrome or Chromium binary. Any Chromium-based
+browser works through the `pi-browser-use.executablePath` setting or the `CHROME_PATH`
+environment variable. `install.sh` skips the package when either requirement is
+missing, instead of installing an extension that fails at startup.
+
 ## Evaluated and not installed
 
 These were reviewed and deliberately left out. Reasons are recorded so the
