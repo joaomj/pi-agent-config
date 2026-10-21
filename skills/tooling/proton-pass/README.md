@@ -1,8 +1,10 @@
 # Proton Pass skill for Pi
 
-Read selected secrets from Proton Pass without exposing them in command
-arguments, logs, or transcripts. Use scoped agent credentials for unattended
-work rather than granting automation access to personal vaults.
+Load secrets, passwords, TOTP codes, and SSH keys from Proton Pass at runtime
+without exposing them in command arguments, logs, or transcripts. SSH keys stay
+in the vault and reach ssh, git, and commit signing through the agent socket.
+Use scoped agent credentials for unattended work rather than granting
+automation access to personal vaults.
 
 This directory adapts [tohuw/proton-pass-skill](https://github.com/tohuw/proton-pass-skill),
 commit `b7c5da50f528eb24929b3cc85379acb50cfc2044`. The upstream MIT license is
@@ -13,13 +15,18 @@ retained in [LICENSE](LICENSE). This community skill is not affiliated with Prot
 The skill is bundled at `skills/tooling/proton-pass`. Run `/reload` after updating
 it, then use `/skill:proton-pass` when explicit invocation is useful.
 Install [Proton Pass CLI](https://protonpass.github.io/pass-cli/get-started/installation/)
-separately. This adaptation was checked against CLI 2.4.2.
+separately. This adaptation was checked against CLI 2.5.1.
 
-Read [Ubuntu/Pi notes](references/ubuntu-pi.md) before changing key storage.
+Read the [SSH agent reference](references/ssh-agent.md) before changing agent or
+signing configuration, and the [laptop notes](references/ubuntu-pi.md) before
+changing key storage.
 
 ## Included resources
 
-- [SKILL.md](SKILL.md): secret references, session isolation and access approval.
+- [SKILL.md](SKILL.md): the runtime playbook for secrets, TOTP, passwords and
+  SSH keys, plus session isolation and access approval.
+- [SSH agent reference](references/ssh-agent.md): agent modes, socket selection,
+  key selectors, signing and failure diagnosis.
 - [Command reference](references/commands.md): help captured from CLI 2.4.2.
 - [Bootstrap reference](references/bootstrap.md): upstream credential-store design.
 - `bin/proton-pass-agent.sh`: shell helper for owner-supplied scoped tokens.

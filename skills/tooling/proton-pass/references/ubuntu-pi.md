@@ -1,91 +1,104 @@
-# Ubuntu and Pi integration
+# This laptop
 
-## Sources and current CLI
+Concrete paths and services for the Ubuntu desktop account `marcos`, so a read or
+an SSH connection can be diagnosed without rediscovering the setup. Everything
+here was checked against CLI 2.5.1 on 2026-10-21.
 
-Upstream skill commit: `b7c5da50f528eb24929b3cc85379acb50cfc2044`.
-This installation adds local Ubuntu/Pi updates. CLI 2.4.2 (`ef5f645`) matches
-the latest GitHub release checked during installation.
+## Installed pieces
 
-- Configuration: <https://protonpass.github.io/pass-cli/get-started/configuration/>
-- SSH agent: <https://protonpass.github.io/pass-cli/commands/ssh-agent/>
-- Releases: <https://github.com/protonpass/pass-cli/releases>
-- Skill: <https://github.com/tohuw/proton-pass-skill>
+| Piece | Location |
+|---|---|
+| CLI | `~/.local/bin/pass-cli`, stable track |
+| Session data | `~/.local/share/proton-pass-cli/.session/`, mode 0700 |
+| Agent start-up script | `~/.local/libexec/proton-pass-ssh-agent/proton_pass_agent.py` |
+| Agent signing wrapper | `~/.local/libexec/proton-pass-ssh-agent/proton-pass-sign.sh` |
+| Shell hook | `~/.local/libexec/proton-pass-ssh-agent/proton-pass-init.sh`, sourced from `.profile` and `.bashrc` |
+| SSH agent unit | `~/.config/systemd/user/proton-pass-ssh-agent.service` |
+| Host block | `~/.ssh/proton-pass-github.conf`, included from `~/.ssh/config` |
+| Key selector | `~/.ssh/vivobook-personal-github.pub`, mode 0600 |
+| Allowed signers | `~/.config/git/allowed_signers` |
 
-CLI help takes precedence over conflicting documentation examples.
-CLI 2.4.2 accepts `login --pat`, not `--personal-access-token`.
-Its SSH refresh interval defaults to 30 seconds, not one hour.
-`test` and `completions` are absent from top-level command help.
+The unit, the start-up script, and the shell hook are installed by
+`scripts/install-proton-pass` in `joaomj/computer-cleanup-services`. Change them
+there and rerun the installer; editing only the copies under
+`~/.local/libexec` lasts until the next install.
 
-## Isolate agent credentials
+## Shell environment
 
-Use a separate, durable `PROTON_PASS_SESSION_DIR` with mode 0700 for token login.
-Never log out the human session to recover an agent session.
-Creating tokens, granting access, and bulk secret reads require owner approval.
-This installation creates no tokens and changes no vault permissions.
+The hook exports three values into interactive shells:
 
-## Reboot persistence
-
-Linux defaults to the kernel keyring, whose encryption key is lost on reboot.
-An enabled systemd service alone does not provide reboot persistence.
-
-Recommended desktop settings:
-
-```sh
-export PROTON_PASS_KEY_PROVIDER=keyring
-export PROTON_PASS_LINUX_KEYRING=dbus
+```bash
+PROTON_PASS_KEY_PROVIDER=keyring
+PROTON_PASS_LINUX_KEYRING=dbus
+SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/proton-pass-ssh-agent/agent.sock"
 ```
 
-GNOME Keyring must be unlocked before authentication. Start the agent after
-desktop login. Changing providers may require a fresh login; do not assume
-that the encryption key migrates. Ask before replacing the human session.
+The keyring backend stores the session-encryption key in the GNOME keyring over
+D-Bus, so the session survives a reboot without a plaintext key on disk. Do not
+switch to the `fs` backend or move session files between keyring identities
+without approval: the encryption key does not follow them.
 
-For unattended startup before login, Proton supports
-`PROTON_PASS_KEY_PROVIDER=fs`. Warning: this stores the encryption key in
-plaintext beside the encrypted session. Obtain approval for this weaker storage.
-Never silently fall back from keyring to filesystem storage.
-User-service startup before login also requires `loginctl enable-linger minipc`.
-Linger does not unlock GNOME Keyring or preserve the kernel keyring.
+## SSH agent service
 
-## SSH service and clients
+`proton-pass-ssh-agent.service` runs at graphical login and:
 
-Use the same `PROTON_PASS_SESSION_DIR` in the login shell, Exa helper and SSH
-service. CLI 2.4.2 appends `.session` to this directory. The existing account
-uses `~/.local/share/proton-pass-cli/.session` as its base, so the authenticated
-metadata is in `.session/.session`. Preserve the path until an intentional
-migration; do not silently move encrypted files between keyring identities.
+1. waits up to 120 s for the default Secret Service collection to unlock, then
+2. waits up to 120 s for `pass-api.proton.me:443` to answer, then
+3. replaces itself with
+   `pass-cli ssh-agent start --socket-path $XDG_RUNTIME_DIR/proton-pass-ssh-agent/agent.sock`.
 
+It exits with status 78 when either wait expires, which systemd does not retry.
+Other failures retry every 15 s, up to three times in five minutes. On this
+laptop, a login with no network can therefore leave the agent stopped: reconnect
+and restart the service.
 
-Service: `proton-pass-ssh-agent.service`.
-Vault: `Personal`. Socket: `~/.ssh/proton-pass-agent.sock`.
-GitHub SSH already selects that socket. Do not disable other agents globally
-or change vault scope without approval.
+The socket directory is a runtime directory with mode 0700, so it disappears at
+logout and cannot be reached by another user.
 
-For clients that use the environment:
+## Verify
 
-```sh
-export SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock"
-```
-
-Check without reading secrets:
-
-```sh
-systemctl --user is-enabled proton-pass-ssh-agent.service
+```bash
+pass-cli info
 systemctl --user is-active proton-pass-ssh-agent.service
-SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-agent.sock" ssh-add -l
+SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/proton-pass-ssh-agent/agent.sock" ssh-add -l
+ssh -o BatchMode=yes -T git@github.com
 ```
 
-Do not claim reboot verification until the user reboots and repeats these checks.
+`ssh -T` must greet the account `joaomj`. The selector in
+`~/.ssh/proton-pass-github.conf` offers only the `vivobook-personal-github` key,
+so a different greeting means the host block is being skipped or the selector
+does not match the key in the vault.
 
-## Helper and optional tools
+## Recover
 
-The shell bootstrap helper uses `secret-tool` from `libsecret-tools` on Ubuntu.
-GNOME Keyring must be available and unlocked. Use absolute helper paths relative
-to this skill. Never create or read a real token merely to check installation.
+```bash
+systemctl --user reset-failed proton-pass-ssh-agent.service
+systemctl --user restart proton-pass-ssh-agent.service
+journalctl --user -u proton-pass-ssh-agent.service -n 30 --no-pager
+```
 
-The PowerShell helper, deduplication tool, and Claude Code hooks are bundled
-but not configured or verified for Ubuntu/Pi. Do not run deduplication without
-separate approval for a live vault operation. Do not add bundled `bin/pass-cli`
-to PATH: it contains an upstream machine-specific path.
-Hooks cannot constrain callers of the real binary. Prefer least-privilege grants.
+Read the journal lines before acting. `Waiting for desktop keyring` means the
+GNOME keyring is locked, not that Proton Pass is broken. `Proton API is
+unreachable` means the network, not the session. An authentication error means a
+login, and the account session belongs to the user: ask before touching it.
 
-Reload Pi with `/reload` to discover `/skill:proton-pass`.
+Do not run `pass-cli ssh-agent daemon start` alongside this service. Two agents
+serving the same vault produce confusing `ssh-add` results.
+
+## Tokens and remote machines
+
+This laptop has no agent token, no separate `PROTON_PASS_SESSION_DIR`, and no
+vault grants created for automation. Creating a token, widening a grant, or
+pointing another machine at this vault all need owner approval first.
+
+## Other machines
+
+Earlier versions of this file described a Pi host. None of it was rechecked
+during this revision, so treat these notes as unverified: that host used
+`~/.ssh/proton-pass-agent.sock` and `~/.ssh/proton-pass-agent.pid`, a `Personal`
+vault, and an Exa helper that read a token through `secret-tool` from
+`libsecret-tools`. Starting a user service before login there also needed
+`loginctl enable-linger`, which does not unlock the GNOME keyring.
+
+Do not claim the service survives a reboot until the machine has rebooted and the
+verify commands above have been repeated.
