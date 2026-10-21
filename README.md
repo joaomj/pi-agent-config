@@ -68,7 +68,7 @@ Maintain the installation with these commands:
 
 - `pi update --extensions` updates this package and the third-party packages.
 - `pi config` disables a single shared prompt or skill, for example after a name collision.
-- `pi install git:github.com/joaomj/pi-agent-config@v1` stays on a released tag.
+- `pi install git:github.com/joaomj/pi-agent-config@v0.4.0` stays on a released tag.
 
 Every skill in `skills/` is included, including `proton-pass` and
 `skill-doctor`. Turn off any prompt or skill you do not want with `pi config`.

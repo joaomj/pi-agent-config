@@ -2,6 +2,52 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.4.0] - 2026-10-20
+
+### Changed
+
+- Document the fail-closed questions and the CLI guard
+- Survive a missing Claude CLI and show y/n on prompts
+- Ask for install consent on the terminal
+- Offer the Claude transport as an installer step
+- Run setup from the installer instead of an agent session
+- Install as a Pi package with a backup-first script
+- Ship shared resources as a Pi package
+- Remove the visible task list package from the catalog
+- Document extension catalog, monorepo publishing, and permission guardrails
+- Add model setup reference
+- Add container roadmap and allow ROADMAP.md
+- Disable whole-home FFF indexing by default
+- Track personal tool permission policy
+- Clarify interactive questions and plan approval rules
+- Keep personal Pi configuration local and document extensions
+- Improve product planning and add optional technical depth
+- Describe automatic background routing in agent rules
+- Require verification first and deployed code as evidence
+- Match only real git commands in the plan-file guard
+- Replace secret redaction with permission deny rules
+- Make the plan prompt product-focused and guard plan files
+- Document Proton Pass-backed Exa authentication and add skill
+- Remove subscription usage extension
+- Disable FFF home directory scanning
+- Configure shared models and user-owned Pi installation
+- Use native tool settings and remove subscription usage
+- Remove telemetry extension from workstation configuration
+- Add startup readiness experiments and investigation findings
+- Expand code reviews and simplify explanation workflows
+- Simplify prompt commands and make chat style global
+- Show compact startup timings in the native notification display
+- Add on-demand startup benchmark report
+- Remove startup timing command without a stage breakdown
+- Show startup elapsed milliseconds in the TUI
+- Use durable background bash in every profile
+- Remove Luna from shared model configuration
+- Default to fullscreen TUI and per-project trust
+- Align shared configuration with the current VPS workflow
+- Separate configuration sync from extension updates
+- Keep read and bash direct and route extension tools through codemode
+- docs: update changelog for v0.3.0
+
 ## [v0.3.0] - 2026-10-04
 
 ### Added
