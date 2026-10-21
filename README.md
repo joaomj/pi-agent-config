@@ -37,7 +37,10 @@ It does not change providers, models, MCP servers, permission rules, or `AGENTS.
 
 After the install, the same script walks the parts a package cannot ship:
 
-- `packages` offers each third-party package with a yes/no question.
+- `packages` offers each third-party package with a yes/no question: fff,
+  permission checks, background bash, the Claude usage footer, interactive
+  questions, the context view, ponytail, and browser automation. The two that
+  need a resource filter in `settings.json` get it on install.
 - `claude` offers the Claude subscription transport. When you accept, it checks
   Node and the qualified Claude Code CLI range (`>=2.1.263 <2.2.0`) and offers
   the pinned CLI install. Only a qualified CLI leads to `claude auth login` and

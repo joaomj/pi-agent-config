@@ -192,22 +192,58 @@ fi
 printf '\n'
 
 # --- 4. Configure -----------------------------------------------------------
+apply_package_filter() {
+  local source="$1" key="$2" settings="$AGENT_DIR/settings.json"
+  if ! command -v python3 >/dev/null 2>&1; then
+    log "Set \"$key\": [] for $source in $settings to match the shared setup"
+    return
+  fi
+  python3 - "$settings" "$source" "$key" <<'FILTER' || log "Could not set \"$key\": [] for $source in $settings"
+import json, os, sys, tempfile
+path, source, key = sys.argv[1:4]
+with open(path) as handle:
+    data = json.load(handle)
+packages = data.get("packages") or []
+for index, entry in enumerate(packages):
+    if entry == source:
+        packages[index] = {"source": source, key: []}
+        break
+else:
+    sys.exit(0)
+data["packages"] = packages
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path))
+with os.fdopen(fd, "w") as handle:
+    json.dump(data, handle, indent=2)
+    handle.write("\n")
+os.replace(tmp, path)
+FILTER
+}
+
 if has_step packages; then
   log "Third-party packages. Each one is optional and runs with your permissions."
-  # source|description|default
+  # source|description|default|resource filter (key=, empty for none)
   packages=(
-    "npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y"
-    "npm:@gotgenes/pi-permission-system|tool permission checks|y"
-    "npm:@joaomj/pi-background-bash|durable background commands|y"
+    "npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y|"
+    "npm:@gotgenes/pi-permission-system|tool permission checks|y|"
+    "npm:@joaomj/pi-background-bash|durable background commands|y|"
+    "npm:@joaomj/pi-claude-usage|Claude subscription quota in the footer|y|"
+    "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills="
+    "npm:pi-context-view|inspect what fills the context window|y|"
+    "npm:@dietrichgebert/ponytail|minimal-change coding skills on demand|y|extensions="
+    "npm:pi-browser-use|managed browser automation tools|y|"
   )
   for entry in "${packages[@]}"; do
-    IFS='|' read -r pkg desc default <<< "$entry"
+    IFS='|' read -r pkg desc default filter <<< "$entry"
     if pi list 2>/dev/null | grep -Fq "$pkg"; then
       log "Already installed: $pkg"
       continue
     fi
     if confirm "Install $pkg ($desc)?" "$default"; then
-      pi install "$pkg" || printf 'install.sh: %s failed to install; continue without it\n' "$pkg" >&2
+      if pi install "$pkg"; then
+        [ -n "$filter" ] && apply_package_filter "$pkg" "${filter%=}"
+      else
+        printf 'install.sh: %s failed to install; continue without it\n' "$pkg" >&2
+      fi
     else
       log "Skipped: $pkg"
     fi

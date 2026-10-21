@@ -84,6 +84,7 @@ To match that resource selection, use this entry in your own `settings.json` pac
 ```
 
 This entry replaces the package's string declaration; do not add a duplicate.
+`install.sh` writes it for you after the install.
 
 ### Context usage map
 
@@ -115,6 +116,8 @@ package list:
   "extensions": []
 }
 ```
+
+`install.sh` writes it for you after the install.
 
 Without the `"extensions": []` filter, the package appends its instructions to
 every request. This entry replaces the package's string declaration; do not add
