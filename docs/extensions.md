@@ -117,8 +117,9 @@ pi install npm:pi-browser-use
 
 It requires Node.js 24 or later and a Chrome or Chromium binary. Any Chromium-based
 browser works through the `pi-browser-use.executablePath` setting or the `CHROME_PATH`
-environment variable. `install.sh` skips the package when either requirement is
-missing, instead of installing an extension that fails at startup.
+environment variable. When either requirement is missing, `install.sh` offers to
+download the official Node build and Chrome for Testing and then sets
+`executablePath`, so the package never installs into a startup failure.
 
 ## Evaluated and not installed
 

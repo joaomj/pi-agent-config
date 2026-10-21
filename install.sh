@@ -166,6 +166,230 @@ CHROME
   return 1
 }
 
+# download_to saves a URL with curl, then wget.
+download_to() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$1" -o "$2"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$2" "$1"
+  else
+    printf 'install.sh: curl or wget is needed to download %s\n' "$1" >&2
+    return 1
+  fi
+}
+
+node_platform() {
+  case "$(uname -s)-$(uname -m)" in
+    Linux-x86_64) echo linux-x64 ;;
+    Linux-aarch64|Linux-arm64) echo linux-arm64 ;;
+    Darwin-arm64) echo darwin-arm64 ;;
+    Darwin-x86_64) echo darwin-x64 ;;
+    *) return 1 ;;
+  esac
+}
+
+chrome_platform() {
+  case "$(uname -s)-$(uname -m)" in
+    Linux-x86_64) echo linux64 ;;
+    Darwin-arm64) echo mac-arm64 ;;
+    Darwin-x86_64) echo mac-x64 ;;
+    *) return 1 ;;
+  esac
+}
+
+# install_node_major unpacks an official Node.js build into ~/.local/opt and
+# links it into ~/.local/bin. No root, no system package changes.
+install_node_major() {
+  local major="$1" platform tmp file version root
+  if ! platform="$(node_platform)"; then
+    log "No official Node.js build for $(uname -s) $(uname -m)"
+    return 1
+  fi
+  tmp="$(mktemp -d)"
+  if ! download_to "https://nodejs.org/dist/latest-v${major}.x/SHASUMS256.txt" "$tmp/SHASUMS256.txt"; then
+    rm -rf "$tmp"
+    return 1
+  fi
+  file="$(grep -oE "node-v[0-9.]+-${platform}\.tar\.xz" "$tmp/SHASUMS256.txt" | head -1 || true)"
+  if [ -z "$file" ]; then
+    log "No Node.js $major build listed for $platform"
+    rm -rf "$tmp"
+    return 1
+  fi
+  version="${file#node-v}"; version="${version%%-*}"
+  log "Downloading $file"
+  if ! download_to "https://nodejs.org/dist/latest-v${major}.x/$file" "$tmp/$file"; then
+    rm -rf "$tmp"
+    return 1
+  fi
+  root="$HOME/.local/opt/node-$major"
+  rm -rf "$root"
+  mkdir -p "$root" "$HOME/.local/bin"
+  if ! tar xf "$tmp/$file" -C "$root" --strip-components=1; then
+    log "Could not unpack $file"
+    rm -rf "$tmp"
+    return 1
+  fi
+  local binary
+  for binary in node npm npx corepack; do
+    [ -e "$root/bin/$binary" ] && ln -sf "$root/bin/$binary" "$HOME/.local/bin/$binary"
+  done
+  rm -rf "$tmp"
+  export PATH="$HOME/.local/bin:$PATH"
+  log "Node $version installed under $root; $HOME/.local/bin now points at it"
+  log "Keep $HOME/.local/bin before the system path so Pi starts on Node $major"
+}
+
+# install_chrome_for_testing downloads a Chrome for Testing build and sets
+# executablePath, so a missing system Chrome does not need root either.
+install_chrome_for_testing() {
+  local platform tmp json url file root binary
+  if ! platform="$(chrome_platform)"; then
+    log "No Chrome for Testing build for $(uname -s) $(uname -m)"
+    return 1
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    log "python3 is needed to unpack the Chrome download"
+    return 1
+  fi
+  tmp="$(mktemp -d)"
+  json="$tmp/cft.json"
+  if ! download_to "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" "$json"; then
+    rm -rf "$tmp"; return 1
+  fi
+  url="$(python3 - "$json" "$platform" <<'CFT' || true
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+except (OSError, json.JSONDecodeError):
+    sys.exit(1)
+for entry in data["channels"]["Stable"]["downloads"]["chrome"]:
+    if entry["platform"] == sys.argv[2]:
+        print(entry["url"])
+        break
+else:
+    sys.exit(1)
+CFT
+)"
+  if [ -z "$url" ]; then
+    log "Chrome for Testing does not publish a build for $platform"
+    rm -rf "$tmp"; return 1
+  fi
+  file="$tmp/chrome.zip"
+  log "Downloading $(basename "$url")"
+  if ! download_to "$url" "$file"; then
+    rm -rf "$tmp"; return 1
+  fi
+  root="$HOME/.local/share/chrome-for-testing"
+  rm -rf "$root"; mkdir -p "$root"
+  if command -v unzip >/dev/null 2>&1; then
+    unpacked=0
+    unzip -q -o "$file" -d "$root" || unpacked=1
+  else
+    unpacked=0
+    python3 - "$file" "$root" <<'UNZIP' || unpacked=1
+import os, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    for member in archive.infolist():
+        archive.extract(member, sys.argv[2])
+        mode = (member.external_attr >> 16) & 0o777
+        if mode:
+            os.chmod(os.path.join(sys.argv[2], member.filename), mode)
+UNZIP
+  fi
+  if [ "$unpacked" -ne 0 ]; then
+    log "Could not unpack the Chrome download"
+    rm -rf "$tmp"; return 1
+  fi
+  rm -rf "$tmp"
+  local unpacked
+  binary=""
+  if [ "$(uname -s)" = "Darwin" ]; then
+    binary="$root/chrome-mac-$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+  else
+    binary="$root/chrome-linux64/chrome"
+  fi
+  if [ ! -f "$binary" ]; then
+    log "Chrome for Testing unpacked without the expected binary"
+    return 1
+  fi
+  chmod +x "$binary"
+  CHROME_BIN="$binary"
+  log "Chrome for Testing installed at $binary"
+}
+
+# set_executable_path records the browser for pi-browser-use.
+set_executable_path() {
+  local binary="$1" settings="$AGENT_DIR/settings.json"
+  if ! command -v python3 >/dev/null 2>&1; then
+    log "Set pi-browser-use.executablePath to $binary in $settings"
+    return
+  fi
+  python3 - "$settings" "$binary" <<'PATHCFG' || printf 'install.sh: could not set pi-browser-use.executablePath in %s\n' "$settings" >&2
+import json, os, sys, tempfile
+path, binary = sys.argv[1], sys.argv[2]
+data = {}
+if os.path.exists(path):
+    with open(path) as handle:
+        try:
+            data = json.load(handle)
+        except json.JSONDecodeError:
+            sys.exit(1)
+config = data.get("pi-browser-use")
+if not isinstance(config, dict):
+    config = {}
+config["executablePath"] = binary
+data["pi-browser-use"] = config
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".")
+with os.fdopen(fd, "w") as handle:
+    json.dump(data, handle, indent=2)
+    handle.write("\n")
+os.replace(tmp, path)
+PATHCFG
+}
+
+# ensure_path_reaches installs nothing; it makes the new Node reachable in
+# future shells when no profile adds ~/.local/bin.
+ensure_path_reaches() {
+  if grep -qF '.local/bin' "$HOME/.profile" "$HOME/.bashrc" 2>/dev/null; then
+    log "~/.local/bin is already on PATH in your shell profile"
+    return
+  fi
+  if ! confirm "Add ~/.local/bin to PATH in ~/.profile so new shells find Node?" y; then
+    printf 'install.sh: add this to your shell profile before starting Pi:\n  export PATH="$HOME/.local/bin:$PATH"\n' >&2
+    return
+  fi
+  printf '\n# Added by pi-agent-config: user installs live in ~/.local/bin\ncase ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac\n' >> "$HOME/.profile"
+  log "Added ~/.local/bin to PATH in ~/.profile"
+}
+
+# ensure_prerequisite offers to install what a package needs, then confirms it
+# is there. Without a terminal nothing is installed and the package is skipped.
+ensure_prerequisite() {
+  local need="$1" reason
+  reason="$(missing_prerequisite "$need" || true)"
+  [ -n "$reason" ] || return 0
+  log "$reason is required"
+  if ! confirm "Install $reason now?" y; then
+    return 1
+  fi
+  case "$need" in
+    node24)
+      install_node_major 24 || return 1
+      ensure_path_reaches
+      ;;
+    chrome)
+      install_chrome_for_testing || return 1
+      set_executable_path "$CHROME_BIN"
+      ;;
+  esac
+  reason="$(missing_prerequisite "$need" || true)"
+  if [ -n "$reason" ]; then
+    printf 'install.sh: %s is still missing\n' "$reason" >&2
+    return 1
+  fi
+}
+
 # missing_prerequisite prints what a package needs and returns 0 when it is
 # missing, so the caller can skip the install instead of breaking the session.
 missing_prerequisite() {
@@ -351,14 +575,13 @@ if has_step packages; then
   for entry in "${packages[@]}"; do
     IFS='|' read -r pkg desc default filter requires <<< "$entry"
     if [ -n "$requires" ]; then
-      missing=""
+      prereqs_ok=1
       IFS=',' read -ra needs <<< "$requires"
       for need in "${needs[@]}"; do
-        reason="$(missing_prerequisite "$need" || true)"
-        [ -n "$reason" ] && missing="${missing:+$missing, }$reason"
+        ensure_prerequisite "$need" || prereqs_ok=0
       done
-      if [ -n "$missing" ]; then
-        log "Skipped $pkg: needs $missing"
+      if [ "$prereqs_ok" -eq 0 ]; then
+        log "Skipped $pkg: a requirement is still missing"
         continue
       fi
     fi
