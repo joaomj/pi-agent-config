@@ -318,16 +318,16 @@ UNZIP
   log "Chrome for Testing installed at $binary"
 }
 
-# set_executable_path records the browser for pi-browser-use.
-set_executable_path() {
-  local binary="$1" settings="$AGENT_DIR/settings.json"
+# set_browser_setting writes one pi-browser-use setting, keeping the others.
+set_browser_setting() {
+  local key="$1" value="$2" settings="$AGENT_DIR/settings.json"
   if ! command -v python3 >/dev/null 2>&1; then
-    log "Set pi-browser-use.executablePath to $binary in $settings"
+    log "Set pi-browser-use.$key to $value in $settings"
     return
   fi
-  python3 - "$settings" "$binary" <<'PATHCFG' || printf 'install.sh: could not set pi-browser-use.executablePath in %s\n' "$settings" >&2
+  python3 - "$settings" "$key" "$value" <<'BROWSERCFG' || printf 'install.sh: could not set pi-browser-use.%s in %s\n' "$key" "$settings" >&2
 import json, os, sys, tempfile
-path, binary = sys.argv[1], sys.argv[2]
+path, key, value = sys.argv[1], sys.argv[2], sys.argv[3]
 data = {}
 if os.path.exists(path):
     with open(path) as handle:
@@ -338,14 +338,27 @@ if os.path.exists(path):
 config = data.get("pi-browser-use")
 if not isinstance(config, dict):
     config = {}
-config["executablePath"] = binary
+config[key] = json.loads(value) if value.startswith("[") else value
 data["pi-browser-use"] = config
 fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".")
 with os.fdopen(fd, "w") as handle:
     json.dump(data, handle, indent=2)
     handle.write("\n")
 os.replace(tmp, path)
-PATHCFG
+BROWSERCFG
+}
+
+# sandbox_restricted reports a Linux system where Chrome cannot use its own
+# sandbox: either user namespaces are restricted by AppArmor, or the sandbox
+# helper cannot keep its setuid bit inside a home-directory install.
+sandbox_restricted() {
+  [ "$(uname -s)" = "Linux" ] || return 1
+  if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || echo 0)" = "1" ]; then
+    return 0
+  fi
+  local helper="$HOME/.local/share/chrome-for-testing/chrome-linux64/chrome-sandbox"
+  [ -f "$helper" ] && [ ! -u "$helper" ] && return 0
+  return 1
 }
 
 # ensure_path_reaches installs nothing; it makes the new Node reachable in
@@ -380,7 +393,11 @@ ensure_prerequisite() {
       ;;
     chrome)
       install_chrome_for_testing || return 1
-      set_executable_path "$CHROME_BIN"
+      set_browser_setting executablePath "$CHROME_BIN"
+      if sandbox_restricted; then
+        log "Chrome's sandbox needs root here; disabling it for this browser profile"
+        set_browser_setting chromeArgs '["--no-sandbox"]'
+      fi
       ;;
   esac
   reason="$(missing_prerequisite "$need" || true)"

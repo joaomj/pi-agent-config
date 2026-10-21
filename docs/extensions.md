@@ -121,6 +121,12 @@ environment variable. When either requirement is missing, `install.sh` offers to
 download the official Node build and Chrome for Testing and then sets
 `executablePath`, so the package never installs into a startup failure.
 
+On Linux the home-directory Chrome cannot keep the setuid sandbox helper, and
+Ubuntu 24.04 and later also restrict unprivileged user namespaces. There the
+installer adds `"chromeArgs": ["--no-sandbox"]`, which lets the browser start at
+the cost of Chrome's own renderer sandbox. A system Chrome with a working sandbox
+is the stronger choice when you have one.
+
 ## Evaluated and not installed
 
 These were reviewed and deliberately left out. Reasons are recorded so the
