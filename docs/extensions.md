@@ -96,43 +96,6 @@ injections). On-demand commands only; it adds nothing to the model context.
 pi install npm:pi-context-view
 ```
 
-### Minimal-code guidance, on demand only
-
-[`@dietrichgebert/ponytail`](https://pi.dev/packages/@dietrichgebert/ponytail)
-is a minimal-change coding philosophy plus review commands. Install it with its
-always-on prompt injector disabled, so the skills load only when the task calls
-for them:
-
-```bash
-pi install npm:@dietrichgebert/ponytail
-```
-
-Then replace the string declaration with this entry in your own `settings.json`
-package list:
-
-```json
-{
-  "source": "npm:@dietrichgebert/ponytail",
-  "extensions": []
-}
-```
-
-`install.sh` writes it for you after the install.
-
-Without the `"extensions": []` filter, the package appends its instructions to
-every request. This entry replaces the package's string declaration; do not add
-a duplicate.
-
-### Claude usage footer
-
-[Claude usage](https://github.com/joaomj/pi-extensions/tree/main/extensions/claude-usage)
-shows remaining Claude subscription quota (5-hour and weekly windows) in the footer,
-with a `/claude-account` picker when several Claude logins exist on the machine:
-
-```bash
-pi install npm:@joaomj/pi-claude-usage
-```
-
 ## Evaluated and not installed
 
 These were reviewed and deliberately left out. Reasons are recorded so the

@@ -229,7 +229,6 @@ if has_step packages; then
     "npm:@joaomj/pi-claude-usage|Claude subscription quota in the footer|y|"
     "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills="
     "npm:pi-context-view|inspect what fills the context window|y|"
-    "npm:@dietrichgebert/ponytail|minimal-change coding skills on demand|y|extensions="
     "npm:pi-browser-use|managed browser automation tools|y|"
   )
   for entry in "${packages[@]}"; do
