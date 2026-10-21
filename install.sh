@@ -84,6 +84,67 @@ has_step() {
   case ",$STEPS," in *",$1,"*) return 0 ;; *) return 1 ;; esac
 }
 
+# package_identity prints the short name a source installs, so npm, git, and
+# local copies of the same package compare equal.
+package_identity() {
+  printf '%s' "$1" \
+    | sed -e 's|^npm:||' -e 's|^git:||' -e 's|^https://||' -e 's|^http://||' -e 's|^ssh://||' \
+    | sed -e 's|^git@[^:]*:||' \
+    | awk '{ last = 0; for (i = 1; i <= length($0); i++) if (substr($0, i, 1) == "@") last = i
+             if (last > 1) print substr($0, 1, last - 1); else print }' \
+    | sed -e 's|/*$||' -e 's|.*/||' -e 's|\.git$||' \
+    | tr '[:upper:]' '[:lower:]'
+}
+
+# declared_source prints the entry that already installs this identity, if any.
+# A package declared through another source counts: installing it again would
+# load the same code twice under two names.
+declared_source() {
+  local settings="$AGENT_DIR/settings.json"
+  [ -f "$settings" ] || return 1
+  command -v python3 >/dev/null 2>&1 || return 1
+  python3 - "$settings" "$1" <<'DECLARED'
+import json, sys
+
+path, wanted = sys.argv[1], sys.argv[2].lower()
+
+def identity(source):
+    text = source
+    for prefix in ("npm:", "git:", "https://", "http://", "ssh://"):
+        if text.startswith(prefix):
+            text = text[len(prefix):]
+            break
+    if text.startswith("git@"):
+        text = text.split(":", 1)[-1]
+    if text.rfind("@") > 0:
+        text = text[: text.rfind("@")]
+    text = text.rstrip("/").split("/")[-1]
+    return text[:-4].lower() if text.endswith(".git") else text.lower()
+
+try:
+    with open(path) as handle:
+        packages = json.load(handle).get("packages") or []
+except (OSError, json.JSONDecodeError):
+    sys.exit(1)
+
+for entry in packages:
+    source = entry.get("source") if isinstance(entry, dict) else entry
+    if isinstance(source, str) and identity(source) == wanted:
+        print(source)
+        sys.exit(0)
+sys.exit(1)
+DECLARED
+}
+
+# rules_already_in reports whether every non-empty line of the second file
+# already appears in the first.
+rules_already_in() {
+  [ -f "$1" ] && [ -f "$2" ] || return 1
+  awk 'FNR == NR { if ($0 !~ /^[ 	]*$/) want[$0] = 1; next }
+       { seen[$0] = 1 }
+       END { for (line in want) if (!(line in seen)) exit 1 }' "$2" "$1"
+}
+
 MARK_START="<!-- pi-agent-config: shared rules -->"
 MARK_END="<!-- pi-agent-config: end shared rules -->"
 
@@ -170,8 +231,12 @@ fi
 
 # --- 3. Install the package -------------------------------------------------
 SOURCE="${SOURCE_OVERRIDE:-$REPO@$REF}"
-log "Installing $SOURCE"
-pi install "$SOURCE" || die "pi install failed; restore with: $RESTORE_HINT"
+if existing="$(declared_source pi-agent-config)"; then
+  log "Package already declared as $existing; leaving the entry alone"
+else
+  log "Installing $SOURCE"
+  pi install "$SOURCE" || die "pi install failed; restore with: $RESTORE_HINT"
+fi
 pi list 2>/dev/null | grep -q "pi-agent-config" \
   || die "the package is not listed after install; restore with: $RESTORE_HINT"
 
@@ -233,8 +298,12 @@ if has_step packages; then
   )
   for entry in "${packages[@]}"; do
     IFS='|' read -r pkg desc default filter <<< "$entry"
-    if pi list 2>/dev/null | grep -Fq "$pkg"; then
-      log "Already installed: $pkg"
+    if existing="$(declared_source "$(package_identity "$pkg")")"; then
+      if [ "$existing" = "$pkg" ]; then
+        log "Already installed: $pkg"
+      else
+        log "Already declared as $existing; remove it with 'pi remove $existing' to switch"
+      fi
       continue
     fi
     if confirm "Install $pkg ($desc)?" "$default"; then
@@ -300,8 +369,8 @@ if has_step claude; then
           claude auth login || printf 'install.sh: claude auth login did not finish; run it yourself, then rerun --only claude\n' >&2
         fi
       fi
-      if pi list 2>/dev/null | grep -Fq "pi-claude-directsdk"; then
-        log "Claude transport already installed"
+      if existing="$(declared_source pi-claude-directsdk)"; then
+        log "Claude transport already declared as $existing"
       else
         log "Installing npm:pi-claude-directsdk"
         pi install npm:pi-claude-directsdk || printf 'install.sh: could not install the transport; rerun --only claude\n' >&2
@@ -331,6 +400,8 @@ if has_step agents; then
       fi
     elif grep -qF "$MARK_START" "$target"; then
       log "Shared rules already present in $target"
+    elif rules_already_in "$target" "$PKG_DIR/AGENTS.md"; then
+      log "Shared rules already in $target without markers; not appending them again"
     else
       if confirm "Append the shared rules block to $target?" n; then
         { printf '\n%s\n' "$MARK_START"; cat "$PKG_DIR/AGENTS.md"; printf '%s\n' "$MARK_END"; } >> "$target"
@@ -363,7 +434,9 @@ if has_step permissions; then
 fi
 
 if has_step mcp; then
-  if [ -n "${EXA_API_KEY:-}" ]; then
+  if pi mcp list 2>/dev/null | grep -Eq '^(mcp__)?exa[:|]|mcp\.exa\.ai'; then
+    log "An Exa MCP server is already configured; leaving it alone"
+  elif [ -n "${EXA_API_KEY:-}" ]; then
     if confirm "Add the Exa MCP server using EXA_API_KEY?" n; then
       pi mcp add exa --url https://mcp.exa.ai/mcp \
         --bearer-token-env-var EXA_API_KEY \

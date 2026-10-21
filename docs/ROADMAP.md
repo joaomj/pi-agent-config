@@ -60,6 +60,10 @@ before it writes, and reports what it changed.
   The script also treats an empty probe (missing binary, missing file) as a
   normal result instead of an error, so a missing optional tool cannot end the
   run early.
+- **Repeated runs add nothing.** The installer compares packages by name rather
+  than by source string, so an existing git entry blocks the npm install of the
+  same package. It skips the `AGENTS.md` append when the rules are already there,
+  and it does not add an Exa server twice.
 - **The Claude transport is a first-class step, not a dependency.** It needs the
   qualified CLI range and a separate Claude Code login, so the installer checks
   both before it installs the package, and it never installs the CLI without

@@ -64,6 +64,11 @@ Every question shows `[y/n]`; Enter takes the default. A run without a terminal
 and without `--yes` skips the steps that need an answer, so nothing installs
 silently.
 
+The installer does not create duplicates. A package you already declared is left
+alone, even when your entry came from another source, such as git instead of npm.
+When `AGENTS.md` already holds the shared rules without markers, it does not
+append them again. An Exa server that is already configured is not added twice.
+
 Prompt templates become explicit commands, such as `/explain`, `/code-review`,
 `/plan`, and `/generate-slides`.
 
