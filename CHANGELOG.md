@@ -2,6 +2,18 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.4.1] - 2026-10-20
+
+### Changed
+
+- Start the downloaded Chrome when its sandbox cannot work
+- Install what browser automation needs instead of skipping it
+- Skip browser automation when its requirements are missing
+- Refuse to install a package or block twice
+- Drop ponytail from the shared setup
+- Offer every configured package in the installer
+- docs: update changelog for v0.4.0
+
 ## [v0.4.0] - 2026-10-20
 
 ### Changed
