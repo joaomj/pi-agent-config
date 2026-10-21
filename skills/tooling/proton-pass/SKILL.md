@@ -15,6 +15,10 @@ wins. Machine setup on this laptop is in `references/ubuntu-pi.md`.
 
 Official documentation: <https://protonpass.github.io/pass-cli/>.
 
+Use `~/.local/bin/pass-cli`. Do not add this skill's `bin/` directory to `PATH`:
+its wrapper contains machine-specific paths. Resolve bundled paths from this
+skill's own directory, not from the working directory.
+
 ## The one rule
 
 **A secret must never reach a command line, a log, or a transcript.** Process
