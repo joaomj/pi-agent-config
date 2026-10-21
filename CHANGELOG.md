@@ -6,6 +6,7 @@ All notable changes to this configuration are documented here. This file is gene
 
 ### Changed
 
+- Release v0.4.0
 - Document the fail-closed questions and the CLI guard
 - Survive a missing Claude CLI and show y/n on prompts
 - Ask for install consent on the terminal
