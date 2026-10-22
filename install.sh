@@ -24,7 +24,10 @@
 set -euo pipefail
 
 REPO="git:github.com/joaomj/pi-agent-config"
-REF="main"
+# Installs a released tag, not a branch: a branch ref runs whatever was
+# pushed last, so a compromised account could ship code on the next install.
+# Bump this with each release, or pass --ref.
+REF="v0.4.1"
 SOURCE_OVERRIDE=""
 BACKUP_DIR="${HOME}"
 STEPS="packages,claude,agents,permissions,mcp,verify"
@@ -178,6 +181,14 @@ download_to() {
   fi
 }
 
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$1" | awk '{ print $1 }'
+  fi
+}
+
 node_platform() {
   case "$(uname -s)-$(uname -m)" in
     Linux-x86_64) echo linux-x64 ;;
@@ -200,7 +211,7 @@ chrome_platform() {
 # install_node_major unpacks an official Node.js build into ~/.local/opt and
 # links it into ~/.local/bin. No root, no system package changes.
 install_node_major() {
-  local major="$1" platform tmp file version root
+  local major="$1" platform tmp file version root expected actual
   if ! platform="$(node_platform)"; then
     log "No official Node.js build for $(uname -s) $(uname -m)"
     return 1
@@ -217,11 +228,25 @@ install_node_major() {
     return 1
   fi
   version="${file#node-v}"; version="${version%%-*}"
+  expected="$(awk -v f="$file" '$2 == f { print $1; exit }' "$tmp/SHASUMS256.txt")"
+  if [ -z "$expected" ]; then
+    log "No checksum listed for $file; refusing to install it"
+    rm -rf "$tmp"
+    return 1
+  fi
   log "Downloading $file"
   if ! download_to "https://nodejs.org/dist/latest-v${major}.x/$file" "$tmp/$file"; then
     rm -rf "$tmp"
     return 1
   fi
+  actual="$(sha256_file "$tmp/$file")"
+  if [ "$actual" != "$expected" ]; then
+    log "Checksum mismatch for $file; refusing to unpack it"
+    printf '  expected %s\n  actual   %s\n' "$expected" "$actual" >&2
+    rm -rf "$tmp"
+    return 1
+  fi
+  log "Checksum verified for $file"
   root="$HOME/.local/opt/node-$major"
   rm -rf "$root"
   mkdir -p "$root" "$HOME/.local/bin"
