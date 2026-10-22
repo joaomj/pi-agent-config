@@ -32,7 +32,8 @@ pi install git:github.com/joaomj/pi-agent-config
 ```
 
 The package adds the prompt templates in [prompts/](prompts/) and the skills in
-`skills/documentation/` and `skills/engineering/`. It contains no extension code.
+`skills/documentation/`, `skills/engineering/`, and `skills/tooling/`. It contains
+no extension code.
 It does not change providers, models, MCP servers, permission rules, or `AGENTS.md`.
 
 After the install, the same script walks the parts a package cannot ship:
@@ -81,8 +82,8 @@ Maintain the installation with these commands:
 - `pi config` disables a single shared prompt or skill, for example after a name collision.
 - `pi install git:github.com/joaomj/pi-agent-config@v0.4.0` stays on a released tag.
 
-Every skill in `skills/` is included, including `proton-pass` and
-`skill-doctor`. Turn off any prompt or skill you do not want with `pi config`.
+Every skill in `skills/` is included, including `proton-pass`, `skill-doctor`,
+and `improve-me`. Turn off any prompt or skill you do not want with `pi config`.
 Skill collisions are matched on the declared `name` in `SKILL.md`, not on the
 folder, so a separate folder does not avoid a clash.
 
@@ -118,7 +119,7 @@ adds the Exa server only from your own `EXA_API_KEY` environment variable.
 - [AGENTS.md](AGENTS.md): collaboration, approval, Git, and testing instructions.
 - [prompts/](prompts/): planning, review, explanation, diagrams, slide decks, and other explicit workflows.
 - [install.sh](install.sh): the backup-first installer and setup steps.
-- [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, and skill assessment.
+- [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, skill assessment, and `improve-me`, which turns fixes that repeat across sessions into guards, checks, and scripts.
 - [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
 - [Model setup reference](docs/model-setup.md): default and cycling models, shared limits, and cache behavior.
 - [Diagram output contract](docs/workflows/diagram-output-contract.md).
