@@ -31,15 +31,17 @@ To install the package without the backup step:
 pi install git:github.com/joaomj/pi-agent-config
 ```
 
-The package adds the prompt templates in [prompts/](prompts/) and the skills in
-`skills/documentation/`, `skills/engineering/`, and `skills/tooling/`. It contains
-no extension code.
+The package adds the prompt templates in [prompts/](prompts/), the skills in
+`skills/documentation/`, `skills/engineering/`, and `skills/tooling/`, and one
+extension, [`bgrun-guard`](extensions/bgrun-guard.ts). The guard blocks `bash`
+calls that look long-running and tells the agent to use `bgrun` instead. It does
+nothing unless `pi-background-run` is installed.
 It does not change providers, models, MCP servers, permission rules, or `AGENTS.md`.
 
 After the install, the same script walks the parts a package cannot ship:
 
 - `packages` offers each third-party package with a yes/no question: fff,
-  permission checks, background bash, the Claude usage footer, interactive
+  permission checks, background commands, the Claude usage footer, interactive
   questions, the context view, and browser automation. The package that needs a
   resource filter in `settings.json` gets it on install. Browser automation
   needs Node 24 or later and a Chrome or Chromium binary; when either is missing

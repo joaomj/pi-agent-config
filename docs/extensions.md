@@ -37,15 +37,55 @@ pi install npm:@gotgenes/pi-permission-system
 
 ### Durable background commands
 
-[Background bash](https://github.com/joaomj/pi-extensions/tree/main/extensions/background-bash)
-lets commands continue in the background and exposes job inspection and cancellation:
+[`pi-background-run`](https://www.npmjs.com/package/pi-background-run) runs a command
+detached with `bgrun` and wakes the session when it finishes, so the agent reads a
+short digest instead of a long log. It provides `bgrun`, `bgstatus`, `bgtail`,
+`bggrep`, `bgkill`, and `bgclean`, and ships the `run-bg` and `digest-config` skills:
 
 ```bash
-pi install npm:@joaomj/pi-background-bash
+pi install npm:pi-background-run
 ```
 
-The former standalone package branch no longer exists. Setups still pointing at it
-keep working from their local copy but cannot update; switch them to the npm package.
+The extension makes backgrounding explicit: `bash` commands run in the foreground
+unless you start them with `bgrun`. Without it, hosts that support it fall back to
+moving long commands to the background themselves, with no completion wake-up.
+
+The jobs directory lives under the project (`.pi-bgrun/jobs`), so logs survive a
+restart. Ignore that directory in version control.
+
+#### Enforce bgrun with the guard
+
+The `bgrun` instructions only ask the agent to use `bgrun`; they cannot stop a long
+`bash` call. This package adds [`bgrun-guard`](../extensions/bgrun-guard.ts), which
+blocks such a call before it runs and returns a message that tells the agent to
+start the same command with `bgrun`. The agent then retries on its next step.
+
+The guard blocks these commands, also inside `cd dir &&`, pipes, environment
+assignments, and wrappers such as `uv run`, `npx`, `time`, and `timeout`:
+
+- Full test runs: `pytest`, `go test ./...`, `npm test`, `cargo test`, `jest`,
+  `vitest`, `tox`.
+- Builds and checks: `make` with no target or with `test`, `build`, `check`,
+  `lint`, `all`, `ci`, `install`, or `e2e`; `npm run build`, `cargo build`, `tsc`,
+  `mvn`, `gradle`.
+- Dependency installs: `npm install`, `pip install`, `uv sync`, `brew install`.
+- Container builds and foreground `docker compose up`.
+- `terraform plan`, `apply`, and `destroy`, and `ansible-playbook`.
+- Development servers, such as `npm run dev` and `uvicorn`.
+- `sleep` for 30 seconds or more.
+
+The guard lets these through:
+
+- Focused test runs: a single test file, a `::` test id, `-k`, `-run`, `-t`, or a
+  single Go package.
+- `--help` and `--version`.
+- `docker compose up -d`.
+- Commands that only mention a name, such as `echo make test`.
+
+The guard does nothing when the `bgrun` tool is not registered, so it never
+sends the agent to a tool that is missing. Commands that are not on the list
+still run in `bash`. For those, the written instructions remain the only control.
+To change the list, edit `RULES` in `extensions/bgrun-guard.ts` and restart Pi.
 
 ### Claude subscription transport
 
@@ -156,10 +196,10 @@ maintainer's setup requires separately implementing or sourcing equivalent behav
 
 ## Maintaining the maintainer's extensions
 
-`pi-background-bash` and `pi-claude-usage` live in one monorepo,
-[`joaomj/pi-extensions`](https://github.com/joaomj/pi-extensions), and publish
-independently to npm from it (pnpm workspaces plus changesets). Pi installs them
-from npm; there are no git-subdirectory installs to maintain.
+`pi-claude-usage` lives in the
+[`joaomj/pi-extensions`](https://github.com/joaomj/pi-extensions) monorepo and
+publishes to npm from it (pnpm workspaces plus changesets). Pi installs it from npm;
+there are no git-subdirectory installs to maintain.
 
 Releases are automated: push a changeset, merge the `chore: release` PR, and the
 Release workflow publishes through npm trusted publishing (GitHub OIDC, no

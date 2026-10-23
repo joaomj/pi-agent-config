@@ -608,7 +608,7 @@ if has_step packages; then
   packages=(
     "npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y|"
     "npm:@gotgenes/pi-permission-system|tool permission checks|y|"
-    "npm:@joaomj/pi-background-bash|durable background commands|y|"
+    "npm:pi-background-run|detached background commands that wake the session when done|y|"
     "npm:@joaomj/pi-claude-usage|Claude subscription quota in the footer|y|"
     "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills="
     "npm:pi-context-view|inspect what fills the context window|y|"

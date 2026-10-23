@@ -69,7 +69,8 @@ versions.lock
 /mcp*.json.example
 /models.json
 /profiles/
-/extensions/
+/extensions/*
+!/extensions/bgrun-guard.ts
 /telemetry.json.example
 /.env.example
 /scripts/sync.mjs
