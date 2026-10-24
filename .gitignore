@@ -82,3 +82,8 @@ versions.lock
 /docs/proton-pass-exa.md
 /docs/ROADMAP.md
 !/docs/ROADMAP.md
+
+# Runtime state written by extensions
+bgrun-observations.json
+cached-compaction.jsonl
+mcp.*.backup
