@@ -12,7 +12,7 @@
 #   install.sh --only packages      run selected configure steps only
 #   install.sh --no-configure       install or update the package only
 #
-# Configure steps: packages, claude, agents, permissions, mcp, verify
+# Configure steps: packages, claude, agents, permissions, verify
 #
 # Options:
 #   --ref <tag>         release to install (default: the newest signed release)
@@ -25,7 +25,7 @@
 #   --yes               accept the default answer for every question
 #
 # Before it edits anything, the installer records the files it touches
-# (settings.json, AGENTS.md, mcp.json, and the permission policy) in a private
+# (settings.json, AGENTS.md, and the permission policy) in a private
 # history at ~/.pi/agent/.install-history. --rollback restores that history.
 set -euo pipefail
 
@@ -37,7 +37,7 @@ KEYS_URL="https://github.com/joaomj.keys"
 SIGNER_FILE="${PI_AGENT_CONFIG_SIGNERS:-$HOME/.ssh/allowed_signers_github}"
 REF=""
 SOURCE_OVERRIDE=""
-STEPS="packages,claude,agents,permissions,mcp,verify"
+STEPS="packages,claude,agents,permissions,verify"
 WITH_CLAUDE=0
 ASSUME_YES=0
 DRY_RUN=0
@@ -290,7 +290,7 @@ release_notes() {
 # $AGENT_DIR, and --rollback needs no tarball.
 
 # $HIST is set in main, once the configuration directory is known.
-CARRIED_PATHS="settings.json AGENTS.md mcp.json extensions/pi-permission-system/config.json"
+CARRIED_PATHS="settings.json AGENTS.md extensions/pi-permission-system/config.json"
 RUN_STAMP=""
 RUN_DIR=""
 HISTORY_RECORDED=0
@@ -379,7 +379,7 @@ history_rollback() {
     [ -n "$target" ] || die "the history holds only one run; there is no earlier state to restore"
   fi
   label="$(hist_git log -1 --format='%s' "$target")"
-  if ! confirm "Restore settings.json, AGENTS.md, mcp.json, and the permission policy to the state before '$label'?" y; then
+  if ! confirm "Restore settings.json, AGENTS.md, and the permission policy to the state before '$label'?" y; then
     die "aborted; nothing was restored"
   fi
   for path in $CARRIED_PATHS; do
@@ -773,6 +773,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
+for step in ${STEPS//,/ }; do
+  case "$step" in
+    packages|claude|agents|permissions|verify) ;;
+    *) die "unknown configure step '$step'. Steps: packages, claude, agents, permissions, verify" ;;
+  esac
+done
+
 mkdir -p "$AGENT_DIR" || die "cannot create $AGENT_DIR"
 HIST="$AGENT_DIR/.install-history"
 
@@ -1119,29 +1126,7 @@ if has_step permissions; then
   fi
 fi
 
-# --- 6. MCP -----------------------------------------------------------------
-if has_step mcp; then
-  if pi mcp list 2>/dev/null | grep -Eq '^(mcp__)?exa[:|]|mcp\.exa\.ai'; then
-    log "An Exa MCP server is already configured; leaving it alone"
-  elif [ -n "${EXA_API_KEY:-}" ]; then
-    if confirm "Add the Exa MCP server using EXA_API_KEY?" n; then
-      if [ "$DRY_RUN" -eq 1 ]; then
-        log "Would add the Exa MCP server from EXA_API_KEY"
-      else
-        pi mcp add exa --url https://mcp.exa.ai/mcp \
-          --bearer-token-env-var EXA_API_KEY \
-          --exposure codemode \
-          --description "Web search, fetch, and research" \
-          || warn "the Exa MCP server could not be added"
-      fi
-    fi
-  else
-    log "Skipping the Exa MCP server: export EXA_API_KEY first, then rerun --only mcp"
-  fi
-  log "Other MCP servers stay yours: pi mcp add, then pi mcp login for OAuth servers"
-fi
-
-# --- 7. Verify --------------------------------------------------------------
+# --- 6. Verify --------------------------------------------------------------
 if has_step verify; then
   log "Installed packages"
   pi list 2>/dev/null | sed 's/^/    /'
@@ -1153,7 +1138,7 @@ if has_step verify; then
   fi
 fi
 
-# --- 8. Report --------------------------------------------------------------
+# --- 7. Report --------------------------------------------------------------
 if [ "$DRY_RUN" -eq 1 ]; then
   printf '\nDry run: nothing was changed.\n'
   printf 'What the last recorded run changed (if anything):\n'

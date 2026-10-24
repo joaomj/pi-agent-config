@@ -16,10 +16,10 @@ git clone https://github.com/joaomj/pi-agent-config.git ~/pi-agent-config
 ```
 
 Before it changes anything, the installer records the files it edits in a private
-git history at `~/.pi/agent/.install-history`: `settings.json`, `AGENTS.md`,
-`mcp.json`, and the permission policy. It installs only a release tag whose
-signature verifies against the maintainer's published keys, so a changed or
-compromised repository cannot ship unreviewed code.
+git history at `~/.pi/agent/.install-history`: `settings.json`, `AGENTS.md`, and
+the permission policy. It installs only a release tag whose signature verifies
+against the maintainer's published keys, so a changed or compromised repository
+cannot ship unreviewed code.
 
 A later run updates instead of reinstalling: it moves the package to the newest
 signed release, prints what changed, and offers only the packages and settings
@@ -79,8 +79,6 @@ After the install, the same script walks the parts a package cannot ship:
 - `permissions` copies the reference policy when you have none. When you have
   your own, it writes `config.json.proposed` beside it and prints the diff.
   Nothing is overwritten.
-- `mcp` adds the Exa server only when `EXA_API_KEY` is set, and only after you
-  agree.
 - `verify` prints the installed packages and counts the shared prompts and skills.
 
 Run a single step with `--only packages`, skip them all with `--no-configure`,
@@ -94,7 +92,7 @@ silently.
 The installer does not create duplicates. A package you already declared is left
 alone, even when your entry came from another source, such as git instead of npm.
 When `AGENTS.md` already holds the shared rules without markers, it does not
-append them again. An Exa server that is already configured is not added twice.
+append them again.
 
 Prompt templates become explicit commands, such as `/explain`, `/code-review`,
 `/plan`, and `/generate-slides`.
@@ -132,10 +130,10 @@ commands, and local-only helpers. `install.sh` offers the installable ones one a
 a time; nothing installs automatically. Review each package before you install
 it: extensions execute code with your local permissions.
 
-Configure providers through Pi's `/login` and `/model` commands.
-Configure MCP connections separately for your own services and credentials.
-This repository supplies no provider credentials and no MCP keys. `install.sh`
-adds the Exa server only from your own `EXA_API_KEY` environment variable.
+Configure providers through Pi's `/login` and `/model` commands. Configure MCP
+connections with `pi mcp add`, then `pi mcp login` for servers that need OAuth.
+The installer does not touch MCP servers: they carry credentials and endpoints
+that belong to your machine, so setup stays manual.
 
 ## Shared resources
 

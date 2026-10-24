@@ -26,20 +26,20 @@ The distribution channel is the repository itself,
 | `extensions/pi-permission-system/config.json` | Shipped as a reference policy. The installer copies it, or writes `config.json.proposed` and prints a diff. |
 | `extensions/` runtime code | Nothing. Extensions ship as third-party packages. |
 | `AGENTS.md` | Shipped as the canonical text. The installer copies it when absent, or appends it once between markers. |
-| MCP servers | Not shippable. The installer asks about the Exa server and needs `EXA_API_KEY`; other servers stay per user. |
+| MCP servers | Not shippable and not installed. Endpoints and credentials belong to each machine, so the installer leaves `mcp.json` alone. |
 | Claude transport | Offered as a step. The installer checks Node and the qualified Claude Code CLI range and offers the pinned CLI install. It offers the CLI login and installs the package only when a qualified CLI is present; otherwise it prints the fix command and installs nothing. Model selection stays interactive in `/model`. |
 
 `install.sh` installs the third-party packages listed in
-[Extensions in use](extensions.md) at pinned versions, one at a time, asks about
-each MCP server, and handles `AGENTS.md` and the permission policy. A later run
+[Extensions in use](extensions.md) at pinned versions, one at a time, and
+handles `AGENTS.md` and the permission policy. A later run
 updates instead of reinstalling. It records what it edits, inspects before it
 writes, and reports what it changed.
 
 ## Decisions
 
 - **The installer records the files it edits.** Before a change, `install.sh`
-  commits the current state of `settings.json`, `AGENTS.md`, `mcp.json`, and the
-  permission policy into a private git history at `~/.pi/agent/.install-history`.
+  commits the current state of `settings.json`, `AGENTS.md`, and the permission
+  policy into a private git history at `~/.pi/agent/.install-history`.
   `--rollback` restores the state before the last run, including removing files
   that run created. No tarball, no `--reset`, and no second repository in the
   user's configuration directory.
@@ -53,6 +53,9 @@ writes, and reports what it changed.
   package it offers, so a release describes a tested set. An installed package
   newer than the pin stays where it is and is reported.
 
+- **MCP servers stay out of the installer.** Adding a server means an endpoint,
+  a credential, or an OAuth flow. A script that guesses at those fails in ways a
+  user then has to debug, so setup stays manual.
 - **The installer, not an agent session, performs setup.** Setup is a checklist,
   so bash does it deterministically, cheaply, and over SSH. Pi documents package
   dependencies for npm tarballs only; a git-installed package that depends on
@@ -73,8 +76,7 @@ writes, and reports what it changed.
   run early.
 - **Repeated runs add nothing.** The installer compares packages by name rather
   than by source string, so an existing git entry blocks the npm install of the
-  same package. It skips the `AGENTS.md` append when the rules are already there,
-  and it does not add an Exa server twice.
+  same package. It skips the `AGENTS.md` append when the rules are already there.
 - **The Claude transport is a first-class step, not a dependency.** It needs the
   qualified CLI range and a separate Claude Code login, so the installer checks
   both before it installs the package, and it never installs the CLI without
