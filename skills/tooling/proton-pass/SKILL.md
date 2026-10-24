@@ -1,241 +1,242 @@
 ---
 name: proton-pass
-description: Load secrets, passwords, TOTP codes, and SSH keys from Proton Pass at runtime with pass-cli, so they never appear in arguments, logs, or transcripts. Use when a command, script, service, git push, or ssh connection needs a credential from the vault; when ssh reports "Permission denied (publickey)" or the agent has no usable key; when a value must stay off the command line; or when an unattended process needs a scoped, audited token.
+description: Retrieve and use credentials stored in Proton Pass with the pass-cli command-line tool. Use when a task needs an API key, password, token, SSH key, note, or TOTP code that lives in Proton Pass; when discovering which vault or item holds a credential; when a pass-cli command reports an expired session, a missing access reason, or a keyring error; or when setting up scoped, audited agent access to a vault or item.
 ---
 
-# Proton Pass at runtime
+# Proton Pass credentials from the command line
 
-`pass-cli` is Proton's CLI for Proton Pass. This skill is the runtime playbook:
-put a secret into the process that needs it, and get an SSH key into use without
-writing the private key anywhere.
+`pass-cli` is Proton's official command-line client for Proton Pass. Use it when
+a task needs a credential that is stored in Proton Pass. The goal is to get the
+value into the process that needs it, not into the conversation.
 
-Checked against CLI 2.5.1. Run `pass-cli --version` before you rely on a flag.
-When documentation and the installed CLI disagree, `pass-cli <command> --help`
-wins. Machine setup on this laptop is in `references/ubuntu-pi.md`.
+`references/commands.md` lists verified options. The installed CLI is the source
+of truth: run `pass-cli <command> --help` when an option matters. This skill was
+verified against pass-cli 2.5.0 and the official documentation at
+<https://protonpass.github.io/pass-cli/>.
 
-Official documentation: <https://protonpass.github.io/pass-cli/>.
+A *user session* comes from a web login and has the account owner's access. An
+*agent session* comes from a personal access token (PAT) or an agent token. Only
+the agent session writes an audit log, and only if it logged in with a token.
 
-Use `~/.local/bin/pass-cli`. Do not add this skill's `bin/` directory to `PATH`:
-its wrapper contains machine-specific paths. Resolve bundled paths from this
-skill's own directory, not from the working directory.
+## Protect the secret
 
-## The one rule
+- Do not put a secret in a command argument, a log, a repository file, or your
+  reply.
+- Do not echo or print a value to check that a read worked. Check the exit code,
+  or use the value directly.
+- Do not fetch a whole item when one field is enough.
+- Do not ask the operator to paste a secret that `pass-cli` can retrieve.
+- If a secret appears in the conversation, treat it as exposed. Finish the task
+  and tell the operator to rotate it.
 
-**A secret must never reach a command line, a log, or a transcript.** Process
-arguments are readable by other users on most systems, shell history persists,
-and an agent transcript is often stored and sometimes shared. Deliver the value
-through the environment or a file of the process that consumes it, and nowhere
-else.
-
-That rule picks the tool:
-
-| Need | Use | Why not the obvious alternative |
-|---|---|---|
-| A value the program reads from its environment | `run` | `export X=$(pass-cli item view ...)` leaves the value in the shell, its history, and any `set -x` trace |
-| A config file the program reads | `inject` | A hand-edited file keeps the secret on disk and in editor history |
-| One field, right now | `item view` with a URI | `--output json` returns the whole item, secrets included |
-| A live TOTP code | `item view .../totp` | `totp generate` takes the TOTP secret as an argument |
-| SSH or git authentication | the SSH agent | `ssh-agent load` copies private keys into another agent |
-
-## Address a secret
-
-```
-pass://<vault-name-or-share-id>/<item-title-or-id>/<field-name>
-```
-
-All three segments are required. Names and IDs mix freely. Names are
-case-sensitive, and the first match wins on a duplicate name, so use Share IDs
-and Item IDs when the read must be exact. Quote the whole URI: names may contain
-spaces, and no escaping syntax is documented.
-
-Fields: `username`, `password`, `email`, `url`, `note`, `totp`, or a custom field
-by name. A field inside a custom section is `SectionName.fieldname`. Identity
-items are the exception: their built-in fields take no prefix.
-
-Discovery needs no reason field: `info`, `vault list`, `share list`,
-`item list`.
-
-## Give a process its secrets: `run`
-
-`run` scans the environment it is given for `pass://` references and replaces
-each one before it starts the command:
+## 1. Confirm the tool and the session
 
 ```bash
-DB_PASSWORD='pass://Production/Database/password' \
-  pass-cli run -- ./my-app
+command -v pass-cli
+pass-cli --version
+pass-cli info
 ```
 
-The child sees `DB_PASSWORD` with the resolved value. Values may mix references
-and plain text, and one value may hold several references.
+`info` exits 0 when the session is usable. It shows the account, the release
+track, and whether the session has a lock. If `pass-cli` is missing, install it
+from the official installation page and check again. Do not guess a package name
+or a binary path.
 
-A dotenv file keeps the references in version control:
+If `info` fails, identify the cause before changing anything. An expired
+session, a locked session, an unavailable keyring, and a network failure need
+different fixes. `pass-cli test` does not exist, although some documentation
+mentions it.
+
+## 2. Find the credential
+
+Start with metadata. These commands do not print field values:
 
 ```bash
-# .env.production — the reference, never the value
-DB_HOST=localhost
-DB_PASSWORD=pass://Production/Database/password
-
-pass-cli run --env-file .env.production -- ./my-app
+pass-cli vault list --output json
+pass-cli share list --output json
+pass-cli item list --vault-name "Vault" --output json
 ```
 
-`--env-file` repeats, and later files override earlier ones. `run` forwards
-stdin, stdout, stderr, and termination signals to the child.
+`item list` also accepts `--share-id`, `--filter-type`, `--filter-state`, and
+`--sort-by`. Use `share list` to see item-level shares that are not part of a
+whole vault. Do not use `--show-secrets`: agent sessions reject it, and you do
+not need it to locate an item.
 
-**Masking is on by default.** Resolved values are replaced by
-`<concealed by Proton Pass>` in the child's output. It matches the literal
-value only: a program that re-encodes the secret (base64, hash, URL-escape)
-prints it in the clear. Do not add `--no-masking` to "see what happens".
+## 3. Build the reference
 
-## Write a config file: `inject`
+The addressing syntax is:
 
-Templates use double braces. Bare `pass://` URIs outside braces are ignored.
+```text
+pass://<vault>/<item>/<field>
+```
+
+Each segment can be a name or an ID. Names are resolved case-sensitively, and
+the first match wins when names collide. Use Share IDs and Item IDs when
+precision matters. Quote the whole URI in the shell; spaces are allowed.
+
+- **Always include the field.** `item view` accepts `pass://<vault>/<item>` and
+  prints the entire item, including its secrets. `run` and `inject` reject a
+  reference without a field.
+- Common fields are `username`, `password`, `email`, `url`, `note`, and `totp`.
+  Custom fields use their own names.
+- A field in a custom section is `Section.field`. An unqualified name resolves
+  to the first match across sections.
+- Field matching is case-insensitive in the CLI, but write the stored spelling.
+  Duplicate names across sections make the first match win.
+- A TOTP field returns the current code. Add `?totp=uri` only when you need the
+  stored `otpauth://` seed.
+
+When a name is ambiguous or a read fails, ask the operator for the field name.
+Do not dump the item to discover it. There is no "list fields" command that
+avoids printing secret values.
+
+## 4. Use the secret without reading it
+
+Prefer `run` and `inject`. The value goes to the child process or the output
+file, so it never enters your context.
 
 ```bash
-# config.yaml.template
-database:
-  password: {{ pass://Production/Database/password }}
+# The child reads DB_PASSWORD from its environment.
+DB_PASSWORD='pass://Production/Database/password' pass-cli run -- ./deploy.sh
 
-pass-cli inject -i config.yaml.template -o config.yaml
+# References live in a dotenv file.
+pass-cli run --env-file .env -- ./app
+
+# Template file. References use {{ pass://... }}.
+pass-cli inject --in-file config.tpl --out-file config.ini
 ```
 
-The output file is created with mode `0600` by default; `--file-mode` overrides
-it. `-f` overwrites an existing file without a prompt. Without `-i` the template
-comes from stdin, and without `-o` the result goes to stdout.
+`run` replaces `pass://` references inside environment values and masks resolved
+values in the child's stdout and stderr as `<concealed by Proton Pass>` by
+default. Leave masking on. `inject` replaces only double-brace references and
+writes the output file with mode 0600 by default on Unix.
 
-## Read one value: `item view`
+If the consumer accepts only command-line arguments, the secret becomes visible
+to other processes. Prefer a consumer that reads an environment variable or a
+file, and say why when no such option exists.
+
+## 5. Read one field when you must
 
 ```bash
 PROTON_PASS_AGENT_REASON="Deploying the staging worker" \
-  pass-cli item view "pass://Access Tokens/Stripe/secret_key"
+  pass-cli item view "pass://Production/Database/password"
 ```
 
-The URI form returns the bare field value. The flag form plus `--output json`
-returns the whole item, and a hidden custom field serializes as plain text:
-never redact that JSON by pattern. Do not echo a value to prove it worked; test
-the exit code or the length.
+This prints only the value. Aliases are `item get` and `item show`. Do not add
+`--output json`; JSON is for whole items.
 
-`item list --show-secrets` requires `--output json` and is refused in agent
-sessions. It is for owner-approved exports, not for lookups.
+Set `PROTON_PASS_AGENT_REASON` on every call in an agent session. It must be
+non-empty and at most 300 characters. The owner reads it in `agent monitor`, so
+name the task and why it needs this secret. The CLI enforces it for `item view`,
+`item create`, `item update`, `item trash`, `item untrash`, `item move`,
+`item delete`, `item totp`, `vault update`, `run`, and `inject`; the published
+list omits some of these. A user session ignores the variable, and setting it is
+harmless.
 
-## TOTP and passwords
+## 6. TOTP codes
 
 ```bash
-pass-cli item view "pass://Work/GitHub/totp"            # current code
-pass-cli item view "pass://Work/GitHub/totp?totp=uri"   # stored otpauth:// URI
+PROTON_PASS_AGENT_REASON="Signing in to the build service" \
+  pass-cli item view "pass://Work/Build Service/totp"
 ```
 
-`pass-cli totp generate "<secret-or-uri>"` accepts the secret only as an
-argument, so it leaks through the process table. Prefer the `item view` URI,
-which reads the secret from the vault.
+The reference returns the current code. Use it once and do not store it. Add
+`?totp=uri` only when the seed itself is the thing that must move.
+
+## 7. Writing to the vault
+
+Ask the operator before you create, update, move, trash, delete, or share a
+vault or item. A write changes what every member of that vault sees.
+
+- **Create with a template, not with secret flags.** `item create` has
+  `--get-template` and `--from-template <path|->`. Write the template outside the
+  repository, feed it on stdin, then remove it. `--password` and `--note` put
+  the secret on the command line.
+- **Update has no template path.** `item update --field password=...` puts the
+  value in the process table. Use it only when no other route exists, and say
+  so.
+- **Trash is reversible.** `item trash` moves an item; `item untrash` restores
+  it. `item delete` is permanent and requires both the share ID and the item ID.
+- **Never widen a grant to reach a secret.** The vault boundary is the security
+  control. Ask for a purpose-built vault with its own scoped token instead of
+  adding the personal vault to an existing grant.
+- **Do not export.** `export archive` writes all selected secrets to an HTML
+  file that is plaintext unless `--encrypt` is used. Export only when the
+  operator asks for it.
+
+## 8. Sessions and agent tokens
+
+Reuse an existing session first. Log in only when `info` shows there is none or
+it has expired.
+
+To isolate an agent from the human session, set `PROTON_PASS_SESSION_DIR` in the
+environment of every call. Use a durable directory owned by the agent's user
+with mode 0700, not the shared default and not `/tmp`. The CLI appends
+`.session` to this directory.
 
 ```bash
-pass-cli password generate random --length 24
-pass-cli password generate passphrase --count 6
+export PROTON_PASS_SESSION_DIR="<durable-agent-directory>"
+pass-cli info
 ```
 
-`pass-cli password score <password>` also takes the value as an argument. Score
-candidate passwords, never a vault password. Generating is not storing: writing
-the new password into the vault is a mutation and needs explicit approval.
-
-## SSH keys at runtime
-
-The private key stays in the vault. The agent signs on request over a socket,
-and ssh, git, and ssh-keygen ask that socket.
-
-Two modes:
-
-- **Native agent.** `pass-cli ssh-agent start --socket-path <path>` serves keys
-  from the vault over its own socket. On this laptop a systemd user service runs
-  it at login.
-- **Load into the running agent.** `pass-cli ssh-agent load [--vault-name X]`
-  pushes keys into whatever `$SSH_AUTH_SOCK` already points at. Convenient, and
-  weaker: anything that can reach that socket can ask it to sign.
-
-Check what the agent is serving:
+Log in with a token from the environment, never as a literal on the command
+line:
 
 ```bash
-SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/proton-pass-ssh-agent/agent.sock" ssh-add -l
-ssh -o BatchMode=yes -T git@github.com    # GitHub names the account in its greeting
+# The operator puts the token in the process environment first.
+pass-cli login
 ```
 
-A vault holds many keys, so name the one each host may use:
+`login --pat` exists but exposes the token in the process table. The token is
+shown once at creation. If it is not already in the environment, ask the
+operator for a login; do not ask for the token in chat.
 
-```sshconfig
-Host github.com
-    IdentityAgent /run/user/1000/proton-pass-ssh-agent/agent.sock
-    IdentityFile ~/.ssh/github.pub
-    IdentitiesOnly yes
-```
+- **PAT and agent sessions last 2 hours** and cannot have a session lock. When
+  one expires, log in again if the token is still available; otherwise stop and
+  ask the operator.
+- **An agent token is a PAT with access logging.** Create it as the operator,
+  with a short expiration and only the vaults or items it needs:
+  `pass-cli agent create <name> --expiration 3m --vault "Vault"`.
+- **Grant narrowly.** `pass-cli agent access grant <name> --vault-name "Vault"
+  --role viewer`, or add `--item-title` to limit it to one item.
+- **Renew before expiry.** `pass-cli agent renew <name> --expiration 3m` issues a
+  new token; grants survive and the old token stops immediately.
+- **Revoke with `agent delete <name>`**, then remove the local copy. Deleting a
+  local copy does not revoke the token.
+- **Review with `agent monitor <name>`.** A session that logged in with the
+  human account writes no audit entries.
+- **Do not log out a session you did not create.** Use `logout --force` only for
+  your own isolated session, and only when a remote logout fails.
 
-The file in `IdentityFile` is a **public-key selector**, not a private key:
-create it from the matching line of `ssh-add -L`. `IdentitiesOnly yes` stops ssh
-from offering every vault key, and servers count each offer as a failed attempt.
+Key storage is the OS keyring by default. `PROTON_PASS_KEY_PROVIDER=fs` writes
+the encryption key in plaintext beside the session data; `env` derives it from
+`PROTON_PASS_ENCRYPTION_KEY`. Do not switch providers to make an error disappear.
+Ask the operator first, and explain the weaker protection.
 
-**Keep the selector file at mode `0600`.** At `0644` ssh refuses to read it,
-prints `WARNING: UNPROTECTED PRIVATE KEY FILE`, and the connection ends in
-`Permission denied (publickey)`.
+## 9. When something fails
 
-Commit signing uses the same selector:
+Read `references/troubleshooting.md`. Separate authentication, session lock,
+keyring, and network errors before you act. Do not force logout on a generic
+failure, do not delete a session directory, and do not retry a failed login in a
+loop.
 
-```bash
-git config --global gpg.format ssh
-git config --global user.signingkey "$HOME/.ssh/github.pub"
-git config --global gpg.ssh.program "$HOME/.local/libexec/proton-pass-ssh-agent/proton-pass-sign.sh"
-```
+## Documentation drift
 
-The signing wrapper sets the socket itself, so signing also works from a
-terminal that has a different agent.
+The official documentation and `pass-cli agent instructions` disagree with the
+2.5.0 CLI in these places:
 
-`references/ssh-agent.md` covers modes, sockets, refresh, and failure diagnosis.
-
-## When a read fails
-
-Start with `pass-cli info`. It reports the account, the release track, and
-whether a lock is held. Then separate the three causes:
-
-| Symptom | Cause | Action |
-|---|---|---|
-| `info` fails, or names no account | Expired or logged-out session | Log in with the documented method for that session; never `logout` someone else's session to recover |
-| Keyring or D-Bus error | Desktop keyring locked | Unlock the keyring, then retry |
-| Resolve or connect error | No network, or DNS not ready | Fix the network, then retry |
-
-A session persists on disk between commands, so most reads need no login.
-
-- Agent and PAT sessions last **2 hours** and cannot hold a session lock.
-- Set `PROTON_PASS_SESSION_DIR` to a durable 0700 directory before a token
-  login. Without it, a token login overwrites the human's interactive session.
 - `pass-cli test` does not exist. Use `info`.
+- `login` accepts `--pat`, not `--personal-access-token`.
+- `item view` aliases are `get` and `show`, not `read`.
+- `item view` takes `--item-title`, not `--item-name`.
+- There is no `pass-cli agent item ...`. Use the normal `item` commands.
+- `pass://<vault>/<item>` without a field is valid for `item view` and prints the
+  whole item. The documentation calls it invalid.
+- Field matching is case-insensitive in the code; the documentation says both.
+- `run` and `inject` require `PROTON_PASS_AGENT_REASON` under an agent session,
+  although the documentation lists only item and vault commands.
 
-The one credential an unattended process cannot fetch itself is the login
-token. `references/bootstrap.md` covers the keychain bootstrap, rotation, and
-the two mistakes that each cost a one-time token.
+## Files
 
-## Approval and audit
-
-- `PROTON_PASS_AGENT_REASON` is required on agent-token sessions for reads and
-  writes (`item view`, `item create`, `item update`, `item trash`, `item
-  untrash`, `item move`, `vault update`). It must be a real sentence: the vault
-  owner reads it in `agent monitor`.
-- Bulk reads, vault mutations, and token or grant changes need explicit owner
-  approval for that operation. Never set `PROTON_PASS_APPROVED=1` yourself.
-- Grant the smallest vault. Widening a personal vault is never the answer to
-  "the agent cannot reach credential X"; create a scoped vault and token.
-
-## When you find a plaintext secret
-
-Say so once, and name the `pass://` reference that would replace it: a `.env`
-entry, a key in a script, a token in CI config. One line, not a lecture.
-
-## References
-
-- `references/ssh-agent.md`: agent modes, sockets, selector setup, diagnosis.
-- `references/commands.md`: help captured from CLI 2.4.2; check `--help` first.
-- `references/ubuntu-pi.md`: this laptop's session storage, keyring, and service.
-- `references/bootstrap.md`: the keychain token bootstrap and rotation.
-- `references/dedupe.md`: deduplicating a vault in place, and why an export and
-  re-import round trip loses passkeys.
-- `references/agent-guard.md`: gating agent access, and why pass-cli's own
-  controls do not bind a caller that ignores them.
-
-`pass-cli agent instructions` prints Proton's own usage doc as Markdown; diff it
-against this file after a CLI update.
+- `references/commands.md`: verified options for the commands above.
+- `references/troubleshooting.md`: error messages and recovery.

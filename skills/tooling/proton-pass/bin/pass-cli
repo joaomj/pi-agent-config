@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# Thin wrapper. Policy lives in hooks/pass-cli-shim.py in this repo - single
-# source of truth, shared with the .cmd wrapper used by PowerShell and cmd.
-exec python "$HOME/repos/proton-pass-skill/hooks/pass-cli-shim.py" "$@"

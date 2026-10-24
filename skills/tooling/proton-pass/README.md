@@ -1,55 +1,55 @@
 # Proton Pass skill for Pi
 
-Load secrets, passwords, TOTP codes, and SSH keys from Proton Pass at runtime
-without exposing them in command arguments, logs, or transcripts. SSH keys stay
-in the vault and reach ssh, git, and commit signing through the agent socket.
-Use scoped agent credentials for unattended work rather than granting
-automation access to personal vaults.
+Use `pass-cli` to move credentials from Proton Pass into the process that needs
+them without printing the value, pasting it into a command, or asking the
+operator for a copy.
 
-This directory adapts [tohuw/proton-pass-skill](https://github.com/tohuw/proton-pass-skill),
-commit `b7c5da50f528eb24929b3cc85379acb50cfc2044`. The upstream MIT license is
-retained in [LICENSE](LICENSE). This community skill is not affiliated with Proton.
+This is a prompt-only skill. It ships no executables, hooks, or machine-specific
+paths. It was verified against pass-cli 2.5.0 and the official documentation.
 
 ## Use in Pi
 
-The skill is bundled at `skills/tooling/proton-pass`. Run `/reload` after updating
-it, then use `/skill:proton-pass` when explicit invocation is useful.
-Install [Proton Pass CLI](https://protonpass.github.io/pass-cli/get-started/installation/)
-separately. This adaptation was checked against CLI 2.5.1.
+The skill is bundled at `skills/tooling/proton-pass`. Run `/reload` after
+updating it, then use `/skill:proton-pass` when explicit invocation is useful.
+Install the [Proton Pass CLI](https://protonpass.github.io/pass-cli/get-started/installation/)
+separately and confirm it with `pass-cli --version`.
 
-Read the [SSH agent reference](references/ssh-agent.md) before changing agent or
-signing configuration, and the [laptop notes](references/ubuntu-pi.md) before
-changing key storage.
+The skill targets the operator's own `pass-cli` installation. It does not
+install the CLI, create tokens, or grant access to vaults.
 
-## Included resources
+## What it covers
 
-- [SKILL.md](SKILL.md): the runtime playbook for secrets, TOTP, passwords and
-  SSH keys, plus session isolation and access approval.
-- [SSH agent reference](references/ssh-agent.md): agent modes, socket selection,
-  key selectors, signing and failure diagnosis.
-- [Command reference](references/commands.md): help captured from CLI 2.4.2.
-- [Bootstrap reference](references/bootstrap.md): upstream credential-store design.
-- `bin/proton-pass-agent.sh`: shell helper for owner-supplied scoped tokens.
-- Upstream PowerShell, deduplication and Claude Code guard tools: bundled but
-  not configured or verified for Ubuntu/Pi.
+- Check the CLI and the current session before reading.
+- Discover vaults, shares, items, and fields with metadata-only commands.
+- Build `pass://vault/item/field` references, including sections and TOTP.
+- Use `run` and `inject` so the secret reaches the consumer without entering
+  the conversation. `run` masks values in child output by default.
+- Read a single field only when the agent itself must hold the value.
+- Write, move, trash, and delete items with the operator's approval.
+- Use scoped agent tokens, isolated session directories, and `agent monitor`.
+- Diagnose authentication, lock, keyring, and network failures.
 
-Resolve helper paths relative to this directory. Do not put its `bin` directory
-on PATH: the upstream `pass-cli` wrappers contain machine-specific paths.
-Do not activate the Claude Code hooks in Pi. They are not a security boundary.
+Out of scope: SSH agent setup, vault deduplication, bulk export, and Claude Code
+hook integration.
 
-## Shell helper behavior
+## Files
 
-The shell helper keeps token sessions in a separate durable directory with
-mode 0700. It accepts tokens through a masked prompt and stores them in the OS
-credential store. First login requires an explicit `connect --force`.
+- [SKILL.md](SKILL.md): the agent instructions.
+- [Command reference](references/commands.md): options captured from CLI 2.5.0.
+- [Troubleshooting](references/troubleshooting.md): error messages and recovery.
 
-Ordinary `connect` checks an existing session. It reports failures rather than
-logging out on every error. `get` checks the session before reading and does
-not retry a failed read automatically. Identify authentication errors before
-requesting a new login. Token creation and grant changes require owner approval.
+## Sources
 
-GNOME Keyring must be available and unlocked on Ubuntu. The skill's optional
-`self-check` exercises a fake credential, not a real vault secret. Those checks,
-PowerShell behavior, deduplication and hook installation were not part of the
-verified Exa setup. Upstream historical references may describe older helper
-behavior; this README and Ubuntu/Pi notes describe the local adaptation.
+- [Official documentation](https://protonpass.github.io/pass-cli/)
+- [Official source](https://github.com/protonpass/pass-cli)
+- CLI 2.5.0 `--help` output, and source at tag `2.5.0` for behavior the
+  documentation contradicts
+
+Where the documentation and the installed CLI disagree, the CLI wins. The known
+differences are listed in `SKILL.md`.
+
+## License
+
+The skill was originally adapted from
+[tohuw/proton-pass-skill](https://github.com/tohuw/proton-pass-skill), whose MIT
+license is retained in [LICENSE](LICENSE). It is not affiliated with Proton.
