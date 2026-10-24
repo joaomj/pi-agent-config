@@ -2,6 +2,17 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.6.0] - 2026-10-24
+
+### Changed
+
+- Drop the reference to the removed Ubuntu guide
+- Ignore runtime state and backups written next to the configuration
+- Trim the Proton Pass skill to the CLI installed on the machine
+- Add destructive-action and style rules; correct the browser claims
+- Leave MCP servers out of the installer
+- docs: update changelog for v0.5.0
+
 ## [v0.5.0] - 2026-10-24
 
 ### Changed
