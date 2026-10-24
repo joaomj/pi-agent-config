@@ -2,6 +2,22 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.5.0] - 2026-10-24
+
+### Changed
+
+- Update the package in place and roll the last run back
+- Explain which Claude login the usage packages read
+- Route bash calls with rules, measurements, and a classifier
+- Switch background jobs to pi-background-run and enforce bgrun
+- Document the improve-me skill and the tooling skills directory
+- Add improve-me to turn repeated fixes into structure
+- Ground plans in current code and list the repositories involved
+- Pin installs to a released tag and verify Node downloads
+- Keep the bundled CLI wrapper out of PATH
+- Document runtime use of Proton Pass and its SSH agent
+- docs: update changelog for v0.4.1
+
 ## [v0.4.1] - 2026-10-20
 
 ### Changed
