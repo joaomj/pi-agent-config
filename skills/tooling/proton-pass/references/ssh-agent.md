@@ -60,7 +60,7 @@ Proton's documentation ships an example unit. The integration installed on this
 laptop adds two things a bare unit lacks: it waits for the desktop keyring to
 unlock, and it waits for the Proton API to answer before listing vault keys.
 Without that second wait, a login where DNS is not ready yet kills the agent and
-systemd stops retrying. See `references/ubuntu-pi.md`.
+systemd stops retrying.
 
 ```ini
 [Unit]
