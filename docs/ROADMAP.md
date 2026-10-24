@@ -30,17 +30,28 @@ The distribution channel is the repository itself,
 | Claude transport | Offered as a step. The installer checks Node and the qualified Claude Code CLI range and offers the pinned CLI install. It offers the CLI login and installs the package only when a qualified CLI is present; otherwise it prints the fix command and installs nothing. Model selection stays interactive in `/model`. |
 
 `install.sh` installs the third-party packages listed in
-[Extensions in use](extensions.md) one at a time, asks about each MCP server,
-and handles `AGENTS.md` and the permission policy. It backs up first, inspects
-before it writes, and reports what it changed.
+[Extensions in use](extensions.md) at pinned versions, one at a time, asks about
+each MCP server, and handles `AGENTS.md` and the permission policy. A later run
+updates instead of reinstalling. It records what it edits, inspects before it
+writes, and reports what it changed.
 
 ## Decisions
 
-- **The installer backs up first.** `install.sh` writes a tarball of the Pi
-  configuration before it installs anything, prints the restore command, and
-  stops if the backup fails. `--reset` moves the old configuration aside instead
-  of deleting it. Nothing writes to a user's configuration before a backup
-  exists.
+- **The installer records the files it edits.** Before a change, `install.sh`
+  commits the current state of `settings.json`, `AGENTS.md`, `mcp.json`, and the
+  permission policy into a private git history at `~/.pi/agent/.install-history`.
+  `--rollback` restores the state before the last run, including removing files
+  that run created. No tarball, no `--reset`, and no second repository in the
+  user's configuration directory.
+- **Updates reuse the installed package.** A run moves the package to a new
+  release with `pi update --extension`, which keeps the checkout and the
+  user's settings. A failed in-place update falls back to remove and install.
+- **Only signed releases install.** Release tags are verified against the
+  maintainer's published keys before anything is fetched from them. An unsigned
+  tag never installs, even when it is the newest one.
+- **Third-party packages are pinned.** The installer pins a version for each
+  package it offers, so a release describes a tested set. An installed package
+  newer than the pin stays where it is and is reported.
 
 - **The installer, not an agent session, performs setup.** Setup is a checklist,
   so bash does it deterministically, cheaply, and over SSH. Pi documents package
@@ -87,11 +98,13 @@ before it writes, and reports what it changed.
 ## Next steps
 
 1. Run the installer on a clean machine. Confirm that prompts and skills appear,
-   that the backup restores, and that no personal file changed.
-2. Confirm that `pi update --extensions` updates the package.
+   that no personal file changes, and that `--rollback` restores them.
+2. Confirm an update from one release to the next reports the changes and keeps
+   the user's settings.
 3. Confirm the collision behavior on a machine that already has `/plan` or
    `/code-review`.
-4. Tag a release after the first successful clean install.
+4. Move the full-clone installations onto the packaged install. A full clone
+   loads the same resources twice, so it must go before the package is added.
 
 ## Deferred: container isolation
 

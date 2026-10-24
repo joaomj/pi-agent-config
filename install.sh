@@ -1,41 +1,49 @@
 #!/usr/bin/env bash
-# Install and configure the shared Pi package.
+# Install, update, or roll back the shared Pi package.
 #
-# The script backs up the Pi configuration before it changes anything, then
-# installs the package and walks the settings a package cannot ship.
+# A first run installs the package and walks the settings a package cannot
+# ship. Later runs move the package to the newest signed release and offer only
+# what is still missing.
 #
-#   install.sh                      back up, install, then configure
+#   install.sh                      install, or update what is already there
+#   install.sh --dry-run            list what a run would change, change nothing
+#   install.sh --rollback           undo the last run
+#   install.sh --rollback v0.4.1    go back to a named release
 #   install.sh --only packages      run selected configure steps only
-#   install.sh --no-configure       back up and install only
-#   install.sh --reset              move the current configuration aside first
-#   install.sh --backup-only        stop after the backup
+#   install.sh --no-configure       install or update the package only
 #
 # Configure steps: packages, claude, agents, permissions, mcp, verify
 #
 # Options:
-#   --ref <ref>         git ref to install (default: main)
-#   --source <source>   package source instead of the git URL, for testing
-#   --backup-dir <dir>  where to write the backup and the moved-aside copy (default: $HOME)
-#   --reset             move the existing configuration aside before installing
-#   --drop-auth         with --reset, move the provider login aside too
-#   --backup-only       stop after the backup
+#   --ref <tag>         release to install (default: the newest signed release)
+#   --source <source>   package source instead of the git release, for testing
+#   --git-url <url>     repository to fetch releases from (testing only with --ref)
+#   --signer <path>     allowed signers file for release signatures
+#   --dry-run           show what would change and stop
+#   --rollback [ref]    restore the files the installer edits, then stop
 #   --claude            set up the Claude subscription transport without asking
 #   --yes               accept the default answer for every question
+#
+# Before it edits anything, the installer records the files it touches
+# (settings.json, AGENTS.md, mcp.json, and the permission policy) in a private
+# history at ~/.pi/agent/.install-history. --rollback restores that history.
 set -euo pipefail
 
 REPO="git:github.com/joaomj/pi-agent-config"
-# Installs a released tag, not a branch: a branch ref runs whatever was
-# pushed last, so a compromised account could ship code on the next install.
-# Bump this with each release, or pass --ref.
-REF="v0.4.1"
+GIT_URL="https://github.com/joaomj/pi-agent-config.git"
+# The maintainer's published keys. A release installs only when its tag carries
+# a signature these keys verify, so a compromised clone cannot ship a tag.
+KEYS_URL="https://github.com/joaomj.keys"
+SIGNER_FILE="${PI_AGENT_CONFIG_SIGNERS:-$HOME/.ssh/allowed_signers_github}"
+REF=""
 SOURCE_OVERRIDE=""
-BACKUP_DIR="${HOME}"
 STEPS="packages,claude,agents,permissions,mcp,verify"
 WITH_CLAUDE=0
-RESET=0
-DROP_AUTH=0
-BACKUP_ONLY=0
 ASSUME_YES=0
+DRY_RUN=0
+ROLLBACK=0
+ROLLBACK_TARGET=""
+RELEASE_TMP=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -43,17 +51,22 @@ while [ $# -gt 0 ]; do
     --ref=*) REF="${1#--ref=}"; shift ;;
     --source) SOURCE_OVERRIDE="${2:?--source needs a value}"; shift 2 ;;
     --source=*) SOURCE_OVERRIDE="${1#--source=}"; shift ;;
-    --backup-dir) BACKUP_DIR="${2:?--backup-dir needs a value}"; shift 2 ;;
-    --backup-dir=*) BACKUP_DIR="${1#--backup-dir=}"; shift ;;
+    --git-url) GIT_URL="${2:?--git-url needs a value}"; shift 2 ;;
+    --git-url=*) GIT_URL="${1#--git-url=}"; shift ;;
+    --signer) SIGNER_FILE="${2:?--signer needs a value}"; shift 2 ;;
+    --signer=*) SIGNER_FILE="${1#--signer=}"; shift ;;
     --only) STEPS="${2:?--only needs a value}"; shift 2 ;;
     --only=*) STEPS="${1#--only=}"; shift ;;
     --no-configure) STEPS=""; shift ;;
-    --reset) RESET=1; shift ;;
-    --drop-auth) DROP_AUTH=1; shift ;;
-    --backup-only) BACKUP_ONLY=1; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    --rollback) ROLLBACK=1; shift ;;
     --claude) WITH_CLAUDE=1; shift ;;
     --yes|-y) ASSUME_YES=1; shift ;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,29p' "$0"; exit 0 ;;
+    --backup-only|--backup-dir|--reset|--drop-auth)
+      printf 'install.sh: %s was removed. The installer records the files it edits\n' "$1" >&2
+      printf '  in ~/.pi/agent/.install-history and restores them with --rollback.\n' >&2
+      exit 2 ;;
     *) echo "install.sh: unknown option $1" >&2; exit 2 ;;
   esac
 done
@@ -87,57 +100,427 @@ has_step() {
   case ",$STEPS," in *",$1,"*) return 0 ;; *) return 1 ;; esac
 }
 
-# package_identity prints the short name a source installs, so npm, git, and
-# local copies of the same package compare equal.
+# package_identity prints what a source installs, including its pinned ref, so
+# npm, git, and local copies of the same package compare equal.
 package_identity() {
   printf '%s' "$1" \
-    | sed -e 's|^npm:||' -e 's|^git:||' -e 's|^https://||' -e 's|^http://||' -e 's|^ssh://||' \
+    | sed -e 's|^npm:||' -e 's|^git:||' -e 's|^https\?://||' -e 's|^ssh://||' \
     | sed -e 's|^git@[^:]*:||' \
     | awk '{ last = 0; for (i = 1; i <= length($0); i++) if (substr($0, i, 1) == "@") last = i
-             if (last > 1) print substr($0, 1, last - 1); else print }' \
-    | sed -e 's|/*$||' -e 's|.*/||' -e 's|\.git$||' \
-    | tr '[:upper:]' '[:lower:]'
+             if (last > 1) { printf "%s@%s", substr($0, 1, last - 1), substr($0, last + 1) } else { print } }' \
+    | awk '{ marker = 0; for (i = 1; i <= length($0); i++) if (substr($0, i, 1) == "@") marker = i
+             name = (marker > 0) ? substr($0, 1, marker - 1) : $0
+             ref = (marker > 0) ? substr($0, marker) : ""
+             sub(/\/+$/, "", name); n = split(name, parts, "/"); name = parts[n]
+             sub(/\.git$/, "", name)
+             printf "%s%s", tolower(name), tolower(ref) }'
 }
 
-# declared_source prints the entry that already installs this identity, if any.
-# A package declared through another source counts: installing it again would
-# load the same code twice under two names.
-declared_source() {
+# declared_sources prints every package source declared in settings.json.
+declared_sources() {
   local settings="$AGENT_DIR/settings.json"
-  [ -f "$settings" ] || return 1
-  command -v python3 >/dev/null 2>&1 || return 1
-  python3 - "$settings" "$1" <<'DECLARED'
+  [ -f "$settings" ] || return 0
+  python3 - "$settings" <<'DECLARED'
 import json, sys
-
-path, wanted = sys.argv[1], sys.argv[2].lower()
-
-def identity(source):
-    text = source
-    for prefix in ("npm:", "git:", "https://", "http://", "ssh://"):
-        if text.startswith(prefix):
-            text = text[len(prefix):]
-            break
-    if text.startswith("git@"):
-        text = text.split(":", 1)[-1]
-    if text.rfind("@") > 0:
-        text = text[: text.rfind("@")]
-    text = text.rstrip("/").split("/")[-1]
-    return text[:-4].lower() if text.endswith(".git") else text.lower()
-
 try:
-    with open(path) as handle:
+    with open(sys.argv[1]) as handle:
         packages = json.load(handle).get("packages") or []
 except (OSError, json.JSONDecodeError):
-    sys.exit(1)
-
+    sys.exit(0)
 for entry in packages:
     source = entry.get("source") if isinstance(entry, dict) else entry
-    if isinstance(source, str) and identity(source) == wanted:
+    if isinstance(source, str):
         print(source)
-        sys.exit(0)
-sys.exit(1)
 DECLARED
 }
+
+# declared_source prints the declared entry that installs the same package as
+# the given source spec, if any. A package declared through another source
+# counts: installing it again would load the same code twice under two names.
+declared_source() {
+  local wanted identity source
+  wanted="$(package_identity "$1")"
+  while IFS= read -r source; do
+    [ -n "$source" ] || continue
+    identity="$(package_identity "$source")"
+    if [ "$identity" = "$wanted" ]; then
+      printf '%s' "$source"
+      return 0
+    fi
+  done < <(declared_sources)
+  return 1
+}
+
+# declared_version prints the version an npm package is installed at, or the
+# commit a git package stands on.
+declared_version() {
+  local source="$1" path
+  case "$source" in
+    npm:*)
+      path="$AGENT_DIR/npm/node_modules/${source#npm:}"; path="${path%@*}"
+      [ -f "$path/package.json" ] && sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$path/package.json" | head -1
+      ;;
+    git:*)
+      source="${source#git:}"; source="${source%%@*}"
+      path="$AGENT_DIR/git/$source"
+      [ -d "$path/.git" ] && git -C "$path" describe --tags --always 2>/dev/null
+      ;;
+  esac
+}
+
+# package_name prints the package name without its pinned ref, which is how two
+# declarations of the same package compare when only the pin differs.
+package_name() {
+  local identity
+  identity="$(package_identity "$1")"
+  printf '%s' "${identity%@*}"
+}
+
+# declared_source_name prints the declared entry for a package name, whatever
+# ref it pins, if it is declared at all.
+declared_source_name() {
+  local wanted source
+  wanted="$(package_name "$1")"
+  while IFS= read -r source; do
+    [ -n "$source" ] || continue
+    if [ "$(package_name "$source")" = "$wanted" ]; then
+      printf '%s' "$source"
+      return 0
+    fi
+  done < <(declared_sources)
+  return 1
+}
+
+# --- Release selection ------------------------------------------------------
+
+# download_to saves a URL with curl, then wget.
+download_to() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$1" -o "$2"
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO "$2" "$1"
+  else
+    printf 'install.sh: curl or wget is needed to download %s\n' "$1" >&2
+    return 1
+  fi
+}
+
+# release_tags prints every release tag in the repository, newest last.
+release_tags() {
+  git ls-remote --tags --refs "$GIT_URL" 2>/dev/null \
+    | sed -n 's|.*refs/tags/\(v[0-9][0-9.]*\)$|\1|p' \
+    | sort -V
+}
+
+signer_keys() {
+  local cache="$RELEASE_TMP/keys"
+  if [ ! -s "$cache" ]; then
+    [ -n "$RELEASE_TMP" ] || die "internal: release workspace is missing"
+    download_to "$KEYS_URL" "$cache" || return 1
+  fi
+  printf '%s' "$cache"
+}
+
+# verify_release fetches one tag and prints its commit when the tag carries a
+# signature from a published maintainer key. It prints nothing otherwise.
+verify_release() {
+  local tag="$1" repo keys allowed
+  [ -n "$tag" ] || return 1
+  repo="$RELEASE_TMP/repo"
+  if [ ! -d "$repo" ]; then
+    git init -q --bare "$repo" || return 1
+  fi
+  git -C "$repo" fetch -q --depth=1 "$GIT_URL" "+refs/tags/$tag:refs/tags/$tag" 2>/dev/null || return 1
+  keys="$(signer_keys)" || return 1
+  allowed="$RELEASE_TMP/allowed_signers"
+  if [ -f "$SIGNER_FILE" ] && [ -s "$SIGNER_FILE" ]; then
+    cp "$SIGNER_FILE" "$allowed"
+  else
+    awk 'NF >= 2 { printf "* namespaces=\"git\" %s %s\n", $1, $2 }' "$keys" > "$allowed"
+  fi
+  git -C "$repo" -c gpg.ssh.allowedSignersFile="$allowed" verify-tag "$tag" >/dev/null 2>&1 || return 1
+  git -C "$repo" rev-parse "refs/tags/$tag^{commit}"
+}
+
+# select_release sets REF and REF_COMMIT to a release whose signature verifies.
+select_release() {
+  local tag commit
+  RELEASE_TMP="$(mktemp -d)"
+  if [ -n "$REF" ]; then
+    commit="$(verify_release "$REF" || true)"
+    [ -n "$commit" ] || die "$REF is not a release whose tag signature verifies against $KEYS_URL
+  Signed releases only: check the tag, or pass --ref with a signed release tag."
+    REF_COMMIT="$commit"
+    log "Release $REF ($(printf '%s' "$commit" | cut -c1-7)) has a valid signature"
+    return 0
+  fi
+  for tag in $(release_tags | sed '1!G;h;$!d'); do
+    commit="$(verify_release "$tag" || true)"
+    if [ -n "$commit" ]; then
+      REF="$tag"
+      REF_COMMIT="$commit"
+      log "Newest signed release: $tag ($(printf '%s' "$commit" | cut -c1-7))"
+      return 0
+    fi
+    printf 'install.sh: %s has no verifiable signature; trying an older release\n' "$tag" >&2
+  done
+  die "no release tag carries a signature that verifies against $KEYS_URL
+  To install a specific tag, pass --ref <tag>. Without a working network connection
+  this check cannot run, so nothing is installed."
+}
+
+# release_notes prints the commit subjects between two release tags.
+release_notes() {
+  local from="$1" to="$2" repo="$RELEASE_TMP/repo" body
+  [ -n "$from" ] && [ -n "$to" ] && [ "$from" != "$to" ] || return 0
+  [ -d "$repo" ] || return 0
+  git -C "$repo" cat-file -e "refs/tags/$to" 2>/dev/null || return 0
+  if ! git -C "$repo" cat-file -e "refs/tags/$from" 2>/dev/null; then
+    git -C "$repo" fetch -q --depth=200 "$GIT_URL" "+refs/tags/$from:refs/tags/$from" 2>/dev/null || return 0
+  fi
+  body="$(git -C "$repo" log --no-merges --format='  - %s' "refs/tags/$from..refs/tags/$to" 2>/dev/null || true)"
+  [ -n "$body" ] || return 0
+  printf 'Changes from %s to %s:\n%s\n' "$from" "$to" "$body"
+}
+
+# --- Installer history ------------------------------------------------------
+#
+# Every run records the files this installer edits, before and after, in a git
+# repository of its own. It never touches a repository the user keeps at
+# $AGENT_DIR, and --rollback needs no tarball.
+
+# $HIST is set in main, once the configuration directory is known.
+CARRIED_PATHS="settings.json AGENTS.md mcp.json extensions/pi-permission-system/config.json"
+RUN_STAMP=""
+RUN_DIR=""
+HISTORY_RECORDED=0
+
+hist_git() {
+  git --git-dir="$HIST/store" --work-tree="$HIST/tree" \
+      -c user.name="pi-agent-config installer" -c user.email="installer@pi-agent-config.invalid" \
+      -c commit.gpgsign=false -c core.autocrlf=false -c core.hooksPath=/dev/null "$@"
+}
+
+# history_init creates the history and the lock, and refuses a second run.
+history_init() {
+  local lock="$HIST/lock"
+  [ "$DRY_RUN" -eq 1 ] && return 0
+  mkdir -p "$HIST/tree" "$HIST/runs"
+  if [ ! -d "$HIST/store" ]; then
+    git init -q --bare "$HIST/store" || die "cannot create $HIST/store"
+  fi
+  if ! mkdir "$lock" 2>/dev/null; then
+    die "$lock exists: another run may be in progress. Remove that directory if no run is active."
+  fi
+  RUN_STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+  RUN_DIR="$HIST/runs/$RUN_STAMP"
+  mkdir -p "$RUN_DIR"
+  log "Recording changes in $HIST (undo with --rollback)"
+}
+
+path_id() { printf '%s' "$1" | tr '/' '_' ; }
+
+# history_commit stores the after-state as a new commit, so the next run can
+# point at it in its start message.
+history_commit() {
+  local path copy message
+  [ "$DRY_RUN" -eq 1 ] && return 0
+  message="$RUN_STAMP"
+  [ -n "${RUN_LABEL:-}" ] && message="$message $RUN_LABEL"
+  for path in $CARRIED_PATHS; do
+    if [ -f "$AGENT_DIR/$path" ]; then
+      copy="$HIST/tree/$(path_id "$path")"
+      cp "$AGENT_DIR/$path" "$copy"
+      hist_git add -f -- "$(path_id "$path")" 2>/dev/null || true
+    elif hist_git cat-file -e "HEAD:$(path_id "$path")" 2>/dev/null; then
+      rm -f "$HIST/tree/$(path_id "$path")"
+      hist_git rm --cached -q --ignore-unmatch -- "$(path_id "$path")" 2>/dev/null || true
+    fi
+  done
+  if hist_git diff --cached --quiet 2>/dev/null; then
+    log "No installer-owned file changed in this run"
+    return 0
+  fi
+  hist_git commit -q -m "Run: $message" || die "cannot record the run in $HIST/store"
+  HISTORY_RECORDED=1
+  log "Recorded this run; undo it with: $0 --rollback"
+}
+
+# history_diff prints what this run changed in the files it owns.
+history_diff() {
+  [ -d "$HIST/store" ] || return 0
+  hist_git diff --stat HEAD 2>/dev/null | sed 's/^/    /' || true
+  hist_git diff HEAD -- settings.json 2>/dev/null | head -60 | sed 's/^/    /' || true
+}
+
+# history_report prints what the recorded run changed.
+history_report() {
+  local stat
+  stat="$(hist_git diff --stat HEAD^ HEAD 2>/dev/null || true)"
+  [ -n "$stat" ] || return 0
+  printf '\nFiles this run changed:\n'
+  printf '%s\n' "$stat" | sed 's/^/  /'
+  local detail
+  detail="$(hist_git diff HEAD^ HEAD -- settings.json 2>/dev/null | head -40 || true)"
+  [ -n "$detail" ] && printf '%s\n' "$detail" | sed 's/^/  /'
+  return 0
+}
+
+# history_rollback restores the installer-owned files from an earlier run. It
+# leaves sessions, logins, and anything the user edited outside those files.
+history_rollback() {
+  local target label path restored=0
+  [ -d "$HIST/store" ] || die "no installer history at $HIST/store; nothing to roll back"
+  if [ -n "$ROLLBACK_TARGET" ]; then
+    target="$(git --git-dir="$HIST/store" rev-parse "$ROLLBACK_TARGET^{commit}" 2>/dev/null || true)"
+    [ -n "$target" ] || die "no recorded run matches '$ROLLBACK_TARGET'"
+  else
+    target="$(hist_git log --format='%H %s' --grep='^Run: ' 2>/dev/null | sed -n '2p' | awk '{ print $1 }')"
+    [ -n "$target" ] || die "the history holds only one run; there is no earlier state to restore"
+  fi
+  label="$(hist_git log -1 --format='%s' "$target")"
+  if ! confirm "Restore settings.json, AGENTS.md, mcp.json, and the permission policy to the state before '$label'?" y; then
+    die "aborted; nothing was restored"
+  fi
+  for path in $CARRIED_PATHS; do
+    id="$(path_id "$path")"
+    if hist_git cat-file -e "$target:$id" 2>/dev/null; then
+      hist_git checkout "$target" -- "$id" || die "could not restore $path"
+      mkdir -p "$(dirname "$AGENT_DIR/$path")"
+      cp "$HIST/tree/$id" "$AGENT_DIR/$path"
+      log "Restored $path"
+      restored=$((restored + 1))
+    elif hist_git cat-file -e "HEAD:$id" 2>/dev/null; then
+      rm -f "$AGENT_DIR/$path"
+      rm -f "$HIST/tree/$id"
+      log "Removed $path, which that run created"
+      restored=$((restored + 1))
+    fi
+  done
+  [ "$restored" -gt 0 ] || die "that run recorded no files to restore"
+  log "Rolled back $restored file(s)"
+  printf 'Packages are not rolled back: reinstall the release you want with --ref.\n'
+  printf 'Removed packages stay removed until you install them again.\n'
+}
+
+# --- Settings helpers -------------------------------------------------------
+
+# write_package_entry edits the packages array in settings.json.
+#   add <file> <source> [filter-key] [filter-json] [replace-source]
+#   drop <file> <source>
+#   filter <file> <source> <filter-key>
+write_package_entry() {
+  local mode="$1"; shift
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "Would update $1 ($mode $2 $3 $4)"
+    return 0
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    log "python3 is missing; showing the edit to apply by hand"
+    case "$mode" in
+      add) printf '  Add %s to packages in %s\n' "${2:-}" "${1:-settings.json}" ;;
+      drop) printf '  Remove %s from packages in %s\n' "${2:-}" "${1:-settings.json}" ;;
+      filter) printf '  Set "%s": [] on %s in %s\n' "${4:-}" "${3:-}" "${1:-settings.json}" ;;
+    esac
+    return 0
+  fi
+  python3 - "$mode" "$@" <<'PACKAGE_ENTRY'
+import json, os, sys, tempfile
+
+mode, path = sys.argv[1], sys.argv[2]
+data = {}
+if os.path.exists(path):
+    with open(path) as handle:
+        try:
+            data = json.load(handle)
+        except json.JSONDecodeError as error:
+            sys.exit(f"{path} is not valid JSON: {error}")
+packages = data.get("packages") or []
+
+if mode == "add":
+    source, key, value, replace = (sys.argv[3:8] + ["", "", "", ""])[:4]
+    entry = {"source": source}
+    if key:
+        entry[key] = json.loads(value) if value else []
+    if replace:
+        for index, existing in enumerate(packages):
+            current = existing.get("source") if isinstance(existing, dict) else existing
+            if current == replace:
+                packages[index] = entry
+                break
+        else:
+            packages.append(entry)
+    else:
+        packages.append(entry)
+elif mode == "drop":
+    source = sys.argv[3]
+    packages = [entry for entry in packages
+                if (entry.get("source") if isinstance(entry, dict) else entry) != source]
+elif mode == "filter":
+    source, key = sys.argv[3:5]
+    for index, existing in enumerate(packages):
+        current = existing.get("source") if isinstance(existing, dict) else existing
+        if current == source:
+            packages[index] = {"source": source, key: []}
+            break
+    else:
+        sys.exit(0)
+else:
+    sys.exit(f"unknown mode {mode}")
+
+data["packages"] = packages
+directory = os.path.dirname(path) or "."
+fd, tmp = tempfile.mkstemp(dir=directory)
+with os.fdopen(fd, "w") as handle:
+    json.dump(data, handle, indent=2)
+    handle.write("\n")
+os.replace(tmp, path)
+PACKAGE_ENTRY
+}
+
+# filter_sources applies resource filters to every declared package, which is
+# how this configuration hides a package's own skills.
+filter_sources() {
+  local key="$1"; shift
+  local source
+  for source in "$@"; do
+    if declared_source "$source" >/dev/null; then
+      write_package_entry filter "$AGENT_DIR/settings.json" "$(declared_source "$source")" "$key"
+    fi
+  done
+}
+
+# set_browser_setting writes one pi-browser-use setting, keeping the others.
+set_browser_setting() {
+  local key="$1" value="$2" settings="$AGENT_DIR/settings.json"
+  if ! command -v python3 >/dev/null 2>&1; then
+    log "Set pi-browser-use.$key to $value in $settings"
+    return
+  fi
+  python3 - "$settings" "$key" "$value" <<'BROWSERCFG' || printf 'install.sh: could not set pi-browser-use.%s in %s\n' "$key" "$settings" >&2
+import json, os, sys, tempfile
+path, key, value = sys.argv[1], sys.argv[2], sys.argv[3]
+data = {}
+if os.path.exists(path):
+    with open(path) as handle:
+        try:
+            data = json.load(handle)
+        except json.JSONDecodeError:
+            sys.exit(1)
+config = data.get("pi-browser-use")
+if not isinstance(config, dict):
+    config = {}
+config[key] = json.loads(value) if value.startswith("[") else value
+data["pi-browser-use"] = config
+fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".")
+with os.fdopen(fd, "w") as handle:
+    json.dump(data, handle, indent=2)
+    handle.write("\n")
+os.replace(tmp, path)
+BROWSERCFG
+}
+
+# --- Prerequisites ----------------------------------------------------------
 
 # find_chrome mirrors how pi-browser-use resolves a browser: CHROME_PATH, the
 # executablePath setting, then the standard install paths.
@@ -169,26 +552,6 @@ CHROME
   return 1
 }
 
-# download_to saves a URL with curl, then wget.
-download_to() {
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$1" -o "$2"
-  elif command -v wget >/dev/null 2>&1; then
-    wget -qO "$2" "$1"
-  else
-    printf 'install.sh: curl or wget is needed to download %s\n' "$1" >&2
-    return 1
-  fi
-}
-
-sha256_file() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{ print $1 }'
-  else
-    shasum -a 256 "$1" | awk '{ print $1 }'
-  fi
-}
-
 node_platform() {
   case "$(uname -s)-$(uname -m)" in
     Linux-x86_64) echo linux-x64 ;;
@@ -199,19 +562,18 @@ node_platform() {
   esac
 }
 
-chrome_platform() {
-  case "$(uname -s)-$(uname -m)" in
-    Linux-x86_64) echo linux64 ;;
-    Darwin-arm64) echo mac-arm64 ;;
-    Darwin-x86_64) echo mac-x64 ;;
-    *) return 1 ;;
-  esac
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{ print $1 }'
+  else
+    shasum -a 256 "$1" | awk '{ print $1 }'
+  fi
 }
 
 # install_node_major unpacks an official Node.js build into ~/.local/opt and
 # links it into ~/.local/bin. No root, no system package changes.
 install_node_major() {
-  local major="$1" platform tmp file version root expected actual
+  local major="$1" platform tmp file version root expected actual binary
   if ! platform="$(node_platform)"; then
     log "No official Node.js build for $(uname -s) $(uname -m)"
     return 1
@@ -255,7 +617,6 @@ install_node_major() {
     rm -rf "$tmp"
     return 1
   fi
-  local binary
   for binary in node npm npx corepack; do
     [ -e "$root/bin/$binary" ] && ln -sf "$root/bin/$binary" "$HOME/.local/bin/$binary"
   done
@@ -263,127 +624,6 @@ install_node_major() {
   export PATH="$HOME/.local/bin:$PATH"
   log "Node $version installed under $root; $HOME/.local/bin now points at it"
   log "Keep $HOME/.local/bin before the system path so Pi starts on Node $major"
-}
-
-# install_chrome_for_testing downloads a Chrome for Testing build and sets
-# executablePath, so a missing system Chrome does not need root either.
-install_chrome_for_testing() {
-  local platform tmp json url file root binary
-  if ! platform="$(chrome_platform)"; then
-    log "No Chrome for Testing build for $(uname -s) $(uname -m)"
-    return 1
-  fi
-  if ! command -v python3 >/dev/null 2>&1; then
-    log "python3 is needed to unpack the Chrome download"
-    return 1
-  fi
-  tmp="$(mktemp -d)"
-  json="$tmp/cft.json"
-  if ! download_to "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json" "$json"; then
-    rm -rf "$tmp"; return 1
-  fi
-  url="$(python3 - "$json" "$platform" <<'CFT' || true
-import json, sys
-try:
-    data = json.load(open(sys.argv[1]))
-except (OSError, json.JSONDecodeError):
-    sys.exit(1)
-for entry in data["channels"]["Stable"]["downloads"]["chrome"]:
-    if entry["platform"] == sys.argv[2]:
-        print(entry["url"])
-        break
-else:
-    sys.exit(1)
-CFT
-)"
-  if [ -z "$url" ]; then
-    log "Chrome for Testing does not publish a build for $platform"
-    rm -rf "$tmp"; return 1
-  fi
-  file="$tmp/chrome.zip"
-  log "Downloading $(basename "$url")"
-  if ! download_to "$url" "$file"; then
-    rm -rf "$tmp"; return 1
-  fi
-  root="$HOME/.local/share/chrome-for-testing"
-  rm -rf "$root"; mkdir -p "$root"
-  if command -v unzip >/dev/null 2>&1; then
-    unpacked=0
-    unzip -q -o "$file" -d "$root" || unpacked=1
-  else
-    unpacked=0
-    python3 - "$file" "$root" <<'UNZIP' || unpacked=1
-import os, sys, zipfile
-with zipfile.ZipFile(sys.argv[1]) as archive:
-    for member in archive.infolist():
-        archive.extract(member, sys.argv[2])
-        mode = (member.external_attr >> 16) & 0o777
-        if mode:
-            os.chmod(os.path.join(sys.argv[2], member.filename), mode)
-UNZIP
-  fi
-  if [ "$unpacked" -ne 0 ]; then
-    log "Could not unpack the Chrome download"
-    rm -rf "$tmp"; return 1
-  fi
-  rm -rf "$tmp"
-  local unpacked
-  binary=""
-  if [ "$(uname -s)" = "Darwin" ]; then
-    binary="$root/chrome-mac-$([ "$(uname -m)" = "arm64" ] && echo arm64 || echo x64)/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
-  else
-    binary="$root/chrome-linux64/chrome"
-  fi
-  if [ ! -f "$binary" ]; then
-    log "Chrome for Testing unpacked without the expected binary"
-    return 1
-  fi
-  chmod +x "$binary"
-  CHROME_BIN="$binary"
-  log "Chrome for Testing installed at $binary"
-}
-
-# set_browser_setting writes one pi-browser-use setting, keeping the others.
-set_browser_setting() {
-  local key="$1" value="$2" settings="$AGENT_DIR/settings.json"
-  if ! command -v python3 >/dev/null 2>&1; then
-    log "Set pi-browser-use.$key to $value in $settings"
-    return
-  fi
-  python3 - "$settings" "$key" "$value" <<'BROWSERCFG' || printf 'install.sh: could not set pi-browser-use.%s in %s\n' "$key" "$settings" >&2
-import json, os, sys, tempfile
-path, key, value = sys.argv[1], sys.argv[2], sys.argv[3]
-data = {}
-if os.path.exists(path):
-    with open(path) as handle:
-        try:
-            data = json.load(handle)
-        except json.JSONDecodeError:
-            sys.exit(1)
-config = data.get("pi-browser-use")
-if not isinstance(config, dict):
-    config = {}
-config[key] = json.loads(value) if value.startswith("[") else value
-data["pi-browser-use"] = config
-fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path) or ".")
-with os.fdopen(fd, "w") as handle:
-    json.dump(data, handle, indent=2)
-    handle.write("\n")
-os.replace(tmp, path)
-BROWSERCFG
-}
-
-# sandbox_restricted reports a Linux system where Chrome cannot use its own
-# sandbox: either user namespaces are restricted by AppArmor, or the sandbox
-# helper cannot keep its setuid bit inside a home-directory install.
-sandbox_restricted() {
-  [ "$(uname -s)" = "Linux" ] || return 1
-  if [ "$(sysctl -n kernel.apparmor_restrict_unprivileged_userns 2>/dev/null || echo 0)" = "1" ]; then
-    return 0
-  fi
-  local helper="$HOME/.local/share/chrome-for-testing/chrome-linux64/chrome-sandbox"
-  [ -f "$helper" ] && [ ! -u "$helper" ] && return 0
-  return 1
 }
 
 # ensure_path_reaches installs nothing; it makes the new Node reachable in
@@ -399,37 +639,6 @@ ensure_path_reaches() {
   fi
   printf '\n# Added by pi-agent-config: user installs live in ~/.local/bin\ncase ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac\n' >> "$HOME/.profile"
   log "Added ~/.local/bin to PATH in ~/.profile"
-}
-
-# ensure_prerequisite offers to install what a package needs, then confirms it
-# is there. Without a terminal nothing is installed and the package is skipped.
-ensure_prerequisite() {
-  local need="$1" reason
-  reason="$(missing_prerequisite "$need" || true)"
-  [ -n "$reason" ] || return 0
-  log "$reason is required"
-  if ! confirm "Install $reason now?" y; then
-    return 1
-  fi
-  case "$need" in
-    node24)
-      install_node_major 24 || return 1
-      ensure_path_reaches
-      ;;
-    chrome)
-      install_chrome_for_testing || return 1
-      set_browser_setting executablePath "$CHROME_BIN"
-      if sandbox_restricted; then
-        log "Chrome's sandbox needs root here; disabling it for this browser profile"
-        set_browser_setting chromeArgs '["--no-sandbox"]'
-      fi
-      ;;
-  esac
-  reason="$(missing_prerequisite "$need" || true)"
-  if [ -n "$reason" ]; then
-    printf 'install.sh: %s is still missing\n' "$reason" >&2
-    return 1
-  fi
 }
 
 # missing_prerequisite prints what a package needs and returns 0 when it is
@@ -454,118 +663,192 @@ missing_prerequisite() {
   return 1
 }
 
-# rules_already_in reports whether every non-empty line of the second file
-# already appears in the first.
-rules_already_in() {
-  [ -f "$1" ] && [ -f "$2" ] || return 1
-  awk 'FNR == NR { if ($0 !~ /^[ 	]*$/) want[$0] = 1; next }
-       { seen[$0] = 1 }
-       END { for (line in want) if (!(line in seen)) exit 1 }' "$2" "$1"
+# ensure_prerequisite offers to install what a package needs, then confirms it
+# is there. Without a terminal nothing is installed and the package is skipped.
+# Chrome is never downloaded: Google publishes no checksums for it.
+ensure_prerequisite() {
+  local need="$1" reason
+  reason="$(missing_prerequisite "$need" || true)"
+  [ -n "$reason" ] || return 0
+  log "$reason is required"
+  case "$need" in
+    node24)
+      if [ "$DRY_RUN" -eq 1 ]; then
+        log "Would install Node 24"
+        return 1
+      fi
+      if ! confirm "Install $reason now?" y; then
+        return 1
+      fi
+      install_node_major 24 || return 1
+      ensure_path_reaches
+      ;;
+    *)
+      printf 'install.sh: install %s yourself, then rerun. This installer does not download a browser.\n' "$reason" >&2
+      return 1
+      ;;
+  esac
+  reason="$(missing_prerequisite "$need" || true)"
+  if [ -n "$reason" ]; then
+    printf 'install.sh: %s is still missing\n' "$reason" >&2
+    return 1
+  fi
 }
+
+# --- Shared rules block -----------------------------------------------------
 
 MARK_START="<!-- pi-agent-config: shared rules -->"
 MARK_END="<!-- pi-agent-config: end shared rules -->"
 
+# rules_block <mode> <target> <source>
+#   check  exit 0 when the shared block in target already matches source
+#   write  replace the shared block in target with the source
+#   diff   print the difference between the shared block and the source
+rules_block() {
+  local mode="$1" target="$2" source="$3"
+  python3 - "$mode" "$target" "$source" "$MARK_START" "$MARK_END" <<'RULES'
+import difflib
+import sys
+
+mode, target, source, start, end = sys.argv[1:6]
+with open(source) as handle:
+    body = handle.read().rstrip("\n")
+block = f"{start}\n{body}\n{end}"
+
+try:
+    with open(target) as handle:
+        text = handle.read()
+except FileNotFoundError:
+    sys.exit(2)
+
+if start not in text or end not in text:
+    sys.exit(2)
+
+start_index = text.index(start)
+end_index = text.index(end, start_index) + len(end)
+current = text[start_index:end_index]
+
+if mode == "check":
+    sys.exit(0 if current == block else 1)
+if mode == "diff":
+    for line in difflib.unified_diff(current.splitlines(), block.splitlines(),
+                                     "current", "shared", lineterm="", n=2):
+        print("    " + line)
+    sys.exit(0)
+if mode == "write":
+    with open(target, "w") as handle:
+        handle.write(text[:start_index] + block + text[end_index:])
+    sys.exit(0)
+sys.exit(f"unknown mode {mode}")
+RULES
+}
+
+# rules_already_in reports whether every non-empty line of the second file
+# already appears in the first.
+rules_already_in() {
+  [ -f "$1" ] && [ -f "$2" ] || return 1
+  awk 'FNR == NR { if ($0 !~ /^[ \t]*$/) want[$0] = 1; next }
+       { seen[$0] = 1 }
+       END { for (line in want) if (!(line in seen)) exit 1 }' "$2" "$1"
+}
+
+# --- Main -------------------------------------------------------------------
+
 need pi
-need tar
 need git
+command -v python3 >/dev/null 2>&1 \
+  || die "python3 is required to edit settings.json safely. Install it, then retry."
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 AGENT_DIR="${PI_CODING_AGENT_DIR:-$HOME/.pi/agent}"
 AGENT_DIR="${AGENT_DIR%/}"
-AGENT_PARENT="$(dirname "$AGENT_DIR")"
-AGENT_BASE="$(basename "$AGENT_DIR")"
 
 if [ "$(realpath "$SCRIPT_DIR" 2>/dev/null || echo "$SCRIPT_DIR")" = "$(realpath "$AGENT_DIR" 2>/dev/null || echo "$AGENT_DIR")" ]; then
   die "Run this script from a clone, not from inside $AGENT_DIR."
 fi
 
+cleanup() {
+  rm -rf "${RELEASE_TMP:-}" 2>/dev/null || true
+  [ -n "${HIST:-}" ] && rmdir "$HIST/lock" 2>/dev/null || true
+}
+trap cleanup EXIT
+
+mkdir -p "$AGENT_DIR" || die "cannot create $AGENT_DIR"
+HIST="$AGENT_DIR/.install-history"
+
 log "Pi version: $(pi --version 2>/dev/null | head -1)"
 log "Config directory: $AGENT_DIR"
+if [ "$DRY_RUN" -eq 1 ]; then log "Dry run: no package, file, or setting will change"; fi
 
-# --- 1. Backup, before any change -------------------------------------------
-mkdir -p "$BACKUP_DIR" || die "cannot create $BACKUP_DIR"
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-BACKUP="$BACKUP_DIR/pi-agent-backup-$STAMP.tar.gz"
-RESTORE_HINT=""
-
-if [ -d "$AGENT_DIR" ]; then
-  log "Backing up configuration to $BACKUP"
-  # Settings, instructions, prompts, skills, and extension configuration.
-  # Downloads and session history are excluded; both are large and regenerable.
-  tar czf "$BACKUP" -C "$AGENT_PARENT" \
-    --exclude="$AGENT_BASE/sessions" \
-    --exclude="$AGENT_BASE/npm" \
-    --exclude="$AGENT_BASE/git" \
-    --exclude="$AGENT_BASE/state" \
-    --exclude="$AGENT_BASE/fff" \
-    --exclude="$AGENT_BASE/bin" \
-    --exclude="$AGENT_BASE/telemetry.db" \
-    "$AGENT_BASE" || die "backup failed; nothing was changed"
-  COUNT="$(tar tzf "$BACKUP" | wc -l | tr -d ' ')"
-  [ "$COUNT" -gt 0 ] || die "backup is empty; nothing was changed"
-  log "Backup contains $COUNT entries"
-  RESTORE_HINT="tar xzf \"$BACKUP\" -C \"$AGENT_PARENT\""
-else
-  log "No configuration at $AGENT_DIR yet; nothing to back up"
-fi
-
-if [ "$BACKUP_ONLY" -eq 1 ]; then
-  log "Stopping after backup"
-  [ -n "$RESTORE_HINT" ] && printf 'Restore with:\n  %s\n' "$RESTORE_HINT"
+if [ "$ROLLBACK" -eq 1 ]; then
+  history_rollback
   exit 0
 fi
 
-# --- 2. Optionally move the current configuration aside ---------------------
-RESET_DIR=""
-if [ "$RESET" -eq 1 ]; then
-  if [ "$ASSUME_YES" -ne 1 ]; then
-    if [ -t 0 ]; then
-      printf 'Move your current Pi configuration aside (backup: %s)? [y/N] ' "$BACKUP"
-      read -r answer || answer=""
-      case "$answer" in y|Y|yes|YES) ;; *) die "aborted; the backup is at $BACKUP" ;; esac
-    else
-      die "--reset needs --yes when no terminal is available"
-    fi
-  fi
-  RESET_DIR="$BACKUP_DIR/pi-agent-aside-$STAMP"
-  mkdir -p "$RESET_DIR"
-  log "Moving the current configuration to $RESET_DIR"
-  shopt -s nullglob dotglob
-  for entry in "$AGENT_DIR"/*; do
-    name="$(basename "$entry")"
-    case "$name" in
-      # Kept on every run: history, Pi's own binaries, and extension
-      # configuration such as the permission policy.
-      sessions|bin|extensions) continue ;;
-      # Kept unless --drop-auth: provider login and model choices.
-      auth.json) [ "$DROP_AUTH" -eq 0 ] && continue ;;
-      models.json|models-store.json) continue ;;
-    esac
-    mv "$entry" "$RESET_DIR/" || die "could not move $entry; restore with: $RESTORE_HINT"
-  done
-  shopt -u nullglob dotglob
+history_init
+select_release
+
+SOURCE="${SOURCE_OVERRIDE:-$REPO@$REF}"
+
+# --- 1. Install or update the package --------------------------------------
+
+FROM_REF=""
+EXISTING="$(declared_source_name pi-agent-config || true)"
+if [ -n "$EXISTING" ]; then
+  case "$EXISTING" in
+    *@*) FROM_REF="${EXISTING##*@}" ;;
+  esac
 fi
 
-# --- 3. Install the package -------------------------------------------------
-SOURCE="${SOURCE_OVERRIDE:-$REPO@$REF}"
-if existing="$(declared_source pi-agent-config)"; then
-  log "Package already declared as $existing; leaving the entry alone"
+if [ -n "$EXISTING" ] && [ "$EXISTING" = "$SOURCE" ]; then
+  log "Package already at $SOURCE; nothing to update"
+elif [ -n "$EXISTING" ]; then
+  log "Updating the package from $EXISTING to $SOURCE"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "Would update the package to $SOURCE"
+  elif ! pi update --extension "$SOURCE"; then
+    printf 'install.sh: updating in place failed; reinstalling %s\n' "$SOURCE" >&2
+    pi remove "$EXISTING" >/dev/null 2>&1 || true
+    pi install "$SOURCE" || die "could not install $SOURCE; undo with: $0 --rollback"
+  fi
 else
   log "Installing $SOURCE"
-  pi install "$SOURCE" || die "pi install failed; restore with: $RESTORE_HINT"
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "Would install $SOURCE"
+  else
+    pi install "$SOURCE" || die "pi install failed; nothing else was changed"
+    declared_source_name pi-agent-config >/dev/null \
+      || die "the package is not listed after install; check 'pi list'"
+  fi
 fi
-pi list 2>/dev/null | grep -q "pi-agent-config" \
-  || die "the package is not listed after install; restore with: $RESTORE_HINT"
 
-# Resolve the package files: prefer this checkout, fall back to pi list.
-PKG_DIR=""
-if [ -f "$SCRIPT_DIR/package.json" ] && grep -q '"pi"' "$SCRIPT_DIR/package.json"; then
-  PKG_DIR="$SCRIPT_DIR"
-else
-  candidate="$(pi list 2>/dev/null | grep -A1 'pi-agent-config' | tail -1 | sed 's/^ *//' || true)"
-  [ -n "$candidate" ] && [ -f "$candidate/package.json" ] && PKG_DIR="$candidate"
+if [ -n "$FROM_REF" ] && [ "$FROM_REF" != "$REF" ]; then
+  release_notes "$FROM_REF" "$REF"
 fi
+
+# Use the files of the installed release, not of this checkout.
+PKG_DIR=""
+entry="$(declared_source_name pi-agent-config || true)"
+case "$entry" in
+  git:*)
+    candidate="$AGENT_DIR/git/${entry#git:}"; candidate="${candidate%@*}"
+    [ -f "$candidate/package.json" ] && PKG_DIR="$candidate"
+    ;;
+  npm:*)
+    candidate="$AGENT_DIR/npm/node_modules/${entry#npm:}"; candidate="${candidate%@*}"
+    [ -f "$candidate/package.json" ] && PKG_DIR="$candidate"
+    ;;
+esac
+if [ -n "$PKG_DIR" ]; then
+  log "Package files: $PKG_DIR"
+elif [ "$DRY_RUN" -eq 1 ]; then
+  PKG_DIR="$SCRIPT_DIR"
+  log "Package files: $SCRIPT_DIR (checkout, because nothing is installed yet)"
+fi
+
+WARNINGS=""
+warn() { WARNINGS="$WARNINGS$1
+"; }
 
 if [ -n "$STEPS" ] && [ "$ASSUME_YES" -ne 1 ] && [ ! -t 0 ]; then
   log "No terminal: steps that need an answer will be skipped. Use --yes for defaults"
@@ -574,110 +857,145 @@ fi
 
 printf '\n'
 
-# --- 4. Configure -----------------------------------------------------------
-apply_package_filter() {
-  local source="$1" key="$2" settings="$AGENT_DIR/settings.json"
-  if ! command -v python3 >/dev/null 2>&1; then
-    log "Set \"$key\": [] for $source in $settings to match the shared setup"
-    return
-  fi
-  python3 - "$settings" "$source" "$key" <<'FILTER' || log "Could not set \"$key\": [] for $source in $settings"
-import json, os, sys, tempfile
-path, source, key = sys.argv[1:4]
-with open(path) as handle:
-    data = json.load(handle)
-packages = data.get("packages") or []
-for index, entry in enumerate(packages):
-    if entry == source:
-        packages[index] = {"source": source, key: []}
-        break
-else:
-    sys.exit(0)
-data["packages"] = packages
-fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path))
-with os.fdopen(fd, "w") as handle:
-    json.dump(data, handle, indent=2)
-    handle.write("\n")
-os.replace(tmp, path)
-FILTER
-}
-
+# --- 2. Packages ------------------------------------------------------------
 if has_step packages; then
   log "Third-party packages. Each one is optional and runs with your permissions."
-  # source|description|default|resource filter (key=, empty for none)
-  packages=(
-    "npm:@ff-labs/pi-fff|indexed file search: fffind and ffgrep|y|"
-    "npm:@gotgenes/pi-permission-system|tool permission checks|y|"
-    "npm:pi-background-run|detached background commands that wake the session when done|y|"
-    "npm:@joaomj/pi-claude-usage|Claude subscription quota in the footer|y|"
-    "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills="
-    "npm:pi-context-view|inspect what fills the context window|y|"
-    "npm:pi-browser-use|managed browser automation tools|y||node24,chrome"
+  # source|description|default|resource filter|requires|oldest version to keep
+  PINNED=(
+    "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills||0.17.0"
+    "npm:@ff-labs/pi-fff@0.11.0|indexed file search: fffind and ffgrep|y|||0.11.0"
+    "npm:@gotgenes/pi-permission-system@41.0.0|tool permission checks|y|||41.0.0"
+    "npm:pi-background-run@0.8.0|detached background commands that wake the session when done|y|||0.8.0"
+    "npm:@joaomj/pi-claude-usage@0.2.0|Claude subscription quota in the footer|y|||0.2.0"
+    "npm:pi-context-view@0.8.0|inspect what fills the context window|y|skills||0.8.0"
+    "npm:pi-browser-use@0.12.15|managed browser automation tools|y||node24,chrome|0.12.15"
   )
-  for entry in "${packages[@]}"; do
-    IFS='|' read -r pkg desc default filter requires <<< "$entry"
+  # A package filter hides resources this configuration already ships.
+  filter_sources skills pi-ask-user pi-context-view
+
+  for entry in "${PINNED[@]}"; do
+    IFS='|' read -r pkg desc default filter requires keep_from <<< "$entry"
+    existing="$(declared_source_name "$pkg" || true)"
+    if [ -n "$existing" ]; then
+      if [ "$existing" = "$pkg" ]; then
+        log "Already installed: $pkg"
+        continue
+      fi
+      current="$(declared_version "$existing" || true)"
+      wanted="${pkg##*@}"
+      if [ "$(package_name "$existing")" != "$(package_name "$pkg")" ]; then
+        log "Declared as $existing, which is a different package; leaving it"
+        continue
+      fi
+      if [ -n "$current" ] && [ "$current" != "$wanted" ]; then
+        if [ -n "$keep_from" ] && version_ge "$current" "$keep_from"; then
+          log "Leaving $pkg at $current; this release pins $wanted and does not downgrade an installed package"
+          if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$existing" "$filter"; fi
+          continue
+        fi
+        if [ "$DRY_RUN" -eq 1 ]; then
+          log "Would move $pkg from $current to the pinned $wanted"
+          continue
+        fi
+        if ! confirm "Move $pkg from ${current:-unknown} to the pinned $wanted?" y; then
+          log "Kept $pkg at ${current:-unknown}"
+          continue
+        fi
+        if ! pi update --extension "$pkg"; then
+          log "The in-place update left $pkg at ${current:-unknown}; reinstalling from the pinned source"
+          pi remove "$existing" >/dev/null 2>&1 || true
+          if ! pi install "$pkg"; then
+            warn "$pkg could not be installed at $wanted"
+            printf 'install.sh: %s could not be installed; continue without it\n' "$pkg" >&2
+            continue
+          fi
+          if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$pkg" "$filter"; fi
+        fi
+      else
+        log "Already installed: $pkg"
+      fi
+      if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$(declared_source_name "$pkg" || echo "$pkg")" "$filter"; fi
+      continue
+    fi
+
     if [ -n "$requires" ]; then
       prereqs_ok=1
+      missing_list=""
       IFS=',' read -ra needs <<< "$requires"
       for need in "${needs[@]}"; do
-        ensure_prerequisite "$need" || prereqs_ok=0
+        if ! ensure_prerequisite "$need"; then
+          prereqs_ok=0
+          reason="$(missing_prerequisite "$need" || true)"
+          [ -n "$reason" ] || reason="$need"
+          missing_list="${missing_list:+$missing_list, }$reason"
+        fi
       done
       if [ "$prereqs_ok" -eq 0 ]; then
-        log "Skipped $pkg: a requirement is still missing"
+        warn "$pkg was skipped: missing $missing_list"
+        log "Skipped $pkg: missing $missing_list"
         continue
       fi
     fi
-    if existing="$(declared_source "$(package_identity "$pkg")")"; then
-      if [ "$existing" = "$pkg" ]; then
-        log "Already installed: $pkg"
-      else
-        log "Already declared as $existing; remove it with 'pi remove $existing' to switch"
-      fi
+    if ! confirm "Install $pkg ($desc)?" "$default"; then
+      log "Skipped: $pkg"
       continue
     fi
-    if confirm "Install $pkg ($desc)?" "$default"; then
-      if pi install "$pkg"; then
-        [ -n "$filter" ] && apply_package_filter "$pkg" "${filter%=}"
-      else
-        printf 'install.sh: %s failed to install; continue without it\n' "$pkg" >&2
-      fi
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log "Would install $pkg"
+      continue
+    fi
+    if pi install "$pkg"; then
+      if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$pkg" "$filter"; fi
     else
-      log "Skipped: $pkg"
+      warn "$pkg failed to install"
+      printf 'install.sh: %s failed to install; continue without it\n' "$pkg" >&2
     fi
   done
 fi
 
+# --- 3. Claude transport ----------------------------------------------------
 if has_step claude; then
   CLAUDE_RANGE_MIN="2.1.263"
   CLAUDE_RANGE_MAX="2.2.0"
-  CLAUDE_PIN="2.1.281"
+  CLAUDE_CLI_PIN="2.1.281"
+  # Pinned to a commit because the repository moves and the transport is beta.
+  CLAUDESDK_SOURCE="git:github.com/joaomj/pi-claude-directsdk@6574117a2ce0b4e03df18e271f75f003411eeb6a"
 
   cli_version_of() { claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true; }
   cli_qualified() {
     [ -n "$1" ] && version_ge "$1" "$CLAUDE_RANGE_MIN" && ! version_ge "$1" "$CLAUDE_RANGE_MAX"
   }
 
-  if pi list 2>/dev/null | grep -Fq "pi-claude-directsdk"; then
-    log "Claude transport already installed"
-  elif [ "$WITH_CLAUDE" -eq 1 ] || confirm "Set up the Claude subscription transport? It needs a paid Claude plan and a Claude Code login." n; then
+  existing="$(declared_source_name pi-claude-directsdk || true)"
+  claude_wanted=0
+  if [ -n "$existing" ] && [ "$existing" = "$CLAUDESDK_SOURCE" ]; then
+    log "Claude transport already at the pinned commit"
+  elif [ -n "$existing" ]; then
+    log "Claude transport is declared as $existing; this release pins $CLAUDESDK_SOURCE"
+    if confirm "Move the Claude transport to the pinned commit?" y; then claude_wanted=1; fi
+  elif [ "$WITH_CLAUDE" -eq 1 ] \
+       || confirm "Set up the Claude subscription transport? It needs a paid Claude plan and a Claude Code login." n; then
+    claude_wanted=1
+  else
+    log "Skipped the Claude transport"
+  fi
+
+  if [ "$claude_wanted" -eq 1 ]; then
     node_major="$(node -v 2>/dev/null | sed 's/^v//' | cut -d. -f1 || true)"
     if [ -n "$node_major" ] && [ "$node_major" -lt 20 ]; then
       printf 'install.sh: Node 20 or later is required for this transport; found %s\n' "$(node -v)" >&2
     fi
-
     cli_version="$(cli_version_of || true)"
-    if cli_qualified "$cli_version"; then
-      log "Claude Code CLI $cli_version is inside the qualified range"
-    else
+    if ! cli_qualified "$cli_version"; then
       if [ -n "$cli_version" ]; then
         log "Claude Code CLI $cli_version is outside the qualified range $CLAUDE_RANGE_MIN <= v < $CLAUDE_RANGE_MAX"
       else
         log "Claude Code CLI not found"
       fi
-      log "The qualified version is $CLAUDE_PIN."
-      if confirm "Install it globally with npm now?" y; then
-        log "Running: npm install -g --ignore-scripts=false @anthropic-ai/claude-code@$CLAUDE_PIN"
-        if npm install -g --ignore-scripts=false "@anthropic-ai/claude-code@$CLAUDE_PIN"; then
+      log "The qualified version is $CLAUDE_CLI_PIN."
+      if [ "$DRY_RUN" -ne 1 ] && confirm "Install it globally with npm now?" y; then
+        log "Running: npm install -g --ignore-scripts=false @anthropic-ai/claude-code@$CLAUDE_CLI_PIN"
+        if npm install -g --ignore-scripts=false "@anthropic-ai/claude-code@$CLAUDE_CLI_PIN"; then
           log "CLI install finished"
         else
           printf 'install.sh: the global install failed. A permissions error usually means npm needs a writable prefix.\n' >&2
@@ -687,8 +1005,11 @@ if has_step claude; then
     fi
 
     if ! cli_qualified "$cli_version"; then
+      warn "the Claude transport needs Claude Code CLI $CLAUDE_CLI_PIN"
       log "Claude transport not installed: the CLI is missing or outside the qualified range."
-      printf '  Fix it with:\n    npm install -g --ignore-scripts=false @anthropic-ai/claude-code@%s\n  Then rerun:\n    %s --only claude\n' "$CLAUDE_PIN" "$0" >&2
+      printf '  Fix it with:\n    npm install -g --ignore-scripts=false @anthropic-ai/claude-code@%s\n  Then rerun:\n    %s --only claude\n' "$CLAUDE_CLI_PIN" "$0" >&2
+    elif [ "$DRY_RUN" -eq 1 ]; then
+      log "Would install the Claude transport from $CLAUDESDK_SOURCE"
     else
       if claude auth status --json 2>/dev/null | grep -Eq '"loggedIn"[[:space:]]*:[[:space:]]*true'; then
         log "Claude Code is signed in"
@@ -698,11 +1019,15 @@ if has_step claude; then
           claude auth login || printf 'install.sh: claude auth login did not finish; run it yourself, then rerun --only claude\n' >&2
         fi
       fi
-      if existing="$(declared_source pi-claude-directsdk)"; then
-        log "Claude transport already declared as $existing"
+      if [ -n "$existing" ]; then
+        log "Moving the Claude transport from $existing to the pinned commit"
+        if ! pi update --extension "$CLAUDESDK_SOURCE"; then
+          pi remove "$existing" >/dev/null 2>&1 || true
+          pi install "$CLAUDESDK_SOURCE" || warn "the Claude transport could not be installed"
+        fi
       else
-        log "Installing npm:pi-claude-directsdk"
-        pi install npm:pi-claude-directsdk || printf 'install.sh: could not install the transport; rerun --only claude\n' >&2
+        log "Installing $CLAUDESDK_SOURCE"
+        pi install "$CLAUDESDK_SOURCE" || warn "the Claude transport could not be installed"
       fi
       cat <<'CLAUDE'
   One step stays interactive: restart Pi, open /model, wait for the DirectSDK
@@ -711,35 +1036,55 @@ if has_step claude; then
   Anthropic login.
 CLAUDE
     fi
-  else
-    log "Skipped the Claude transport"
   fi
 fi
 
+# --- 4. Shared rules --------------------------------------------------------
 if has_step agents; then
   if [ -z "$PKG_DIR" ] || [ ! -f "$PKG_DIR/AGENTS.md" ]; then
     log "No AGENTS.md in the package sources; skipping"
   else
     target="$AGENT_DIR/AGENTS.md"
+    source="$PKG_DIR/AGENTS.md"
     if [ ! -f "$target" ]; then
       if confirm "Create $target from the shared rules?" y; then
-        mkdir -p "$AGENT_DIR"
-        cp "$PKG_DIR/AGENTS.md" "$target"
-        log "Created $target"
+        if [ "$DRY_RUN" -eq 1 ]; then
+          log "Would create $target from the shared rules"
+        else
+          mkdir -p "$AGENT_DIR"
+          cp "$source" "$target"
+          log "Created $target"
+        fi
       fi
+    elif rules_block check "$target" "$source"; then
+      log "Shared rules block in $target is current"
     elif grep -qF "$MARK_START" "$target"; then
-      log "Shared rules already present in $target"
-    elif rules_already_in "$target" "$PKG_DIR/AGENTS.md"; then
+      log "The shared rules block in $target differs from this release"
+      rules_block diff "$target" "$source"
+      if confirm "Replace the shared rules block in $target?" y; then
+        if [ "$DRY_RUN" -eq 1 ]; then
+          log "Would replace the shared rules block in $target"
+        else
+          rules_block write "$target" "$source" || warn "could not rewrite the shared rules block in $target"
+          log "Replaced the shared rules block; review the diff before you rely on it"
+        fi
+      else
+        log "Kept the existing shared rules block"
+      fi
+    elif rules_already_in "$target" "$source"; then
       log "Shared rules already in $target without markers; not appending them again"
-    else
-      if confirm "Append the shared rules block to $target?" n; then
-        { printf '\n%s\n' "$MARK_START"; cat "$PKG_DIR/AGENTS.md"; printf '%s\n' "$MARK_END"; } >> "$target"
+    elif confirm "Append the shared rules block to $target?" n; then
+      if [ "$DRY_RUN" -eq 1 ]; then
+        log "Would append the shared rules block to $target"
+      else
+        { printf '\n%s\n' "$MARK_START"; cat "$source"; printf '%s\n' "$MARK_END"; } >> "$target"
         log "Appended the shared rules block; review the diff before you rely on it"
       fi
     fi
   fi
 fi
 
+# --- 5. Permission policy ---------------------------------------------------
 if has_step permissions; then
   src="$PKG_DIR/extensions/pi-permission-system/config.json"
   target="$AGENT_DIR/extensions/pi-permission-system/config.json"
@@ -747,31 +1092,48 @@ if has_step permissions; then
     log "No reference permission policy in the package sources; skipping"
   elif [ ! -f "$target" ]; then
     if confirm "Install the reference permission policy at $target?" y; then
-      mkdir -p "$(dirname "$target")"
-      cp "$src" "$target"
-      log "Installed the reference policy; review it in your editor"
+      if [ "$DRY_RUN" -eq 1 ]; then
+        log "Would install the reference permission policy"
+      else
+        mkdir -p "$(dirname "$target")"
+        cp "$src" "$target"
+        log "Installed the reference policy; review it in your editor"
+      fi
     fi
   elif cmp -s "$src" "$target"; then
     log "Permission policy already matches the reference"
   else
     proposed="$target.proposed"
-    cp "$src" "$proposed"
-    log "Your policy differs. The reference is at $proposed; nothing was overwritten."
-    diff -u "$target" "$proposed" | head -40 || true
-    printf 'Merge what you want by hand, then delete %s\n' "$proposed"
+    log "Your policy differs from this release's reference"
+    diff -u "$target" "$src" | head -40 || true
+    if confirm "Overwrite your policy with the reference?" n; then
+      if [ "$DRY_RUN" -eq 1 ]; then
+        log "Would overwrite $target with the reference policy"
+      else
+        cp "$src" "$target"
+        log "Overwrote the policy; undo with $0 --rollback"
+      fi
+    else
+      [ "$DRY_RUN" -eq 1 ] || { cp "$src" "$proposed"; log "Nothing overwritten; the reference is at $proposed"; }
+    fi
   fi
 fi
 
+# --- 6. MCP -----------------------------------------------------------------
 if has_step mcp; then
   if pi mcp list 2>/dev/null | grep -Eq '^(mcp__)?exa[:|]|mcp\.exa\.ai'; then
     log "An Exa MCP server is already configured; leaving it alone"
   elif [ -n "${EXA_API_KEY:-}" ]; then
     if confirm "Add the Exa MCP server using EXA_API_KEY?" n; then
-      pi mcp add exa --url https://mcp.exa.ai/mcp \
-        --bearer-token-env-var EXA_API_KEY \
-        --exposure codemode \
-        --description "Web search, fetch, and research" \
-        || printf 'install.sh: could not add the Exa server\n' >&2
+      if [ "$DRY_RUN" -eq 1 ]; then
+        log "Would add the Exa MCP server from EXA_API_KEY"
+      else
+        pi mcp add exa --url https://mcp.exa.ai/mcp \
+          --bearer-token-env-var EXA_API_KEY \
+          --exposure codemode \
+          --description "Web search, fetch, and research" \
+          || warn "the Exa MCP server could not be added"
+      fi
     fi
   else
     log "Skipping the Exa MCP server: export EXA_API_KEY first, then rerun --only mcp"
@@ -779,6 +1141,7 @@ if has_step mcp; then
   log "Other MCP servers stay yours: pi mcp add, then pi mcp login for OAuth servers"
 fi
 
+# --- 7. Verify --------------------------------------------------------------
 if has_step verify; then
   log "Installed packages"
   pi list 2>/dev/null | sed 's/^/    /'
@@ -790,14 +1153,26 @@ if has_step verify; then
   fi
 fi
 
-# --- 5. Report --------------------------------------------------------------
+# --- 8. Report --------------------------------------------------------------
+if [ "$DRY_RUN" -eq 1 ]; then
+  printf '\nDry run: nothing was changed.\n'
+  printf 'What the last recorded run changed (if anything):\n'
+  history_diff
+  exit 0
+fi
+
+history_commit
+if [ "$HISTORY_RECORDED" -eq 1 ]; then history_report; fi
+
 printf '\nDone.\n'
-[ -n "$RESTORE_HINT" ] && printf '  Backup:      %s\n  Restore:     %s\n' "$BACKUP" "$RESTORE_HINT"
-[ -n "$RESET_DIR" ] && printf '  Moved aside: %s\n' "$RESET_DIR"
+if [ -n "$WARNINGS" ]; then
+  printf '\nNeeds attention:\n'
+  printf '%s' "$WARNINGS" | sed 's/^/  - /'
+fi
 cat <<'MSG'
 
 Next steps:
   1. Run /login and /model if this machine has no provider yet.
   2. Start Pi and check /help for the shared templates.
-  3. Update later with: pi update --extensions
+  3. Update later with this script. Undo the last run with --rollback.
 MSG

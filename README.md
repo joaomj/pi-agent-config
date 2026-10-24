@@ -15,20 +15,38 @@ git clone https://github.com/joaomj/pi-agent-config.git ~/pi-agent-config
 ~/pi-agent-config/install.sh
 ```
 
-The installer writes a backup of `~/.pi/agent` to
-`~/pi-agent-backup-<UTC timestamp>.tar.gz` before it changes anything, prints
-the restore command, and then installs the package. Session history, download
-caches, and binaries stay out of the backup.
+Before it changes anything, the installer records the files it edits in a private
+git history at `~/.pi/agent/.install-history`: `settings.json`, `AGENTS.md`,
+`mcp.json`, and the permission policy. It installs only a release tag whose
+signature verifies against the maintainer's published keys, so a changed or
+compromised repository cannot ship unreviewed code.
 
-- `--reset` moves the existing configuration aside before installing. It keeps
-  `sessions/`, `bin/`, and the provider login, and moves everything else to
-  `~/pi-agent-aside-<timestamp>/`. Add `--drop-auth` to move the login too.
-- `--backup-only` stops after the backup.
-
-To install the package without the backup step:
+A later run updates instead of reinstalling: it moves the package to the newest
+signed release, prints what changed, and offers only the packages and settings
+still missing.
 
 ```bash
-pi install git:github.com/joaomj/pi-agent-config
+~/pi-agent-config/install.sh --dry-run     # list what a run would change
+~/pi-agent-config/install.sh --rollback    # undo the last run
+~/pi-agent-config/install.sh --ref v0.4.1  # stay on, or return to, a release
+```
+
+- `--rollback` restores the files above to their state before the last run. It
+  does not remove packages. Reinstall the release you want with `--ref`.
+- `--dry-run` changes nothing and prints the plan.
+- `--only packages`, or any other step name, runs selected configure steps only.
+
+The installer never downloads a browser. If Chrome or Chromium is missing, it
+skips browser automation and says which requirement is missing.
+
+The package pins the versions of the third-party packages it offers, so an
+update installs a set that has been tested together. A package already installed
+at a newer version is left alone and reported.
+
+To install the package without the setup steps:
+
+```bash
+pi install git:github.com/joaomj/pi-agent-config@v0.4.1
 ```
 
 The package adds the prompt templates in [prompts/](prompts/), the skills in
@@ -83,9 +101,9 @@ Prompt templates become explicit commands, such as `/explain`, `/code-review`,
 
 Maintain the installation with these commands:
 
-- `pi update --extensions` updates this package and the third-party packages.
+- Rerun `install.sh` to update to the newest signed release, or `--dry-run` first to see what would change.
 - `pi config` disables a single shared prompt or skill, for example after a name collision.
-- `pi install git:github.com/joaomj/pi-agent-config@v0.4.0` stays on a released tag.
+- `--ref <tag>` installs or returns to a named release.
 
 Every skill in `skills/` is included, including `proton-pass`, `skill-doctor`,
 and `improve-me`. Turn off any prompt or skill you do not want with `pi config`.
@@ -123,7 +141,7 @@ adds the Exa server only from your own `EXA_API_KEY` environment variable.
 
 - [AGENTS.md](AGENTS.md): collaboration, approval, Git, and testing instructions.
 - [prompts/](prompts/): planning, review, explanation, diagrams, slide decks, and other explicit workflows.
-- [install.sh](install.sh): the backup-first installer and setup steps.
+- [install.sh](install.sh): installs or updates the package, runs the setup steps, and rolls the last run back.
 - [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, skill assessment, and `improve-me`, which turns fixes that repeat across sessions into guards, checks, and scripts.
 - [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
 - [Model setup reference](docs/model-setup.md): default and cycling models, shared limits, and cache behavior.
@@ -139,9 +157,10 @@ Personal configuration and extension files are now ignored, rather than shared.
 The former installer and sync machinery are no longer maintained by this repository.
 Do not run an old local copy of those scripts to update this setup.
 
-Before updating an existing checkout, back up your active configuration and local extensions outside the repository.
-Git can remove previously tracked files when applying their removal from the repository.
-Restore your personal files from that backup afterward; keep them untracked.
+An older checkout of this repository keeps its own files, so updating it is a
+plain `git pull` in that checkout. Commit or stash local changes first: Git can
+remove previously tracked files when applying their removal from the repository,
+and it stops the pull when a local change would be lost.
 
 These boundaries apply to the current repository tree. Earlier configuration and
 extension files remain accessible in Git history. This change does not erase history.
