@@ -146,6 +146,11 @@ with a `/claude-account` picker when several Claude logins exist on the machine:
 pi install npm:@joaomj/pi-claude-usage
 ```
 
+It reads the login that Claude Code owns: `~/.claude/.credentials.json`, or the
+macOS login keychain item `Claude Code-credentials`. The Claude DirectSDK transport
+uses the same login. Packages that read Pi's `anthropic` OAuth login report no
+Claude usage while DirectSDK is the active provider.
+
 ### Browser automation
 
 [`pi-browser-use`](https://pi.dev/packages/pi-browser-use) provides the `browser_*`
@@ -172,9 +177,13 @@ is the stronger choice when you have one.
 These were reviewed and deliberately left out. Reasons are recorded so the
 evaluation is not repeated without new evidence:
 
-- `@narumitw/pi-usage`: provider quota dashboard. Removed after review: its closed
-  adapter list has no Anthropic provider, and Pi never holds the Claude OAuth
-  credential it would need, so it cannot track a Claude subscription.
+- `@narumitw/pi-usage`: provider quota dashboard. Left out: version 0.68.1 has no
+  Anthropic provider. Other packages with Anthropic support (`@sreetej510/pi-usage`,
+  `@llblab/pi-claude-usage`, `@hk_net/pi-usage-bars`) read Pi's `anthropic` OAuth
+  login. The Claude DirectSDK transport uses the Claude Code login instead, so
+  those packages report no Claude usage in this setup. `@j3pf/piquota` reads the
+  Claude Code credentials file but not the macOS keychain item that holds the login
+  here.
 - `@open-plan-annotator/pi-extension`: visual plan annotation in the browser.
   Skipped: high interaction friction for a step the local plan workflow already covers.
 - `pi-powerline-footer`: powerline status bar and editor chrome. Skipped: heaviest
