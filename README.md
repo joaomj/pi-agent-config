@@ -65,9 +65,9 @@ After the install, the same script walks the parts a package cannot ship:
   permission checks, background commands, the Claude usage footer, interactive
   questions, the context view, and browser automation. The package that needs a
   resource filter in `settings.json` gets it on install. Browser automation
-  needs Node 24 or later and a Chrome or Chromium binary; when either is missing
-  the installer offers to download the official Node build and Chrome for
-  Testing, then records the browser path in your settings.
+  needs Node 24 or later and a Chrome or Chromium binary. When Node is missing
+  the installer offers an official Node build; when the browser is missing it
+  prints what to install and skips the package.
 - `claude` offers the Claude subscription transport. When you accept, it checks
   Node and the qualified Claude Code CLI range (`>=2.1.263 <2.2.0`) and offers
   the pinned CLI install. Only a qualified CLI leads to `claude auth login` and

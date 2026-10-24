@@ -162,9 +162,10 @@ pi install npm:pi-browser-use
 
 It requires Node.js 24 or later and a Chrome or Chromium binary. Any Chromium-based
 browser works through the `pi-browser-use.executablePath` setting or the `CHROME_PATH`
-environment variable. When either requirement is missing, `install.sh` offers to
-download the official Node build and Chrome for Testing and then sets
-`executablePath`, so the package never installs into a startup failure.
+environment variable. When Node is missing, `install.sh` offers an official Node
+build. It never downloads a browser, because Google publishes no checksums for
+one: when no browser is found, the step prints what to install and skips the
+package, so it never installs into a startup failure.
 
 On Linux the home-directory Chrome cannot keep the setuid sandbox helper, and
 Ubuntu 24.04 and later also restrict unprivileged user namespaces. There the

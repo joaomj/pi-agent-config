@@ -19,6 +19,7 @@ conventions > this file > skills.
 - Run known long-running commands (test suites, builds, installs, containers, migrations, servers, remote sessions, waits) and any command expected to print more than about 100 lines with `bgrun`, giving each job a short `name`. Starting the job is the whole task: end the turn, and the completion wake arrives as a new turn with the exit code and a digest. Do not poll with `bgstatus`, do not rerun the command, and never `cat` the log; use `bgtail` for a condensed tail and `bggrep` for pattern search, and `bgkill` to cancel. Keep `bash` for short or quiet commands whose full output you need.
 - Run the narrowest test or check that proves a change. Do not run a full test suite unless the user asks for it.
 - Treat a successful git op as complete. Re-inspect only after error or when next action needs state.
+- Never revert, reset, or delete work you did not make. Treat unfamiliar files and uncommitted changes as the user's: inspect them before `git reset --hard`, `git checkout --`, `git clean`, or a recursive delete, and ask when the scope is unclear.
 
 ## Code changes
 
@@ -27,6 +28,8 @@ conventions > this file > skills.
 - Validate configuration at startup: report the setting name and how to fix it.
 - Keep each hand-written file focused; split by responsibility, not by size.
 - No abstractions for hypothetical needs. No backward compatibility unless I ask.
+- Match the structure, naming, and comment density of the surrounding code. Comment only behavior the code cannot show.
+- Before adding complexity for an unlikely race, failure, or security case, state the failure, its likelihood, and the cost, then get agreement.
 
 ## Tests
 
@@ -41,6 +44,7 @@ conventions > this file > skills.
 - Make routine technical choices independently within the agreed scope and repository conventions. Existing approval requirements still apply.
 - Stop and ask before expanding scope or changing a product decision. Explain choices that materially affect user behavior, risk, cost, or delivery in plain words, with a recommendation.
 - Include technical details only when they explain a decision, risk, or verification result, or when the user requests them.
+- Treat a message sent during ongoing work as steering the current task: fold in the correction and continue. Start over only when the user cancels or asks for something incompatible.
 - Small chat: answer directly, no preamble.
 - Substantial work (3+ steps, edits, long checks): state goal, stages, and any decision needed, then report per stage.
 - Report blockers, failures, verification gaps immediately. Do not hide them.
