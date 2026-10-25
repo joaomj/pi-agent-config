@@ -100,20 +100,35 @@ has_step() {
   case ",$STEPS," in *",$1,"*) return 0 ;; *) return 1 ;; esac
 }
 
+# source_parts prints a source as two lines: what it installs and its pinned
+# ref, with the scheme and the git host removed. A scoped npm name starts with
+# "@", so only an "@" after the first character separates a ref.
+source_parts() {
+  printf '%s' "$1" | awk '
+    {
+      s = $0
+      sub(/^npm:/, "", s)
+      sub(/^git:/, "", s)
+      sub(/^[A-Za-z+]+:\/\//, "", s)
+      sub(/^git@[^:]*:/, "", s)
+      ref = ""
+      for (i = length(s); i > 1; i--) {
+        if (substr(s, i, 1) == "@") { ref = substr(s, i + 1); s = substr(s, 1, i - 1); break }
+      }
+      sub(/\/+$/, "", s)
+      printf "%s\n%s\n", s, ref
+    }'
+}
+
 # package_identity prints what a source installs, including its pinned ref, so
 # npm, git, and local copies of the same package compare equal.
 package_identity() {
-  printf '%s' "$1" \
-    | sed -e 's|^npm:||' -e 's|^git:||' -e 's|^https\?://||' -e 's|^ssh://||' \
-    | sed -e 's|^git@[^:]*:||' \
-    | awk '{ last = 0; for (i = 1; i <= length($0); i++) if (substr($0, i, 1) == "@") last = i
-             if (last > 1) { printf "%s@%s", substr($0, 1, last - 1), substr($0, last + 1) } else { print } }' \
-    | awk '{ marker = 0; for (i = 1; i <= length($0); i++) if (substr($0, i, 1) == "@") marker = i
-             name = (marker > 0) ? substr($0, 1, marker - 1) : $0
-             ref = (marker > 0) ? substr($0, marker) : ""
-             sub(/\/+$/, "", name); n = split(name, parts, "/"); name = parts[n]
-             sub(/\.git$/, "", name)
-             printf "%s%s", tolower(name), tolower(ref) }'
+  local path ref name
+  { read -r path; read -r ref; } < <(source_parts "$1")
+  name="$(printf '%s' "${path##*/}" | tr '[:upper:]' '[:lower:]')"
+  name="${name%.git}"
+  [ -n "$ref" ] || { printf '%s' "$name"; return 0; }
+  printf '%s@%s' "$name" "$(printf '%s' "$ref" | tr '[:upper:]' '[:lower:]')"
 }
 
 # declared_sources prints every package source declared in settings.json.
@@ -155,14 +170,14 @@ declared_source() {
 # commit a git package stands on.
 declared_version() {
   local source="$1" path
+  { read -r path; read -r _; } < <(source_parts "$source")
   case "$source" in
     npm:*)
-      path="$AGENT_DIR/npm/node_modules/${source#npm:}"; path="${path%@*}"
+      path="$AGENT_DIR/npm/node_modules/$path"
       [ -f "$path/package.json" ] && sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' "$path/package.json" | head -1
       ;;
     git:*)
-      source="${source#git:}"; source="${source%%@*}"
-      path="$AGENT_DIR/git/$source"
+      path="$AGENT_DIR/git/$path"
       [ -d "$path/.git" ] && git -C "$path" describe --tags --always 2>/dev/null
       ;;
   esac
@@ -412,7 +427,12 @@ history_rollback() {
 write_package_entry() {
   local mode="$1"; shift
   if [ "$DRY_RUN" -eq 1 ]; then
-    log "Would update $1 ($mode $2 $3 $4)"
+    case "$mode" in
+      add) log "Would add ${2:-} to packages in $1" ;;
+      drop) log "Would remove ${2:-} from packages in $1" ;;
+      filter) log "Would set \"${3:-}\": [] on ${2:-} in $1" ;;
+      *) log "Would update $1 ($mode ${2:-})" ;;
+    esac
     return 0
   fi
   if ! command -v python3 >/dev/null 2>&1; then
@@ -478,16 +498,12 @@ os.replace(tmp, path)
 PACKAGE_ENTRY
 }
 
-# filter_sources applies resource filters to every declared package, which is
-# how this configuration hides a package's own skills.
-filter_sources() {
-  local key="$1"; shift
-  local source
-  for source in "$@"; do
-    if declared_source "$source" >/dev/null; then
-      write_package_entry filter "$AGENT_DIR/settings.json" "$(declared_source "$source")" "$key"
-    fi
-  done
+# pin_filter writes the resource filter a pinned package needs, once the step
+# has declared it.
+pin_filter() {
+  local pkg="$1" filter="$2"
+  [ -n "$filter" ] || return 0
+  write_package_entry filter "$AGENT_DIR/settings.json" "$(declared_source_name "$pkg" || echo "$pkg")" "$filter"
 }
 
 # set_browser_setting writes one pi-browser-use setting, keeping the others.
@@ -792,6 +808,11 @@ if [ "$ROLLBACK" -eq 1 ]; then
   exit 0
 fi
 
+# The package list lives in settings.json, which this script reads and writes
+# with python3. Without it every package looks undeclared.
+command -v python3 >/dev/null 2>&1 \
+  || die "python3 is required to read and write $AGENT_DIR/settings.json. Install python3, then rerun."
+
 history_init
 select_release
 
@@ -867,61 +888,79 @@ printf '\n'
 # --- 2. Packages ------------------------------------------------------------
 if has_step packages; then
   log "Third-party packages. Each one is optional and runs with your permissions."
-  # source|description|default|resource filter|requires|oldest version to keep
+  # source|description|default|resource filter|requires
   PINNED=(
-    "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills||0.17.0"
-    "npm:@ff-labs/pi-fff@0.11.0|indexed file search: fffind and ffgrep|y|||0.11.0"
-    "npm:@gotgenes/pi-permission-system@41.0.0|tool permission checks|y|||41.0.0"
-    "npm:pi-background-run@0.8.0|detached background commands that wake the session when done|y|||0.8.0"
-    "npm:@joaomj/pi-claude-usage@0.2.0|Claude subscription quota in the footer|y|||0.2.0"
-    "npm:pi-context-view@0.8.0|inspect what fills the context window|y|skills||0.8.0"
-    "npm:pi-browser-use@0.12.15|managed browser automation tools|y||node24,chrome|0.12.15"
+    "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills|"
+    "npm:@ff-labs/pi-fff@0.11.0|indexed file search: fffind and ffgrep|y||"
+    "npm:@gotgenes/pi-permission-system@41.0.0|tool permission checks|y||"
+    "npm:pi-background-run@0.8.0|detached background commands that wake the session when done|y||"
+    "npm:@joaomj/pi-claude-usage@0.2.0|Claude subscription quota in the footer|y||"
+    "npm:pi-context-view@0.8.0|inspect what fills the context window|y|skills|"
+    "npm:pi-browser-use@0.12.15|managed browser automation tools|y||node24,chrome"
   )
-  # A package filter hides resources this configuration already ships.
-  filter_sources skills pi-ask-user pi-context-view
+  # Sources this configuration replaced. A leftover declaration keeps the old
+  # code loading, and a tool that both packages register stops Pi from
+  # starting, so a retired package is removed instead of left in place.
+  RETIRED=(
+    "npm:@joaomj/pi-background-bash|pi-background-run replaced it, and its bash tool collides with the bgrun guard"
+  )
+  for entry in "${RETIRED[@]}"; do
+    IFS='|' read -r retired why <<< "$entry"
+    existing="$(declared_source_name "$retired" || true)"
+    [ -n "$existing" ] || continue
+    if [ "$DRY_RUN" -eq 1 ]; then
+      log "Would remove $existing ($why)"
+      continue
+    fi
+    if confirm "Remove $existing? $why." y; then
+      if pi remove "$existing" >/dev/null 2>&1; then
+        log "Removed $existing ($why)"
+      else
+        warn "$existing could not be removed; run: pi remove $existing"
+      fi
+    else
+      warn "$existing is still declared ($why); Pi may not start until it is removed"
+    fi
+  done
 
   for entry in "${PINNED[@]}"; do
-    IFS='|' read -r pkg desc default filter requires keep_from <<< "$entry"
+    IFS='|' read -r pkg desc default filter requires <<< "$entry"
+    wanted="${pkg##*@}"
     existing="$(declared_source_name "$pkg" || true)"
+    current=""
     if [ -n "$existing" ]; then
-      if [ "$existing" = "$pkg" ]; then
-        log "Already installed: $pkg"
-        continue
-      fi
-      current="$(declared_version "$existing" || true)"
-      wanted="${pkg##*@}"
       if [ "$(package_name "$existing")" != "$(package_name "$pkg")" ]; then
         log "Declared as $existing, which is a different package; leaving it"
         continue
       fi
-      if [ -n "$current" ] && [ "$current" != "$wanted" ]; then
-        if [ -n "$keep_from" ] && version_ge "$current" "$keep_from"; then
-          log "Leaving $pkg at $current; this release pins $wanted and does not downgrade an installed package"
-          if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$existing" "$filter"; fi
-          continue
-        fi
-        if [ "$DRY_RUN" -eq 1 ]; then
-          log "Would move $pkg from $current to the pinned $wanted"
-          continue
-        fi
-        if ! confirm "Move $pkg from ${current:-unknown} to the pinned $wanted?" y; then
-          log "Kept $pkg at ${current:-unknown}"
-          continue
-        fi
-        if ! pi update --extension "$pkg"; then
-          log "The in-place update left $pkg at ${current:-unknown}; reinstalling from the pinned source"
-          pi remove "$existing" >/dev/null 2>&1 || true
-          if ! pi install "$pkg"; then
-            warn "$pkg could not be installed at $wanted"
-            printf 'install.sh: %s could not be installed; continue without it\n' "$pkg" >&2
-            continue
-          fi
-          if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$pkg" "$filter"; fi
-        fi
-      else
+      current="$(declared_version "$existing" || true)"
+    fi
+    # The copy on disk decides the version, declared or not, so a package that
+    # is already there at the pinned version is never offered as an install.
+    disk="$(declared_version "$pkg" || true)"
+    present="${current:-$disk}"
+
+    if [ "$present" = "$wanted" ]; then
+      if [ -n "$existing" ]; then
         log "Already installed: $pkg"
+      elif [ "$DRY_RUN" -eq 1 ]; then
+        log "Would register $pkg; the pinned $wanted is already on disk"
+      else
+        log "Registering $pkg; the pinned $wanted is already on disk"
+        if ! pi install "$pkg"; then
+          warn "$pkg could not be registered"
+          printf 'install.sh: %s could not be registered; continue without it\n' "$pkg" >&2
+          continue
+        fi
       fi
-      if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$(declared_source_name "$pkg" || echo "$pkg")" "$filter"; fi
+      pin_filter "$pkg" "$filter"
+      continue
+    fi
+
+    # The pin is a floor, never a target: a newer copy stays where it is.
+    if [ -n "$present" ] && version_ge "$present" "$wanted"; then
+      log "Leaving $pkg at $present; this release pins $wanted and never downgrades"
+      pin_filter "$pkg" "$filter"
       continue
     fi
 
@@ -943,16 +982,43 @@ if has_step packages; then
         continue
       fi
     fi
-    if ! confirm "Install $pkg ($desc)?" "$default"; then
+
+    if [ -z "$present" ]; then
+      if [ -n "$existing" ]; then
+        question="Reinstall $pkg at $wanted? It is declared as $existing but missing on disk."
+      else
+        question="Install $pkg ($desc)?"
+      fi
+    elif [ -n "$existing" ]; then
+      question="Advance $pkg from $present to $wanted?"
+    else
+      question="Add $pkg? It advances the copy on disk from $present to $wanted."
+    fi
+    # A dry run reports the plan instead of asking for it.
+    if [ "$DRY_RUN" -eq 1 ]; then
+      if [ -n "$present" ]; then
+        log "Would advance $pkg from $present to $wanted"
+      elif [ -n "$existing" ]; then
+        log "Would reinstall $pkg; it is declared but missing on disk"
+      else
+        log "Would install $pkg"
+      fi
+      continue
+    fi
+    if ! confirm "$question" "$default"; then
       log "Skipped: $pkg"
       continue
     fi
-    if [ "$DRY_RUN" -eq 1 ]; then
-      log "Would install $pkg"
+    if [ -n "$existing" ] && pi update --extension "$pkg"; then
+      pin_filter "$pkg" "$filter"
       continue
     fi
+    if [ -n "$existing" ]; then
+      log "The in-place update left $pkg at $present; reinstalling from the pinned source"
+      pi remove "$existing" >/dev/null 2>&1 || true
+    fi
     if pi install "$pkg"; then
-      if [ -n "$filter" ]; then write_package_entry filter "$AGENT_DIR/settings.json" "$pkg" "$filter"; fi
+      pin_filter "$pkg" "$filter"
     else
       warn "$pkg failed to install"
       printf 'install.sh: %s failed to install; continue without it\n' "$pkg" >&2
