@@ -289,11 +289,15 @@ release_notes() {
   local from="$1" to="$2" repo="$RELEASE_TMP/repo" body
   [ -n "$from" ] && [ -n "$to" ] && [ "$from" != "$to" ] || return 0
   [ -d "$repo" ] || return 0
-  git -C "$repo" cat-file -e "refs/tags/$to" 2>/dev/null || return 0
-  if ! git -C "$repo" cat-file -e "refs/tags/$from" 2>/dev/null; then
-    git -C "$repo" fetch -q --depth=200 "$GIT_URL" "+refs/tags/$from:refs/tags/$from" 2>/dev/null || return 0
+  # verify_release fetches each tag one commit deep, which leaves the commits
+  # between two tags out of the clone, so fetch both tags with their history.
+  if ! git -C "$repo" fetch -q --unshallow "$GIT_URL" '+refs/tags/*:refs/tags/*' 2>/dev/null; then
+    git -C "$repo" fetch -q --depth=500 "$GIT_URL" \
+      "+refs/tags/$from:refs/tags/$from" "+refs/tags/$to:refs/tags/$to" 2>/dev/null || return 0
   fi
-  body="$(git -C "$repo" log --no-merges --format='  - %s' "refs/tags/$from..refs/tags/$to" 2>/dev/null || true)"
+  git -C "$repo" cat-file -e "refs/tags/$to" 2>/dev/null || return 0
+  body="$(git -C "$repo" log --no-merges --format='%s' "refs/tags/$from..refs/tags/$to" 2>/dev/null \
+    | grep -v '^release: v' | grep -v '^docs: update changelog for ' | sed 's/^/  - /' || true)"
   [ -n "$body" ] || return 0
   printf 'Changes from %s to %s:\n%s\n' "$from" "$to" "$body"
 }
@@ -459,19 +463,30 @@ packages = data.get("packages") or []
 
 if mode == "add":
     source, key, value, replace = (sys.argv[3:8] + ["", "", "", ""])[:4]
-    entry = {"source": source}
-    if key:
-        entry[key] = json.loads(value) if value else []
+
+    def entry_for(previous):
+        # Keep the shape the entry already had: pi writes a bare string unless
+        # the entry carries resource filters.
+        if isinstance(previous, dict):
+            entry = dict(previous)
+            entry["source"] = source
+            if key:
+                entry[key] = json.loads(value) if value else []
+            return entry
+        if key:
+            return {"source": source, key: json.loads(value) if value else []}
+        return source
+
     if replace:
         for index, existing in enumerate(packages):
             current = existing.get("source") if isinstance(existing, dict) else existing
             if current == replace:
-                packages[index] = entry
+                packages[index] = entry_for(existing)
                 break
         else:
-            packages.append(entry)
+            packages.append(entry_for(None))
     else:
-        packages.append(entry)
+        packages.append(entry_for(None))
 elif mode == "drop":
     source = sys.argv[3]
     packages = [entry for entry in packages
@@ -834,10 +849,20 @@ elif [ -n "$EXISTING" ]; then
   log "Updating the package from $EXISTING to $SOURCE"
   if [ "$DRY_RUN" -eq 1 ]; then
     log "Would update the package to $SOURCE"
+    log "Would record $SOURCE in $AGENT_DIR/settings.json"
   elif ! pi update --extension "$SOURCE"; then
     printf 'install.sh: updating in place failed; reinstalling %s\n' "$SOURCE" >&2
     pi remove "$EXISTING" >/dev/null 2>&1 || true
     pi install "$SOURCE" || die "could not install $SOURCE; undo with: $0 --rollback"
+  else
+    # An in-place update leaves the declared ref alone, so a package tracked at
+    # @main would look updatable on every run. Record the release that is now
+    # on disk instead.
+    recorded="$(declared_source_name pi-agent-config || true)"
+    if [ "$recorded" != "$SOURCE" ]; then
+      write_package_entry add "$AGENT_DIR/settings.json" "$SOURCE" "" "" "${recorded:-$EXISTING}"
+      log "Recorded $SOURCE in settings.json"
+    fi
   fi
 else
   log "Installing $SOURCE"
