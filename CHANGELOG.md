@@ -2,6 +2,13 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.6.2] - 2026-10-24
+
+### Changed
+
+- Pin the package declaration and list a full release range
+- docs: update changelog for v0.6.1
+
 ## [v0.6.1] - 2026-10-24
 
 ### Changed
