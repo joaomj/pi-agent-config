@@ -144,6 +144,7 @@ that belong to your machine, so setup stays manual.
 - [AGENTS.md](AGENTS.md): collaboration, approval, Git, and testing instructions.
 - [prompts/](prompts/): planning, review, explanation, diagrams, slide decks, and other explicit workflows.
 - [install.sh](install.sh): installs or updates the package, runs the setup steps, and rolls the last run back.
+- [ci/ai-review/](ci/ai-review/): the pull-request review workflow used on GitHub, its CI prompt additions, and the scripts that add it to a repository.
 - [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, skill assessment, and `improve-me`, which turns fixes that repeat across sessions into guards, checks, and scripts.
 - [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
 - [Model setup reference](docs/model-setup.md): default and cycling models, shared limits, and cache behavior.
@@ -152,6 +153,52 @@ that belong to your machine, so setup stays manual.
 - [HTML slide deck contract](docs/workflows/html-slide-decks.md).
 
 Retain the license notices when copying resources, including [prompts/LICENSE](prompts/LICENSE).
+
+## Review pull requests in GitHub
+
+[.github/workflows/ai-review.yml](.github/workflows/ai-review.yml) runs one code
+review before a pull request can merge, using
+[prompts/code-review.md](prompts/code-review.md). The review runs as a GitHub
+Actions job, so nothing runs outside the runner.
+
+The job posts the report as a review comment and fails when the report contains
+a P0 or P1 finding. That failure blocks a merge while the default branch requires
+the `ai-review / review` check. Without that requirement the review reports and
+does not block.
+
+### Add it to a repository
+
+```bash
+ci/ai-review/rollout.sh --ref v0.7.0 joaomj/example-repo
+```
+
+The script adds `.github/workflows/ai-review.yml` on the `ai-review` branch, sets
+the `DEEPSEEK_API_KEY` secret from `pi auth print-api-key --provider deepseek`,
+and opens a pull request. That pull request runs the review, so the first review
+also proves the wiring. Pass `--no-secret` to set the secret yourself.
+
+After the pull request merges, require the check:
+
+```bash
+ci/ai-review/ruleset.sh joaomj/example-repo
+```
+
+The ruleset lets a repository administrator bypass it only through a pull
+request, so direct pushes to the default branch then fail. Preview the change
+with `--dry-run`.
+
+### Limits
+
+- The job skips private repositories. GitHub requires a paid plan to enforce a
+  status check on a private repository, so a private repository would post a
+  review that blocks nothing.
+- The job skips fork pull requests, which receive no secret.
+- The default model is `deepseek/deepseek-flash` with `high` thinking. Pass the
+  `model` and `thinking` inputs in the caller workflow to change it.
+- The guidelines come from the `config-ref` input, which defaults to the release
+  the caller pins. Both must move together.
+- A review that ends without a `REVIEW-VERDICT` line fails the job. Re-run it
+  rather than merging past an inconclusive report.
 
 ## Existing checkouts
 
