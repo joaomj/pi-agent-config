@@ -2,6 +2,14 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.7.1] - 2026-10-28
+
+### Changed
+
+- Fetch the review guidelines by commit
+- Pin the AI review caller to a commit instead of a tag
+- docs: update changelog for v0.7.0
+
 ## [v0.7.0] - 2026-10-28
 
 ### Changed
