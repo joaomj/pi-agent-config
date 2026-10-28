@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-config",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Shared prompt templates, skills, and setup guidance for the Pi coding agent",
   "license": "MIT",
