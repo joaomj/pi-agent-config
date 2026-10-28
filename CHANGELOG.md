@@ -2,6 +2,13 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.7.0] - 2026-10-28
+
+### Changed
+
+- Add an automatic pull-request review on GitHub
+- docs: update changelog for v0.6.2
+
 ## [v0.6.2] - 2026-10-24
 
 ### Changed
