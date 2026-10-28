@@ -2,6 +2,13 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.7.2] - 2026-10-28
+
+### Changed
+
+- Keep the write token out of the review agent's shell
+- docs: update changelog for v0.7.1
+
 ## [v0.7.1] - 2026-10-28
 
 ### Changed
