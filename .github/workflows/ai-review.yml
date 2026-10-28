@@ -29,7 +29,7 @@ on:
       config-ref:
         description: pi-agent-config ref that supplies the review guidelines.
         type: string
-        default: v0.7.0
+        default: v0.7.1
       guidelines:
         description: Guideline file, relative to the configuration ref.
         type: string
@@ -80,8 +80,14 @@ jobs:
         env:
           CONFIG_REF: ${{ inputs.config-ref }}
         run: |
-          git clone --quiet --depth 1 --branch "$CONFIG_REF" \
-            https://github.com/joaomj/pi-agent-config "$RUNNER_TEMP/guidelines"
+          git -C "$RUNNER_TEMP" init --quiet guidelines
+          git -C "$RUNNER_TEMP/guidelines" remote add origin https://github.com/joaomj/pi-agent-config
+          if ! git -C "$RUNNER_TEMP/guidelines" fetch --quiet --depth 1 origin "$CONFIG_REF"; then
+            echo "::error::Cannot fetch $CONFIG_REF from joaomj/pi-agent-config."
+            exit 1
+          fi
+          git -C "$RUNNER_TEMP/guidelines" checkout --quiet FETCH_HEAD
+          git -C "$RUNNER_TEMP/guidelines" log --oneline -1
 
       - name: Assemble the review prompt
         env:

@@ -169,7 +169,7 @@ does not block.
 ### Add it to a repository
 
 ```bash
-ci/ai-review/rollout.sh --ref v0.7.0 joaomj/example-repo
+ci/ai-review/rollout.sh --ref v0.7.1 joaomj/example-repo
 ```
 
 The script adds `.github/workflows/ai-review.yml` on the `ai-review` branch, sets
