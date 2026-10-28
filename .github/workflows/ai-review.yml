@@ -29,7 +29,7 @@ on:
       config-ref:
         description: pi-agent-config ref that supplies the review guidelines.
         type: string
-        default: v0.7.1
+        default: v0.7.2
       guidelines:
         description: Guideline file, relative to the configuration ref.
         type: string
@@ -51,8 +51,6 @@ jobs:
       contents: read
       pull-requests: write
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       PI_TELEMETRY: '0'
       PI_SKIP_VERSION_CHECK: '1'
       PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -61,13 +59,13 @@ jobs:
       HEAD_SHA: ${{ github.event.pull_request.head.sha }}
     steps:
       - name: Check out the pull request
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
 
@@ -120,6 +118,7 @@ jobs:
         env:
           MODEL: ${{ inputs.model }}
           THINKING: ${{ inputs.thinking }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
         run: |
           if [ -z "${DEEPSEEK_API_KEY:-}" ]; then
             echo "::error::DEEPSEEK_API_KEY is empty. Set the repository secret."
@@ -140,6 +139,8 @@ jobs:
           cat "$RUNNER_TEMP/review.md"
 
       - name: Post the review
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
             printf '## AI review\n\n'

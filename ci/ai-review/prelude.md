@@ -8,6 +8,8 @@ read in the repository, including its `AGENTS.md`:
 - Do not install dependencies or start long test suites. A read-only
   reproduction is available through `git`, `gh`, and the tools already on the
   runner.
+- The GitHub CLI is not authenticated in this run. Read the change with
+  `git` and the local history.
 - Do not print environment variables, tokens, or credentials.
 - Post the report as plain Markdown. Do not wrap the entire report in a code
   fence.
