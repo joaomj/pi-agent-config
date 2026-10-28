@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Add the AI review caller workflow to repositories and open one pull request each.
 #
-# Usage: ci/ai-review/rollout.sh [--ref REF] [--branch NAME] [--no-secret] owner/repo...
+# Usage: ci/ai-review/rollout.sh [--ref REF] [--branch NAME] [--no-secret] [--update] owner/repo...
 #
 # Each repository receives .github/workflows/ai-review.yml on a new branch, the
 # DEEPSEEK_API_KEY secret, and a pull request against its default branch. The
 # pull request itself runs the review, which also proves the wiring.
+#
+# REF names a pi-agent-config tag or branch. The script pins the caller to the
+# commit that ref resolves to, for both the called workflow and the guidelines,
+# so a moved tag cannot change what runs with the secret.
 
 set -euo pipefail
 
@@ -13,6 +17,7 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ref=v0.7.0
 branch=ai-review
 set_secret=1
+update=0
 repos=()
 
 die() {
@@ -21,7 +26,7 @@ die() {
 }
 
 usage() {
-  sed -n '2,9p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
 while [ $# -gt 0 ]; do
@@ -29,6 +34,7 @@ while [ $# -gt 0 ]; do
     --ref) ref=${2:?--ref needs a value}; shift 2 ;;
     --branch) branch=${2:?--branch needs a value}; shift 2 ;;
     --no-secret) set_secret=0; shift ;;
+    --update) update=1; shift ;;
     -h|--help) usage; exit 0 ;;
     -*) die "unknown option: $1" ;;
     *) repos+=("$1"); shift ;;
@@ -39,6 +45,14 @@ done
 command -v gh >/dev/null || die "gh is not installed"
 command -v git >/dev/null || die "git is not installed"
 command -v jq >/dev/null || die "jq is not installed"
+
+config_url=https://github.com/joaomj/pi-agent-config
+workflow_sha=$(git ls-remote "$config_url" "refs/tags/$ref^{}" | cut -f1)
+[ -n "$workflow_sha" ] || workflow_sha=$(git ls-remote "$config_url" "refs/tags/$ref" | cut -f1)
+[ -n "$workflow_sha" ] || workflow_sha=$(git ls-remote "$config_url" "refs/heads/$ref" | cut -f1)
+[ -n "$workflow_sha" ] || die "cannot resolve $ref in $config_url"
+
+printf '== %s resolves to %s\n' "$ref" "$workflow_sha"
 
 secret=
 if [ "$set_secret" -eq 1 ]; then
@@ -58,22 +72,39 @@ for repo in "${repos[@]}"; do
   fi
   base=$(printf '%s' "$info" | jq -r .default_branch)
   [ -n "$base" ] && [ "$base" != null ] || die "cannot read the default branch of $repo"
+  [ "$(printf '%s' "$info" | jq -r .has_pull_requests)" = true ] \
+    || die "$repo has pull requests disabled, so a review workflow cannot run"
 
+  exists=0
   if gh api "repos/$repo/branches/$branch" >/dev/null 2>&1; then
-    printf 'skip: branch %s already exists\n' "$branch"
-    continue
+    exists=1
+    if [ "$update" -eq 0 ]; then
+      printf 'skip: branch %s already exists; pass --update to rewrite it\n' "$branch"
+      continue
+    fi
   fi
 
   dir="$work/$name"
-  git clone --quiet "git@github.com:$repo.git" "$dir" || die "cannot clone $repo"
-  git -C "$dir" switch --quiet -c "$branch"
+  start=${branch}
+  if [ "$exists" -eq 0 ]; then
+    start=${base}
+  fi
+  git clone --quiet --branch "$start" "git@github.com:$repo.git" "$dir" || die "cannot clone $repo"
+  [ "$exists" -eq 1 ] || git -C "$dir" switch --quiet -c "$branch"
 
   mkdir -p "$dir/.github/workflows"
-  sed -e "s|@@BASE_BRANCH@@|$base|g" -e "s|@@REF@@|@$ref|g" \
+  sed -e "s|@@BASE_BRANCH@@|$base|g" \
+    -e "s|@@WORKFLOW_SHA@@|@$workflow_sha|g" \
+    -e "s|@@CONFIG_SHA@@|$workflow_sha|g" \
     "$here/caller.yml" > "$dir/.github/workflows/ai-review.yml"
 
+  if git -C "$dir" diff --quiet -- .github/workflows/ai-review.yml && [ "$exists" -eq 1 ]; then
+    printf 'up to date\n'
+    continue
+  fi
+
   git -C "$dir" add .github/workflows/ai-review.yml
-  git -C "$dir" commit --quiet -m "Add the AI review workflow"
+  git -C "$dir" commit --quiet -m "Point the AI review at the pinned configuration"
   git -C "$dir" push --quiet origin "$branch" || die "cannot push to $repo"
 
   if [ -n "$secret" ]; then
@@ -81,9 +112,13 @@ for repo in "${repos[@]}"; do
     printf 'set: DEEPSEEK_API_KEY secret\n'
   fi
 
-  gh pr create --repo "$repo" --base "$base" --head "$branch" \
-    --title "Add the AI review workflow" --body-file "$here/pr-body.md" \
-    || die "cannot open the pull request for $repo"
+  if [ "$exists" -eq 0 ]; then
+    gh pr create --repo "$repo" --base "$base" --head "$branch" \
+      --title "Add the AI review workflow" --body-file "$here/pr-body.md" \
+      || die "cannot open the pull request for $repo"
+  else
+    printf 'pushed to the existing pull request\n'
+  fi
 done
 
 printf '\nDone. Review each pull request, then run:\n'

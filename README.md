@@ -175,7 +175,11 @@ ci/ai-review/rollout.sh --ref v0.7.0 joaomj/example-repo
 The script adds `.github/workflows/ai-review.yml` on the `ai-review` branch, sets
 the `DEEPSEEK_API_KEY` secret from `pi auth print-api-key --provider deepseek`,
 and opens a pull request. That pull request runs the review, so the first review
-also proves the wiring. Pass `--no-secret` to set the secret yourself.
+also proves the wiring. Pass `--no-secret` to set the secret yourself, and
+`--update` to rewrite a branch the script already created.
+
+The caller pins the called workflow and the guidelines to the commit that `--ref`
+resolves to, so moving a release tag cannot change what runs with the secret.
 
 After the pull request merges, require the check:
 
@@ -195,8 +199,10 @@ with `--dry-run`.
 - The job skips fork pull requests, which receive no secret.
 - The default model is `deepseek/deepseek-flash` with `high` thinking. Pass the
   `model` and `thinking` inputs in the caller workflow to change it.
-- The guidelines come from the `config-ref` input, which defaults to the release
-  the caller pins. Both must move together.
+- Repositories with pull requests disabled cannot run the review; the rollout
+  script refuses them.
+- Updating the review means a new release and a re-run of `rollout.sh --update`,
+  because callers pin a commit rather than a tag.
 - A review that ends without a `REVIEW-VERDICT` line fails the job. Re-run it
   rather than merging past an inconclusive report.
 
