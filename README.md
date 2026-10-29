@@ -50,12 +50,15 @@ pi install git:github.com/joaomj/pi-agent-config@v0.4.1
 ```
 
 The package adds the prompt templates in [prompts/](prompts/), the skills in
-`skills/documentation/`, `skills/engineering/`, and `skills/tooling/`, and one
-extension, [`bg-bash-timer`](extensions/bg-bash-timer.ts). It sets how long a
-foreground `bash` command from [`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash)
-can run before it moves to the background: 20 seconds by default. See
-[Background commands](docs/background-commands.md). The extension does nothing
-unless `pi-bg-bash` is installed.
+`skills/documentation/`, `skills/engineering/`, and `skills/tooling/`, and two
+extensions. [`loop-breaker`](extensions/loop-breaker.ts) adds a note to a result
+when the same check fails again after changes, or when an identical tool call
+repeats three times, so the agent tests its premise instead of retrying.
+[`bg-bash-timer`](extensions/bg-bash-timer.ts) sets how long a foreground `bash`
+command from [`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash) can run before
+it moves to the background: 20 seconds by default. See
+[Background commands](docs/background-commands.md). It does nothing unless
+`pi-bg-bash` is installed.
 It does not change providers, models, MCP servers, permission rules, or `AGENTS.md`.
 
 After the install, the same script walks the parts a package cannot ship:
