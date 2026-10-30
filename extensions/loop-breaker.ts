@@ -8,7 +8,8 @@
  * 2. The same tool call repeats with identical input. Its result will not
  *    change, so the third repeat carries a note that says so.
  *
- * A "check" is any shell command, keyed by the command behind a leading `cd`.
+ * A "check" is any shell command, keyed by the whole command, so the same
+ * test run from different directories counts as different checks.
  * A command that runs on as a pi-bg-bash task counts when its completion
  * message arrives. The notes are appended to results; nothing is blocked.
  */
@@ -24,9 +25,12 @@ const SPLIT = /&&|\|\||;|\n/;
 const WRITES = /(^|\s)(sed\s+-i|perl\s+-pi|tee|mv|cp|patch|git\s+(apply|checkout|restore|stash))\s|[^>&0-9]>{1,2}\s*[^&\s]|python3?\s+-\s*<</;
 
 function checkKey(command: string): string {
-  const segments = command.split(SPLIT).map((s) => s.trim()).filter(Boolean);
-  const real = segments.filter((s) => !/^(cd|pushd|export)\b/.test(s));
-  return (real.length > 0 ? real : segments).join(" && ").replace(/\s+/g, " ");
+  return command
+    .split(SPLIT)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .join(" && ")
+    .replace(/\s+/g, " ");
 }
 
 /** The pi-bg-bash task a bash result ran on as, if any. A Pi without structured bash results only has the text. */
