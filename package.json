@@ -16,7 +16,7 @@
       "skills"
     ],
     "extensions": [
-      "extensions/bgrun-guard.ts"
+      "extensions/bg-bash-timer.ts"
     ]
   }
 }
