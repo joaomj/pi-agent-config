@@ -70,7 +70,7 @@ versions.lock
 /models.json
 /profiles/
 /extensions/*
-!/extensions/bgrun-guard.ts
+!/extensions/bg-bash-timer.ts
 /telemetry.json.example
 /.env.example
 /scripts/sync.mjs
@@ -84,6 +84,5 @@ versions.lock
 !/docs/ROADMAP.md
 
 # Runtime state written by extensions
-bgrun-observations.json
 cached-compaction.jsonl
 mcp.*.backup

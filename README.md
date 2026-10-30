@@ -51,12 +51,11 @@ pi install git:github.com/joaomj/pi-agent-config@v0.4.1
 
 The package adds the prompt templates in [prompts/](prompts/), the skills in
 `skills/documentation/`, `skills/engineering/`, and `skills/tooling/`, and one
-extension, [`bgrun-guard`](extensions/bgrun-guard.ts). It routes each `bash` call
-to the foreground or to `bgrun` in [`pi-background-run`](https://pi.dev/packages/pi-background-run):
-rules settle the obvious shapes, a classifier decides the rest, and what this
-machine has measured about a command informs that decision. See
-[Background routing](docs/background-routing.md). The extension does nothing
-unless `pi-background-run` is installed.
+extension, [`bg-bash-timer`](extensions/bg-bash-timer.ts). It sets how long a
+foreground `bash` command from [`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash)
+can run before it moves to the background: 20 seconds by default. See
+[Background commands](docs/background-commands.md). The extension does nothing
+unless `pi-bg-bash` is installed.
 It does not change providers, models, MCP servers, permission rules, or `AGENTS.md`.
 
 After the install, the same script walks the parts a package cannot ship:
@@ -67,8 +66,8 @@ After the install, the same script walks the parts a package cannot ship:
   when the answer changes something: the installer names the version it moves a
   package to, and a package already at the pinned version is reported without a
   question. It also removes a package that a later release replaced, such as
-  `pi-background-bash`, because the old copy keeps registering tools that now
-  collide. The package that needs a resource filter in `settings.json` gets it
+  `pi-background-run` and `pi-background-bash`, because an old copy keeps
+  loading next to its replacement. The package that needs a resource filter in `settings.json` gets it
   on install. Browser automation needs Node 24 or later and a Chrome or Chromium
   binary. When Node is missing the installer offers an official Node build; when
   the browser is missing it prints what to install and skips the package.
@@ -148,7 +147,7 @@ that belong to your machine, so setup stays manual.
 - [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, skill assessment, and `improve-me`, which turns fixes that repeat across sessions into guards, checks, and scripts.
 - [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
 - [Model setup reference](docs/model-setup.md): default and cycling models, shared limits, and cache behavior.
-- [Background routing](docs/background-routing.md): when a `bash` call runs in the background, its threshold and classifier, and the measurements it keeps.
+- [Background commands](docs/background-commands.md): when a `bash` command moves to the background and how to change the limit.
 - [Diagram output contract](docs/workflows/diagram-output-contract.md).
 - [HTML slide deck contract](docs/workflows/html-slide-decks.md).
 

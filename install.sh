@@ -918,7 +918,7 @@ if has_step packages; then
     "npm:pi-ask-user@0.16.0|interactive multiple-choice questions|y|skills|"
     "npm:@ff-labs/pi-fff@0.11.0|indexed file search: fffind and ffgrep|y||"
     "npm:@gotgenes/pi-permission-system@41.0.0|tool permission checks|y||"
-    "npm:pi-background-run@0.8.0|detached background commands that wake the session when done|y||"
+    "npm:pi-bg-bash@0.4.1|bash commands that move to the background when slow and wake the session when done|y||"
     "npm:@joaomj/pi-claude-usage@0.2.0|Claude subscription quota in the footer|y||"
     "npm:pi-context-view@0.8.0|inspect what fills the context window|y|skills|"
     "npm:pi-browser-use@0.12.15|managed browser automation tools|y||node24,chrome"
@@ -928,7 +928,8 @@ if has_step packages; then
   # code loading, and a tool that both packages register stops Pi from
   # starting, so a retired package is removed instead of left in place.
   RETIRED=(
-    "npm:@joaomj/pi-background-bash|pi-background-run replaced it, and its bash tool collides with the bgrun guard"
+    "npm:@joaomj/pi-background-bash|pi-bg-bash replaced it, and both register a bash tool"
+    "npm:pi-background-run|pi-bg-bash replaced it as the background command runner"
   )
   for entry in "${RETIRED[@]}"; do
     IFS='|' read -r retired why <<< "$entry"
