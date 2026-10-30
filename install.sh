@@ -1059,7 +1059,7 @@ if has_step claude; then
   CLAUDE_RANGE_MAX="2.2.0"
   CLAUDE_CLI_PIN="2.1.281"
   # Pinned to a commit because the repository moves and the transport is beta.
-  CLAUDESDK_SOURCE="git:github.com/joaomj/pi-claude-directsdk@6574117a2ce0b4e03df18e271f75f003411eeb6a"
+  CLAUDESDK_SOURCE="git:github.com/joaomj/pi-claude-directsdk@43713436eb6afafcbf55ca994d9057b97c936dd1"
 
   cli_version_of() { claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true; }
   cli_qualified() {
