@@ -220,9 +220,9 @@ download_to() {
   fi
 }
 
-# release_tags prints every release tag in the repository, newest last.
+# release_tags <url> prints every release tag in the repository, newest last.
 release_tags() {
-  git ls-remote --tags --refs "$GIT_URL" 2>/dev/null \
+  git ls-remote --tags --refs "$1" 2>/dev/null \
     | sed -n 's|.*refs/tags/\(v[0-9][0-9.]*\)$|\1|p' \
     | sort -V
 }
@@ -236,16 +236,18 @@ signer_keys() {
   printf '%s' "$cache"
 }
 
-# verify_release fetches one tag and prints its commit when the tag carries a
-# signature from a published maintainer key. It prints nothing otherwise.
+# verify_release <url> <tag> fetches one tag and prints its commit when the tag
+# carries a signature from a published maintainer key. It prints nothing
+# otherwise. Each repository gets its own clone, because tag names overlap.
 verify_release() {
-  local tag="$1" repo keys allowed
+  local url="$1" tag="$2" repo keys allowed
   [ -n "$tag" ] || return 1
   repo="$RELEASE_TMP/repo"
+  [ "$url" = "$GIT_URL" ] || repo="$RELEASE_TMP/$(basename "$url" .git)"
   if [ ! -d "$repo" ]; then
     git init -q --bare "$repo" || return 1
   fi
-  git -C "$repo" fetch -q --depth=1 "$GIT_URL" "+refs/tags/$tag:refs/tags/$tag" 2>/dev/null || return 1
+  git -C "$repo" fetch -q --depth=1 "$url" "+refs/tags/$tag:refs/tags/$tag" 2>/dev/null || return 1
   keys="$(signer_keys)" || return 1
   allowed="$RELEASE_TMP/allowed_signers"
   if [ -f "$SIGNER_FILE" ] && [ -s "$SIGNER_FILE" ]; then
@@ -262,15 +264,15 @@ select_release() {
   local tag commit
   RELEASE_TMP="$(mktemp -d)"
   if [ -n "$REF" ]; then
-    commit="$(verify_release "$REF" || true)"
+    commit="$(verify_release "$GIT_URL" "$REF" || true)"
     [ -n "$commit" ] || die "$REF is not a release whose tag signature verifies against $KEYS_URL
   Signed releases only: check the tag, or pass --ref with a signed release tag."
     REF_COMMIT="$commit"
     log "Release $REF ($(printf '%s' "$commit" | cut -c1-7)) has a valid signature"
     return 0
   fi
-  for tag in $(release_tags | sed '1!G;h;$!d'); do
-    commit="$(verify_release "$tag" || true)"
+  for tag in $(release_tags "$GIT_URL" | sed '1!G;h;$!d'); do
+    commit="$(verify_release "$GIT_URL" "$tag" || true)"
     if [ -n "$commit" ]; then
       REF="$tag"
       REF_COMMIT="$commit"
@@ -1058,8 +1060,17 @@ if has_step claude; then
   CLAUDE_RANGE_MIN="2.1.263"
   CLAUDE_RANGE_MAX="2.2.0"
   CLAUDE_CLI_PIN="2.1.281"
-  # Pinned to a commit because the repository moves and the transport is beta.
-  CLAUDESDK_SOURCE="git:github.com/joaomj/pi-claude-directsdk@43713436eb6afafcbf55ca994d9057b97c936dd1"
+  CLAUDESDK_URL="https://github.com/joaomj/pi-claude-directsdk.git"
+  # The newest signed release, so the installer never offers an older transport.
+  CLAUDESDK_TAG=""
+  for tag in $(release_tags "$CLAUDESDK_URL" | sed '1!G;h;$!d'); do
+    if [ -n "$(verify_release "$CLAUDESDK_URL" "$tag" || true)" ]; then
+      CLAUDESDK_TAG="$tag"
+      break
+    fi
+    printf 'install.sh: pi-claude-directsdk %s has no verifiable signature; trying an older release\n' "$tag" >&2
+  done
+  CLAUDESDK_SOURCE="git:github.com/joaomj/pi-claude-directsdk@$CLAUDESDK_TAG"
 
   cli_version_of() { claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || true; }
   cli_qualified() {
@@ -1068,11 +1079,15 @@ if has_step claude; then
 
   existing="$(declared_source_name pi-claude-directsdk || true)"
   claude_wanted=0
-  if [ -n "$existing" ] && [ "$existing" = "$CLAUDESDK_SOURCE" ]; then
-    log "Claude transport already at the pinned commit"
+  if [ -z "$CLAUDESDK_TAG" ]; then
+    msg="no pi-claude-directsdk release tag carries a signature that verifies against $KEYS_URL; skipping the Claude transport"
+    printf 'install.sh: %s\n' "$msg" >&2
+    warn "$msg"
+  elif [ -n "$existing" ] && [ "$existing" = "$CLAUDESDK_SOURCE" ]; then
+    log "Claude transport already at the newest release, $CLAUDESDK_TAG"
   elif [ -n "$existing" ]; then
-    log "Claude transport is declared as $existing; this release pins $CLAUDESDK_SOURCE"
-    if confirm "Move the Claude transport to the pinned commit?" y; then claude_wanted=1; fi
+    log "Claude transport is declared as $existing; the newest release is $CLAUDESDK_SOURCE"
+    if confirm "Move the Claude transport to $CLAUDESDK_TAG?" y; then claude_wanted=1; fi
   elif [ "$WITH_CLAUDE" -eq 1 ] \
        || confirm "Set up the Claude subscription transport? It needs a paid Claude plan and a Claude Code login." n; then
     claude_wanted=1
@@ -1120,7 +1135,7 @@ if has_step claude; then
         fi
       fi
       if [ -n "$existing" ]; then
-        log "Moving the Claude transport from $existing to the pinned commit"
+        log "Moving the Claude transport from $existing to $CLAUDESDK_TAG"
         if ! pi update --extension "$CLAUDESDK_SOURCE"; then
           pi remove "$existing" >/dev/null 2>&1 || true
           pi install "$CLAUDESDK_SOURCE" || warn "the Claude transport could not be installed"

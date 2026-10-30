@@ -69,7 +69,8 @@ releases) and is not part of the monorepo below.
 pi install git:github.com/joaomj/pi-claude-directsdk
 ```
 
-The installer uses the npm source, `npm:pi-claude-directsdk`. Keep one source
+The installer installs the newest release whose tag signature verifies, for
+example `git:github.com/joaomj/pi-claude-directsdk@v0.3.1`. Keep one source
 only; remove the other with `pi remove` before switching.
 
 ### Interactive questions

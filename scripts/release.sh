@@ -30,9 +30,6 @@ default_branch="${default_branch:-main}"
 git merge-base --is-ancestor "origin/${default_branch}" HEAD \
   || die "origin/${default_branch} has commits you do not have; pull first"
 
-note "Checking the Claude transport pin"
-scripts/check-claude-pin.sh
-
 note "Setting package.json to ${version}"
 python3 - "${version}" <<'VERSION'
 import json, sys
