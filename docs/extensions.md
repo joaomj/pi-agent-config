@@ -173,6 +173,65 @@ installer adds `"chromeArgs": ["--no-sandbox"]`, which lets the browser start at
 the cost of Chrome's own renderer sandbox. A system Chrome with a working sandbox
 is the stronger choice when you have one.
 
+### Undo and redo
+
+[`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) rolls back the last
+agent run: the conversation and the files that the run changed. It provides
+`/undo`, `/redo`, and `/diff`. `/diff` shows what `/undo` would restore.
+
+```bash
+pi install npm:@ahm3tj4f/pi-undo@0.5.0
+```
+
+It requires Git 2.31 or later. It takes a snapshot of the working folder when a
+run starts and another when it ends. It stores the snapshots in a separate Git
+repository under `~/.pi/agent/pi-undo/snapshots`, one per working folder. Your
+own branches, stash, and index stay unchanged. Because the snapshot covers the
+whole folder, `/undo` also restores changes from a `bash` command, a formatter,
+or an extension that runs Git itself, for example `git clean`. `/undo` changes
+only the files that the run changed. Before it overwrites a file that you edited
+after the run, it shows the file and asks for confirmation.
+
+Storage grows with the changed content, not with the size of the repository,
+because Git stores an unchanged file only once. The package limits growth as
+follows:
+
+- It skips dependency, build, and cache directories (`node_modules`, `dist`,
+  `.venv`, and about 50 more).
+- It skips new files larger than 2 MB.
+- It skips a snapshot that adds more than `maxFiles` files.
+- It deletes snapshots older than `retentionDays`. A daily Git garbage
+  collection then removes their data after a 7-day grace period.
+
+Garbage collection runs only when Pi starts in that folder, so the store of a
+folder that you no longer use stays on disk. Check the total size with
+`du -sh ~/.pi/agent/pi-undo`.
+
+The package also takes snapshots of files that `.gitignore` ignores, `.env`
+included. Add your secret patterns to `excludeDirectories` so that no secret is
+copied into the store. The cost is that `/undo` cannot restore an agent change
+to those files. The maintainer uses a 14-day retention and these additions to the
+default list in `~/.pi/agent/pi-undo.json`:
+
+```json
+{
+  "retentionDays": 14,
+  "excludeDirectories": [
+    "...the defaults...",
+    ".env", ".env.*", "*.pem", "*.key", "*.p12", "*.pfx",
+    "id_rsa*", "id_ed25519*", "id_ecdsa*", ".ssh/", "secrets/", ".secrets/"
+  ]
+}
+```
+
+The file is the full configuration: an entry that you remove from
+`excludeDirectories` is included again. Start from the file that the package
+writes on its first run, or copy the default list from its `src/config.ts`.
+
+`/undo` restores the folder after a run. It does not prevent damage during the
+run, and it does not protect files outside the working folder. Two Pi sessions
+in the same folder share one store.
+
 ## Evaluated and not installed
 
 These were reviewed and deliberately left out. Reasons are recorded so the

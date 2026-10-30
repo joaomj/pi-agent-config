@@ -922,6 +922,7 @@ if has_step packages; then
     "npm:@joaomj/pi-claude-usage@0.2.0|Claude subscription quota in the footer|y||"
     "npm:pi-context-view@0.8.0|inspect what fills the context window|y|skills|"
     "npm:pi-browser-use@0.12.15|managed browser automation tools|y||node24,chrome"
+    "npm:@ahm3tj4f/pi-undo@0.5.0|undo and redo of the last agent run, files included|y||"
   )
   # Sources this configuration replaced. A leftover declaration keeps the old
   # code loading, and a tool that both packages register stops Pi from
