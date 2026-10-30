@@ -71,6 +71,7 @@ versions.lock
 /profiles/
 /extensions/*
 !/extensions/bg-bash-timer.ts
+!/extensions/loop-breaker.ts
 /telemetry.json.example
 /.env.example
 /scripts/sync.mjs

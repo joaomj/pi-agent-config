@@ -16,7 +16,8 @@
       "skills"
     ],
     "extensions": [
-      "extensions/bg-bash-timer.ts"
+      "extensions/bg-bash-timer.ts",
+      "extensions/loop-breaker.ts"
     ]
   }
 }
