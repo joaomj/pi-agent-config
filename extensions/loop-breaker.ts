@@ -9,13 +9,15 @@
  *    change, so the third repeat carries a note that says so.
  *
  * A "check" is any shell command, keyed by the command behind a leading `cd`.
- * Background jobs count too: their completion wake names the command and its
- * exit code. The notes are appended to results; nothing is blocked.
+ * A command that runs on as a pi-bg-bash task counts when its completion
+ * message arrives. The notes are appended to results; nothing is blocked.
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const REPEAT_LIMIT = 3;
+/** The `customType` of pi-bg-bash completion messages. */
+const TASK_MESSAGE = "pi-bg-bash";
 const SPLIT = /&&|\|\||;|\n/;
 
 /** Shell commands that likely change files, so they count as a fix attempt. */
@@ -27,6 +29,17 @@ function checkKey(command: string): string {
   return (real.length > 0 ? real : segments).join(" && ").replace(/\s+/g, " ");
 }
 
+/** The pi-bg-bash task a bash result ran on as, if any. A Pi without structured bash results only has the text. */
+function backgroundTaskId(structured: unknown, content: { type: string; text?: string }[]): string | undefined {
+  const id = (structured as { task_id?: unknown } | undefined)?.task_id;
+  if (typeof id === "string") return id;
+  for (const block of content) {
+    const match = block.type === "text" && block.text?.match(/background (?:task|as task) (bg-\d+)/);
+    if (match) return match[1];
+  }
+  return undefined;
+}
+
 type Gate = { failures: number; editsSinceFailure: number };
 
 export default function (pi: ExtensionAPI) {
@@ -34,6 +47,8 @@ export default function (pi: ExtensionAPI) {
   let edits = 0;
   let lastCall = "";
   let repeats = 0;
+  /** Commands that run on as background tasks, by task id, until their completion arrives. */
+  const tasks = new Map<string, string>();
 
   function note(text: string): string {
     return `\n\n[loop-breaker] ${text}`;
@@ -69,7 +84,7 @@ export default function (pi: ExtensionAPI) {
     lastCall = signature;
     if (event.toolName === "edit" || event.toolName === "write") edits++;
     const command = (event.input as { command?: unknown }).command;
-    if ((event.toolName === "bash" || event.toolName === "bgrun") && typeof command === "string" && WRITES.test(command)) {
+    if (event.toolName === "bash" && typeof command === "string" && WRITES.test(command)) {
       edits++;
     }
   });
@@ -84,28 +99,47 @@ export default function (pi: ExtensionAPI) {
     }
     const command = (event.input as { command?: unknown }).command;
     if (event.toolName === "bash" && typeof command === "string") {
-      const started = event.content.some((block) => block.type === "text" && /^started: /m.test(block.text));
-      if (!started) {
+      const taskId = backgroundTaskId(event.structuredContent, event.content);
+      if (taskId) {
+        tasks.set(taskId, command);
+      } else {
         const verdict = judgeCheck(command, event.isError);
         if (verdict) notes.push(verdict);
       }
     }
     if (notes.length === 0) return undefined;
-    return { content: [...event.content, { type: "text", text: notes.map(note).join("") }] };
+    // Replacing content alone drops structuredContent, which codemode scripts read.
+    return {
+      content: [...event.content, { type: "text", text: notes.map(note).join("") }],
+      structuredContent: event.structuredContent,
+    };
   });
 
-  // A background job's completion arrives as input; its exit code settles the gate.
   pi.on("input", (event) => {
     if (event.source !== "extension") {
       lastCall = "";
       repeats = 0;
-      return { action: "continue" };
     }
-    const finished = event.text.match(/Background job .* finished \(exit (-?\d+|\w+)\)/);
-    const command = event.text.match(/^Command: (.*)$/m);
-    if (!finished || !command) return { action: "continue" };
-    const verdict = judgeCheck(command[1], finished[1] !== "0");
-    if (!verdict) return { action: "continue" };
-    return { action: "transform", text: event.text + note(verdict) };
+    return { action: "continue" };
+  });
+
+  // A background task's completion arrives as a custom message; its exit code settles the gate.
+  pi.on("message_end", (event) => {
+    const message = event.message;
+    if (message.role !== "custom" || message.customType !== TASK_MESSAGE) return undefined;
+    const details = message.details as { id?: unknown; exitCode?: unknown; state?: unknown } | undefined;
+    if (typeof details?.id !== "string") return undefined;
+    const command = tasks.get(details.id);
+    tasks.delete(details.id);
+    // A killed task or an unknown exit says nothing about the check.
+    if (command === undefined || details.state !== "exited" || typeof details.exitCode !== "number") return undefined;
+    const verdict = judgeCheck(command, details.exitCode !== 0);
+    if (!verdict) return undefined;
+    const text = note(verdict);
+    const content =
+      typeof message.content === "string"
+        ? message.content + text
+        : [...message.content, { type: "text" as const, text }];
+    return { message: { ...message, content } };
   });
 }
