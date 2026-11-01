@@ -9,13 +9,15 @@
  *
  * pi-bg-bash never promotes a call that sets `timeout`, so a model that adds
  * `timeout: 600` blocks the session for up to ten minutes. This extension moves
- * that deadline into the command (coreutils `timeout`) and drops the
+ * that deadline into the command (`deadline.mjs`, run by Node) and drops the
  * parameter, so the call keeps its deadline and still moves to the background.
  *
  * Without pi-bg-bash the variable has no effect and neither the rule nor the
  * rewrite applies.
  */
 
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const VARIABLE = "PI_BG_BASH_PROMOTE_MS";
@@ -37,10 +39,15 @@ function readStartupSeconds(): { seconds: number; error?: string } {
   return { seconds: ms / 1000 };
 }
 
+const DEADLINE_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), "deadline.mjs");
+
+function quote(text: string): string {
+  return `'${text.replace(/'/g, `'\\''`)}'`;
+}
+
 /** Wraps `command` so it stops after `timeout` seconds, as the `timeout` parameter would. */
 export function withDeadline(command: string, timeout: number): string {
-  const quoted = `'${command.replace(/'/g, `'\\''`)}'`;
-  return `timeout -k 5 ${timeout} bash -c ${quoted}`;
+  return `${quote(process.execPath)} ${quote(DEADLINE_SCRIPT)} ${timeout} ${quote(command)}`;
 }
 
 export default function (pi: ExtensionAPI) {

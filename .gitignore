@@ -73,6 +73,7 @@ versions.lock
 !/extensions/bg-bash-timer.ts
 !/extensions/loop-breaker.ts
 !/extensions/shared-rules.ts
+!/extensions/deadline.mjs
 /telemetry.json.example
 /.env.example
 /scripts/sync.mjs

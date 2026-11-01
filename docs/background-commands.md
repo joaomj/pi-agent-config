@@ -7,7 +7,7 @@ ends, a message with its exit status and last output lines starts the next turn.
 
 The limit does not apply to a command that starts with `sleep`. `pi-bg-bash`
 also skips a command with an explicit `timeout`, so `bg-bash-timer` moves a
-`timeout` longer than the limit into the command (`timeout -k 5 N bash -c ...`)
+`timeout` longer than the limit into the command (`node extensions/deadline.mjs N ...`)
 and removes the parameter. The command still ends at its deadline, and it moves
 to the background after the limit like any other command.
 
