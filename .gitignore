@@ -86,3 +86,7 @@ versions.lock
 # Runtime state written by extensions
 cached-compaction.jsonl
 mcp.*.backup
+
+# Dependencies installed when the package loads from a local clone
+node_modules/
+package-lock.json
