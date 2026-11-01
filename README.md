@@ -270,13 +270,19 @@ a paid Claude plan through the Claude Code login.
 
 3. Check the login with `claude auth status --json`. If `loggedIn` is not
    `true`, the user runs `claude auth login`, which opens a browser.
-4. Install the transport:
+4. Find the newest transport release, for example `v0.3.1`:
 
    ```bash
-   pi install git:github.com/joaomj/pi-claude-directsdk@6574117a2ce0b4e03df18e271f75f003411eeb6a
+   git ls-remote --tags --sort=-v:refname https://github.com/joaomj/pi-claude-directsdk 'v*' | grep -v '\^{}' | head -1
    ```
 
-5. The user restarts Pi, opens `/model`, waits for the DirectSDK catalog, and
+5. Install the transport at that tag:
+
+   ```bash
+   pi install git:github.com/joaomj/pi-claude-directsdk@<transport tag>
+   ```
+
+6. The user restarts Pi, opens `/model`, waits for the DirectSDK catalog, and
    chooses a DirectSDK model.
 
 ### Browser automation
