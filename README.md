@@ -40,54 +40,84 @@ rules.
 Requirements: Pi 1.4.0 or later, Node.js 22.19 or later, Git, and network
 access to GitHub and npm.
 
+An agent runs these steps in the order given. Each step states its expected
+result. Stop and report to the user when a result does not match.
+
+### Step 0: choose the path
+
+Run:
+
+```bash
+pi list
+```
+
+- If the output names `pi-agent-config`, or any of `pi-bg-bash`, `pi-ask-user`,
+  `@ff-labs/pi-fff`, `pi-context-view`, `@ahm3tj4f/pi-undo`, or
+  `@joaomj/pi-claude-usage` as a separate entry, follow
+  [Existing user](#existing-user-upgrade-from-an-older-version).
+- Otherwise, follow [New user](#new-user).
+
+Do not mix the two paths. Pi does not start when two copies of one extension
+register the same tool.
+
+### New user
+
 1. Find the newest release tag:
 
    ```bash
    git ls-remote --tags --sort=-v:refname https://github.com/joaomj/pi-agent-config 'v*' | grep -v '\^{}' | head -1
    ```
 
-   Use the tag at the end of the line, for example `v0.9.0`, as `<tag>` below.
+   Result: one line that ends with a tag such as `refs/tags/v0.9.0`. Use that
+   tag as `<tag>` below.
 
-2. List the packages the user already has:
-
-   ```bash
-   pi list
-   ```
-
-   If the list has any package from the table above as a separate entry, or an
-   earlier `pi-agent-config` setup, follow [Migrate from install.sh](#migrate-from-installsh)
-   first. Pi does not start when two copies of the same extension register the
-   same tool.
-
-3. Install the package:
+2. Install the package:
 
    ```bash
    pi install git:github.com/joaomj/pi-agent-config@<tag>
    ```
 
-   The command ends with `Installed git:github.com/joaomj/pi-agent-config@<tag>`.
+   Result: the last line is `Installed git:github.com/joaomj/pi-agent-config@<tag>`.
 
-4. Verify that every extension loads:
+3. Verify that every extension loads:
 
    ```bash
    pi --help 2>&1 | grep -E 'Failed to load|conflicts with|--fff-mode'
    ```
 
-   The output must be exactly one line, with `--fff-mode`. Any `Failed to load`
-   or `conflicts with` line names the extension to fix.
+   Result: exactly one line, the one with `--fff-mode`. A `Failed to load` or
+   `conflicts with` line names the extension to fix.
+
+4. Ask the user which opt-in add-ons they want: [permission checks](#permission-checks),
+   the [Claude subscription transport](#claude-subscription-transport), or
+   [browser automation](#browser-automation). Follow the section for each one
+   they choose. Skip this step when they choose none.
 
 5. Tell the user to restart Pi. Running sessions do not load the package.
 
-## Migrate from install.sh
+### Existing user (upgrade from an older version)
 
-Earlier releases used `install.sh`, which installed each package separately and
-edited `AGENTS.md`. Clean those up before step 3 of [Install](#install).
+Older versions used `install.sh`, which installed each package separately,
+edited `~/.pi/agent/AGENTS.md`, and kept backups in `~/.pi/agent/.install-history`.
 
-1. Remove each separate entry that the package now ships. Run only the lines
-   whose package appears in `pi list`, with the source exactly as `pi list`
-   shows it:
+1. Back up the two files this procedure changes:
 
    ```bash
+   mkdir -p ~/pi-agent-config-backup
+   cp ~/.pi/agent/settings.json ~/.pi/agent/AGENTS.md ~/pi-agent-config-backup/ 2>/dev/null; ls ~/pi-agent-config-backup
+   ```
+
+   Result: the listing shows `settings.json`, and `AGENTS.md` when it existed.
+
+2. Find the newest release tag, as in step 1 of [New user](#new-user).
+
+3. Run `pi list` and note the exact source of each entry. Remove the old
+   `pi-agent-config` entry and every separate entry that the package now ships.
+   Use the source exactly as `pi list` prints it, and skip lines whose package
+   is not listed. With the sources that `install.sh` wrote:
+
+   ```bash
+   pi remove git:github.com/joaomj/pi-agent-config
    pi remove npm:pi-bg-bash@0.4.1
    pi remove npm:pi-ask-user@0.16.0
    pi remove npm:@ff-labs/pi-fff@0.11.0
@@ -96,27 +126,57 @@ edited `AGENTS.md`. Clean those up before step 3 of [Install](#install).
    pi remove npm:@joaomj/pi-claude-usage@0.2.0
    ```
 
+   Result: each command prints `Removed <source>`. Removing the old
+   `pi-agent-config` entry also removes any filter such as `"extensions": []`
+   that turned off its extensions.
+
    Keep `npm:@gotgenes/pi-permission-system`, `npm:pi-browser-use`, and
-   `pi-claude-directsdk`. They are the opt-in add-ons.
+   `pi-claude-directsdk`. They are the opt-in add-ons and are not bundled.
 
-2. Check the existing `pi-agent-config` entry in `~/.pi/agent/settings.json`.
-   A filter such as `"extensions": []` turns off every bundled extension. Ask
-   the user before you remove a filter.
+4. Run `pi list` again.
 
-3. Check `~/.pi/agent/AGENTS.md` for a block between
-   `<!-- pi-agent-config: shared rules -->` and
-   `<!-- pi-agent-config: end shared rules -->`. While that block exists, the
-   package does not add its rules, so the user keeps the old text. Ask the user
-   before you delete the block, markers included.
+   Result: none of the packages removed in step 3 appear.
 
-4. `~/.pi/agent/.install-history` holds the old installer's backups. It is not
-   used any more. Ask the user before you delete it.
+5. Install the package:
 
-Then continue with step 3 of [Install](#install).
+   ```bash
+   pi install git:github.com/joaomj/pi-agent-config@<tag>
+   ```
+
+   Result: the last line is `Installed git:github.com/joaomj/pi-agent-config@<tag>`.
+
+6. Clean up `~/.pi/agent/AGENTS.md`. Look for the block that `install.sh`
+   added:
+
+   ```bash
+   grep -n 'pi-agent-config: ' ~/.pi/agent/AGENTS.md
+   ```
+
+   - No output: skip to step 7.
+   - Two lines (`shared rules` and `end shared rules`): while this block
+     exists, the package does not add its rules, so the user keeps the old
+     text. Ask the user which outcome they want:
+     - Remove the block, markers included, and keep the rest of the file. The
+       package then adds the current rules.
+     - If the file holds only that block, delete the file.
+
+   Result: `grep -c 'pi-agent-config: ' ~/.pi/agent/AGENTS.md` prints `0`, or
+   the file no longer exists.
+
+7. Ask the user whether to delete `~/.pi/agent/.install-history`. Nothing uses
+   it any more. Skip this step when it does not exist.
+
+8. Verify, as in step 3 of [New user](#new-user).
+
+9. Tell the user to restart Pi. Running sessions do not load the package.
+
+To undo the upgrade, run `pi remove git:github.com/joaomj/pi-agent-config`,
+copy the files in `~/pi-agent-config-backup/` back to `~/.pi/agent/`, and run
+`pi update --extensions`.
 
 ## Update, roll back, and remove
 
-- Update: run step 1 of [Install](#install), then
+- Update: find the newest tag as in step 1 of [New user](#new-user), then
   `pi install git:github.com/joaomj/pi-agent-config@<new tag>`. Read the
   release notes in [CHANGELOG.md](CHANGELOG.md) first.
 - Roll back: install an older tag the same way.
