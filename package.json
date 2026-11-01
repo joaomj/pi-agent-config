@@ -2,11 +2,26 @@
   "name": "pi-agent-config",
   "version": "0.8.0",
   "private": true,
-  "description": "Shared prompt templates, skills, and setup guidance for the Pi coding agent",
+  "type": "module",
+  "description": "Shared rules, prompt templates, skills, and extensions for the Pi coding agent, installed as one Pi package",
   "license": "MIT",
+  "keywords": [
+    "pi-package"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/joaomj/pi-agent-config.git"
+  },
+  "dependencies": {
+    "@ahm3tj4f/pi-undo": "0.5.0",
+    "@ff-labs/pi-fff": "0.11.0",
+    "@joaomj/pi-claude-usage": "0.2.0",
+    "pi-ask-user": "0.16.0",
+    "pi-bg-bash": "0.4.1",
+    "pi-context-view": "0.8.2"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
   },
   "pi": {
     "prompts": [
@@ -17,7 +32,14 @@
     ],
     "extensions": [
       "extensions/bg-bash-timer.ts",
-      "extensions/loop-breaker.ts"
+      "extensions/loop-breaker.ts",
+      "extensions/shared-rules.ts",
+      "node_modules/@ahm3tj4f/pi-undo/src/index.ts",
+      "node_modules/@ff-labs/pi-fff/src/index.ts",
+      "node_modules/@joaomj/pi-claude-usage/src/index.ts",
+      "node_modules/pi-ask-user/index.ts",
+      "node_modules/pi-bg-bash/src/index.ts",
+      "node_modules/pi-context-view/src/index.ts"
     ]
   }
 }
