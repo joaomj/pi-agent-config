@@ -42,8 +42,8 @@ with open(path, "w") as handle:
     handle.write("\n")
 VERSION
 
-note "Checking the installer still parses"
-bash -n install.sh
+note "Checking that the package installs and loads"
+scripts/check-package.sh
 
 git add package.json
 git commit --quiet -m "release: ${tag}"
@@ -59,4 +59,4 @@ gh release create "${tag}" --title "${tag}" --generate-notes
 
 note "Released ${tag}"
 printf '  The changelog workflow commits CHANGELOG.md to %s within a minute or two.\n' "${default_branch}"
-printf '  Installs pick up the newest tag automatically; no version is pinned in install.sh.\n'
+printf '  Users update with: pi install git:github.com/joaomj/pi-agent-config@%s\n' "${tag}"

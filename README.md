@@ -1,160 +1,307 @@
 # pi-agent-config
 
-Reusable instructions, prompt templates, and skills for the [Pi coding agent](https://pi.dev).
+Shared rules, prompt templates, skills, and extensions for the
+[Pi coding agent](https://pi.dev), installed as one Pi package.
 
-This repository shares workflows, not a ready-made personal installation. It
-installs as a Pi package, so your own prompt templates, skills, providers, MCP
-connections, permission rules, and `AGENTS.md` stay local and unchanged.
+This README is written so that a coding agent can follow it. If you are an
+agent setting this up for a user, run the steps in order, check the result of
+each step before the next, and ask the user where a step says so.
+
+## What the package adds
+
+| Part | What it does |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Shared working rules. The `shared-rules` extension adds them to the system prompt; no user file is edited. |
+| [prompts/](prompts/) | Commands such as `/plan`, `/code-review`, `/explain`, `/pr`, and `/generate-slides`. |
+| [skills/](skills/) | `technical-writing`, `research`, `test-audit`, `improve-me`, `proton-pass`, and `skill-doctor`. |
+| [`bg-bash-timer`](extensions/bg-bash-timer.ts) | Moves a foreground `bash` command to the background after 20 s, also when the call sets `timeout`. See [Background commands](docs/background-commands.md). |
+| [`loop-breaker`](extensions/loop-breaker.ts) | Adds a note when the same check fails again after changes, or when an identical call repeats three times. |
+| [`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash) 0.4.1 | Background `bash` tasks: `bash_output`, `bash_tasks`, `bash_kill`, `/bg`. |
+| [`pi-ask-user`](https://www.npmjs.com/package/pi-ask-user) 0.16.0 | The `ask_user` tool. Its own skills are not loaded. |
+| [`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff) 0.11.0 | Indexed search: `fffind` and `ffgrep`. |
+| [`pi-context-view`](https://pi.dev/packages/pi-context-view) 0.8.2 | Commands that show what fills the context window. |
+| [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) 0.5.0 | `/undo`, `/redo`, and `/diff` for the last agent run, files included. Needs Git 2.31 or later. |
+| [`@joaomj/pi-claude-usage`](https://www.npmjs.com/package/@joaomj/pi-claude-usage) 0.2.0 | Claude subscription quota in the footer, when a Claude Code login exists. |
+
+The six third-party packages are npm dependencies of this package, pinned to
+versions tested together. Pi installs them with the package and removes them
+with it. [Extensions in use](docs/extensions.md) describes each one.
+
+Three add-ons stay opt-in because they need a decision or software from the
+user: [permission checks](#permission-checks), the
+[Claude subscription transport](#claude-subscription-transport), and
+[browser automation](#browser-automation).
+
+The package does not change providers, models, MCP servers, or permission
+rules.
 
 ## Install
 
-Install Pi using its official instructions, then run the installer:
+Requirements: Pi 1.4.0 or later, Node.js 22.19 or later, Git, and network
+access to GitHub and npm.
+
+An agent runs these steps in the order given. Each step states its expected
+result. Stop and report to the user when a result does not match.
+
+### Step 0: choose the path
+
+Run:
 
 ```bash
-git clone https://github.com/joaomj/pi-agent-config.git ~/pi-agent-config
-~/pi-agent-config/install.sh
+pi list
 ```
 
-Before it changes anything, the installer records the files it edits in a private
-git history at `~/.pi/agent/.install-history`: `settings.json`, `AGENTS.md`, and
-the permission policy. It installs only a release tag whose signature verifies
-against the maintainer's published keys, so a changed or compromised repository
-cannot ship unreviewed code.
+- If the output names `pi-agent-config`, or any of `pi-bg-bash`, `pi-ask-user`,
+  `@ff-labs/pi-fff`, `pi-context-view`, `@ahm3tj4f/pi-undo`, or
+  `@joaomj/pi-claude-usage` as a separate entry, follow
+  [Existing user](#existing-user-upgrade-from-an-older-version).
+- Otherwise, follow [New user](#new-user).
 
-A later run updates instead of reinstalling: it moves the package to the newest
-signed release, prints what changed, and offers only the packages and settings
-still missing.
+Do not mix the two paths. Pi does not start when two copies of one extension
+register the same tool.
 
-```bash
-~/pi-agent-config/install.sh --dry-run     # list what a run would change
-~/pi-agent-config/install.sh --rollback    # undo the last run
-~/pi-agent-config/install.sh --ref v0.4.1  # stay on, or return to, a release
+### New user
+
+1. Find the newest release tag:
+
+   ```bash
+   git ls-remote --tags --sort=-v:refname https://github.com/joaomj/pi-agent-config 'v*' | grep -v '\^{}' | head -1
+   ```
+
+   Result: one line that ends with a tag such as `refs/tags/v0.9.0`. Use that
+   tag as `<tag>` below.
+
+2. Install the package:
+
+   ```bash
+   pi install git:github.com/joaomj/pi-agent-config@<tag>
+   ```
+
+   Result: the last line is `Installed git:github.com/joaomj/pi-agent-config@<tag>`.
+
+3. Verify that every extension loads:
+
+   ```bash
+   pi --help 2>&1 | grep -E 'Failed to load|conflicts with|--fff-mode'
+   ```
+
+   Result: exactly one line, the one with `--fff-mode`. A `Failed to load` or
+   `conflicts with` line names the extension to fix.
+
+4. Ask the user which opt-in add-ons they want: [permission checks](#permission-checks),
+   the [Claude subscription transport](#claude-subscription-transport), or
+   [browser automation](#browser-automation). Follow the section for each one
+   they choose. Skip this step when they choose none.
+
+5. Tell the user to restart Pi. Running sessions do not load the package.
+
+### Existing user (upgrade from an older version)
+
+Older versions used `install.sh`, which installed each package separately,
+edited `~/.pi/agent/AGENTS.md`, and kept backups in `~/.pi/agent/.install-history`.
+
+1. Back up the two files this procedure changes:
+
+   ```bash
+   mkdir -p ~/pi-agent-config-backup
+   cp ~/.pi/agent/settings.json ~/.pi/agent/AGENTS.md ~/pi-agent-config-backup/ 2>/dev/null; ls ~/pi-agent-config-backup
+   ```
+
+   Result: the listing shows `settings.json`, and `AGENTS.md` when it existed.
+
+2. Find the newest release tag, as in step 1 of [New user](#new-user).
+
+3. Run `pi list` and note the exact source of each entry. Remove the old
+   `pi-agent-config` entry and every separate entry that the package now ships.
+   Use the source exactly as `pi list` prints it, and skip lines whose package
+   is not listed. With the sources that `install.sh` wrote:
+
+   ```bash
+   pi remove git:github.com/joaomj/pi-agent-config
+   pi remove npm:pi-bg-bash@0.4.1
+   pi remove npm:pi-ask-user@0.16.0
+   pi remove npm:@ff-labs/pi-fff@0.11.0
+   pi remove npm:pi-context-view
+   pi remove npm:@ahm3tj4f/pi-undo@0.5.0
+   pi remove npm:@joaomj/pi-claude-usage@0.2.0
+   ```
+
+   Result: each command prints `Removed <source>`. Removing the old
+   `pi-agent-config` entry also removes any filter such as `"extensions": []`
+   that turned off its extensions.
+
+   Keep `npm:@gotgenes/pi-permission-system`, `npm:pi-browser-use`, and
+   `pi-claude-directsdk`. They are the opt-in add-ons and are not bundled.
+
+4. Run `pi list` again.
+
+   Result: none of the packages removed in step 3 appear.
+
+5. Install the package:
+
+   ```bash
+   pi install git:github.com/joaomj/pi-agent-config@<tag>
+   ```
+
+   Result: the last line is `Installed git:github.com/joaomj/pi-agent-config@<tag>`.
+
+6. Clean up `~/.pi/agent/AGENTS.md`. Look for the block that `install.sh`
+   added:
+
+   ```bash
+   grep -n 'pi-agent-config: ' ~/.pi/agent/AGENTS.md
+   ```
+
+   - No output: skip to step 7.
+   - Two lines (`shared rules` and `end shared rules`): while this block
+     exists, the package does not add its rules, so the user keeps the old
+     text. Ask the user which outcome they want:
+     - Remove the block, markers included, and keep the rest of the file. The
+       package then adds the current rules.
+     - If the file holds only that block, delete the file.
+
+   Result: `grep -c 'pi-agent-config: ' ~/.pi/agent/AGENTS.md` prints `0`, or
+   the file no longer exists.
+
+7. Ask the user whether to delete `~/.pi/agent/.install-history`. Nothing uses
+   it any more. Skip this step when it does not exist.
+
+8. Verify, as in step 3 of [New user](#new-user).
+
+9. Tell the user to restart Pi. Running sessions do not load the package.
+
+To undo the upgrade, run `pi remove git:github.com/joaomj/pi-agent-config`,
+copy the files in `~/pi-agent-config-backup/` back to `~/.pi/agent/`, and run
+`pi update --extensions`.
+
+## Update, roll back, and remove
+
+- Update: find the newest tag as in step 1 of [New user](#new-user), then
+  `pi install git:github.com/joaomj/pi-agent-config@<new tag>`. Read the
+  release notes in [CHANGELOG.md](CHANGELOG.md) first.
+- Roll back: install an older tag the same way.
+- Remove: `pi remove git:github.com/joaomj/pi-agent-config`. This removes the
+  rules, prompts, skills, and the bundled packages.
+
+## Turn off one part
+
+Replace the package entry in `~/.pi/agent/settings.json` with the object form
+and exclude what the user does not want. For example, to drop the undo
+extension and the Claude quota footer:
+
+```json
+{
+  "source": "git:github.com/joaomj/pi-agent-config@<tag>",
+  "extensions": [
+    "!node_modules/@ahm3tj4f/pi-undo/**",
+    "!node_modules/@joaomj/pi-claude-usage/**"
+  ]
+}
 ```
 
-- `--rollback` restores the files above to their state before the last run. It
-  does not remove packages. Reinstall the release you want with `--ref`.
-- `--dry-run` changes nothing and prints the plan.
-- `--only packages`, or any other step name, runs selected configure steps only.
+`skills` and `prompts` take the same patterns. `pi config` turns single
+resources on and off interactively. To turn off the shared rules, exclude
+`extensions/shared-rules.ts`.
 
-The installer never downloads a browser. If Chrome or Chromium is missing, it
-skips browser automation and says which requirement is missing.
+## Opt-in add-ons
 
-The package pins the versions of the third-party packages it offers, so an
-update installs a set that has been tested together. A package already installed
-at a newer version is left alone and reported.
+### Permission checks
 
-To install the package without the setup steps:
+[`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
+asks or denies before tool calls, according to a policy file. This repository
+ships a reference policy in
+[permissions/pi-permission-system.json](permissions/pi-permission-system.json).
+It denies reads of credentials and `.env` files and asks before commits, pushes,
+deletes, installs, and remote writes.
 
-```bash
-pi install git:github.com/joaomj/pi-agent-config@v0.4.1
-```
+1. Ask the user whether they want permission checks.
+2. Install the extension:
 
-The package adds the prompt templates in [prompts/](prompts/), the skills in
-`skills/documentation/`, `skills/engineering/`, and `skills/tooling/`, and two
-extensions. [`loop-breaker`](extensions/loop-breaker.ts) adds a note to a result
-when the same check fails again after changes, or when an identical tool call
-repeats three times, so the agent tests its premise instead of retrying.
-[`bg-bash-timer`](extensions/bg-bash-timer.ts) sets how long a foreground `bash`
-command from [`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash) can run before
-it moves to the background: 20 seconds by default. See
-[Background commands](docs/background-commands.md). It does nothing unless
-`pi-bg-bash` is installed.
-It does not change providers, models, MCP servers, permission rules, or `AGENTS.md`.
+   ```bash
+   pi install npm:@gotgenes/pi-permission-system@41.0.0
+   ```
 
-After the install, the same script walks the parts a package cannot ship:
+3. The policy lives at
+   `~/.pi/agent/extensions/pi-permission-system/config.json`. If that file
+   does not exist, copy the reference there:
 
-- `packages` offers each third-party package with a yes/no question: fff,
-  permission checks, background commands, the Claude usage footer, interactive
-  questions, the context view, and browser automation. A question appears only
-  when the answer changes something: the installer names the version it moves a
-  package to, and a package already at the pinned version is reported without a
-  question. It also removes a package that a later release replaced, such as
-  `pi-background-run` and `pi-background-bash`, because an old copy keeps
-  loading next to its replacement. The package that needs a resource filter in `settings.json` gets it
-  on install. Browser automation needs Node 24 or later and a Chrome or Chromium
-  binary. When Node is missing the installer offers an official Node build; when
-  the browser is missing it prints what to install and skips the package.
-- `claude` offers the Claude subscription transport. When you accept, it checks
-  Node and the qualified Claude Code CLI range (`>=2.1.263 <2.2.0`) and offers
-  the pinned CLI install. Only a qualified CLI leads to `claude auth login` and
-  the transport package; when the CLI stays missing or out of range, the step
-  prints the install command and installs nothing. Choosing a model stays
-  interactive, in `/model`.
-- `agents` copies `AGENTS.md` when you have none, or appends the shared rules
-  once, between markers, when you do.
-- `permissions` copies the reference policy when you have none. When you have
-  your own, it writes `config.json.proposed` beside it and prints the diff.
-  Nothing is overwritten.
-- `verify` prints the installed packages and counts the shared prompts and skills.
+   ```bash
+   mkdir -p ~/.pi/agent/extensions/pi-permission-system
+   cp ~/.pi/agent/git/github.com/joaomj/pi-agent-config/permissions/pi-permission-system.json \
+      ~/.pi/agent/extensions/pi-permission-system/config.json
+   ```
 
-Run a single step with `--only packages`, skip them all with `--no-configure`,
-accept every default with `--yes`, and take the Claude transport without being
-asked with `--claude`.
+   If the file exists, do not overwrite it. Follow the update steps below.
 
-Every question shows `[y/n]`; Enter takes the default. A run without a terminal
-and without `--yes` skips the steps that need an answer, so nothing installs
-silently.
+To bring a later reference into an existing policy:
 
-The installer does not create duplicates. A package you already declared is left
-alone, even when your entry came from another source, such as git instead of npm.
-When `AGENTS.md` already holds the shared rules without markers, it does not
-append them again.
+1. Show the user `diff -u <their config.json> <the reference>`.
+2. Ask which changes to take. The policy is a map of surface, pattern, and
+   action. Within a surface, the last matching pattern wins, so keep the order
+   of the patterns you copy.
+3. Write the result to `config.json.proposed` next to `config.json`. The
+   reference policy denies agents access to the policy file, so the user moves
+   the file into place:
 
-Prompt templates become explicit commands, such as `/explain`, `/code-review`,
-`/plan`, and `/generate-slides`.
+   ```bash
+   mv ~/.pi/agent/extensions/pi-permission-system/config.json.proposed \
+      ~/.pi/agent/extensions/pi-permission-system/config.json
+   ```
 
-Maintain the installation with these commands:
+### Claude subscription transport
 
-- Rerun `install.sh` to update to the newest signed release, or `--dry-run` first to see what would change.
-- `pi config` disables a single shared prompt or skill, for example after a name collision.
-- `--ref <tag>` installs or returns to a named release.
+[Pi Claude DirectSDK](https://github.com/joaomj/pi-claude-directsdk) lets Pi use
+a paid Claude plan through the Claude Code login.
 
-Every skill in `skills/` is included, including `proton-pass`, `skill-doctor`,
-and `improve-me`. Turn off any prompt or skill you do not want with `pi config`.
-Skill collisions are matched on the declared `name` in `SKILL.md`, not on the
-folder, so a separate folder does not avoid a clash.
+1. Ask the user whether they want it. It needs a paid Claude plan.
+2. Check the Claude Code CLI. The transport is qualified for versions from
+   2.1.263 up to, but not including, 2.2.0:
 
-## Or copy files by hand
+   ```bash
+   claude --version
+   ```
 
-To reuse a few files without the package, clone the repository outside your
-active Pi configuration and copy what you want:
+   If the CLI is missing or outside that range, ask the user before you
+   install the qualified version:
 
-```bash
-git clone https://github.com/joaomj/pi-agent-config.git ~/pi-agent-config
-```
+   ```bash
+   npm install -g --ignore-scripts=false @anthropic-ai/claude-code@2.1.281
+   ```
 
-Copy prompt templates and skills into `~/.pi/agent`, under `prompts/` and
-`skills/`. Merge the instructions you want from [AGENTS.md](AGENTS.md) into your
-own agent instructions; do not overwrite existing instructions without reviewing
-them. Run `/reload` after copying. Some workflows expect optional tools; install
-those separately or adapt the instructions.
+3. Check the login with `claude auth status --json`. If `loggedIn` is not
+   `true`, the user runs `claude auth login`, which opens a browser.
+4. Find the newest transport release, for example `v0.3.1`:
 
-## Choose extensions
+   ```bash
+   git ls-remote --tags --sort=-v:refname https://github.com/joaomj/pi-claude-directsdk 'v*' | grep -v '\^{}' | head -1
+   ```
 
-[Extensions in use](docs/extensions.md) lists our configured packages, installation
-commands, and local-only helpers. `install.sh` offers the installable ones one at
-a time; nothing installs automatically. Review each package before you install
-it: extensions execute code with your local permissions.
+5. Install the transport at that tag:
 
-Configure providers through Pi's `/login` and `/model` commands. Configure MCP
-connections with `pi mcp add`, then `pi mcp login` for servers that need OAuth.
-The installer does not touch MCP servers: they carry credentials and endpoints
-that belong to your machine, so setup stays manual.
+   ```bash
+   pi install git:github.com/joaomj/pi-claude-directsdk@<transport tag>
+   ```
 
-## Shared resources
+6. The user restarts Pi, opens `/model`, waits for the DirectSDK catalog, and
+   chooses a DirectSDK model.
 
-- [AGENTS.md](AGENTS.md): collaboration, approval, Git, and testing instructions.
-- [prompts/](prompts/): planning, review, explanation, diagrams, slide decks, and other explicit workflows.
-- [install.sh](install.sh): installs or updates the package, runs the setup steps, and rolls the last run back.
-- [ci/ai-review/](ci/ai-review/): the pull-request review workflow used on GitHub, its CI prompt additions, and the scripts that add it to a repository.
-- [skills/](skills/): technical writing, research, test auditing, Proton Pass tooling, skill assessment, and `improve-me`, which turns fixes that repeat across sessions into guards, checks, and scripts.
-- [Workflow scope](docs/tech-context.md): sharing boundaries and optional tool dependencies.
-- [Model setup reference](docs/model-setup.md): default and cycling models, shared limits, and cache behavior.
-- [Background commands](docs/background-commands.md): when a `bash` command moves to the background and how to change the limit.
-- [Diagram output contract](docs/workflows/diagram-output-contract.md).
-- [HTML slide deck contract](docs/workflows/html-slide-decks.md).
+### Browser automation
 
-Retain the license notices when copying resources, including [prompts/LICENSE](prompts/LICENSE).
+[`pi-browser-use`](https://pi.dev/packages/pi-browser-use) adds the `browser_*`
+tools on a managed headless browser.
+
+1. Ask the user whether they want it.
+2. Check the requirements. It needs Node.js 24.18 or later (`node -v`) and
+   Google Chrome or Chromium. Do not download a browser for the user.
+3. Install it:
+
+   ```bash
+   pi install npm:pi-browser-use@0.12.15
+   ```
+
+On Linux, a Chrome under the home directory may not start with its sandbox. See
+[Extensions in use](docs/extensions.md#browser-automation) for the setting that
+fixes it and what it costs.
 
 ## Review pull requests in GitHub
 
@@ -208,16 +355,23 @@ with `--dry-run`.
 - A review that ends without a `REVIEW-VERDICT` line fails the job. Re-run it
   rather than merging past an inconclusive report.
 
-## Existing checkouts
+## Maintain this repository
 
-Personal configuration and extension files are now ignored, rather than shared.
-The former installer and sync machinery are no longer maintained by this repository.
-Do not run an old local copy of those scripts to update this setup.
+- `scripts/check-package.sh [commit]` installs a commit into a scratch Pi
+  directory with `pi install git:...` and checks that every bundled tool
+  registers, no extension fails to load, and the shared rules reach the model
+  request once. It does not read or change your own Pi configuration. Run it
+  after any change to `package.json` or `extensions/`.
+- `scripts/release.sh vX.Y.Z` runs that check, sets the version, signs the tag,
+  and publishes the release.
+- To change a bundled package version, edit `dependencies` in `package.json`,
+  confirm its entry file still matches the path in `pi.extensions`, and run the
+  check.
 
-An older checkout of this repository keeps its own files, so updating it is a
-plain `git pull` in that checkout. Commit or stash local changes first: Git can
-remove previously tracked files when applying their removal from the repository,
-and it stops the pull when a local change would be lost.
+More reference: [Workflow scope](docs/tech-context.md),
+[Model setup](docs/model-setup.md),
+[Diagram output contract](docs/workflows/diagram-output-contract.md), and
+[HTML slide deck contract](docs/workflows/html-slide-decks.md).
 
-These boundaries apply to the current repository tree. Earlier configuration and
-extension files remain accessible in Git history. This change does not erase history.
+Retain the license notices when you copy resources, including
+[prompts/LICENSE](prompts/LICENSE).

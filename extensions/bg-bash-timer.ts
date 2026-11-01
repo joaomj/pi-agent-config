@@ -7,9 +7,17 @@
  * the next call without a restart. pi-bg-bash still writes "120 s" into the
  * bash tool description, so a prompt rule tells the model the real limit.
  *
- * Without pi-bg-bash the variable has no effect and the rule is not added.
+ * pi-bg-bash never promotes a call that sets `timeout`, so a model that adds
+ * `timeout: 600` blocks the session for up to ten minutes. This extension moves
+ * that deadline into the command (`deadline.mjs`, run by Node) and drops the
+ * parameter, so the call keeps its deadline and still moves to the background.
+ *
+ * Without pi-bg-bash the variable has no effect and neither the rule nor the
+ * rewrite applies.
  */
 
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const VARIABLE = "PI_BG_BASH_PROMOTE_MS";
@@ -31,11 +39,33 @@ function readStartupSeconds(): { seconds: number; error?: string } {
   return { seconds: ms / 1000 };
 }
 
+const DEADLINE_SCRIPT = join(dirname(fileURLToPath(import.meta.url)), "deadline.mjs");
+
+function quote(text: string): string {
+  return `'${text.replace(/'/g, `'\\''`)}'`;
+}
+
+/** Wraps `command` so it stops after `timeout` seconds, as the `timeout` parameter would. */
+export function withDeadline(command: string, timeout: number): string {
+  return `${quote(process.execPath)} ${quote(DEADLINE_SCRIPT)} ${timeout} ${quote(command)}`;
+}
+
 export default function (pi: ExtensionAPI) {
   const startup = readStartupSeconds();
   let seconds = startup.seconds;
   let warned = false;
   process.env[VARIABLE] = String(Math.round(seconds * 1000));
+
+  pi.on("tool_call", (event) => {
+    if (event.toolName !== "bash" || !pi.getAllTools().some((tool) => tool.name === "bash_output")) return;
+    const input = event.input as { command?: string; timeout?: number; background?: boolean; waitFor?: string };
+    // background and waitFor already use `timeout` as the task deadline.
+    if (input.background || input.waitFor !== undefined) return;
+    if (typeof input.command !== "string" || typeof input.timeout !== "number") return;
+    if (input.timeout <= seconds) return;
+    input.command = withDeadline(input.command, input.timeout);
+    delete input.timeout;
+  });
 
   pi.on("before_agent_start", (event, ctx) => {
     if (startup.error && !warned) {
@@ -47,8 +77,8 @@ export default function (pi: ExtensionAPI) {
     // A changed limit must replace the earlier rule, not sit next to it.
     options.promptGuidelines = options.promptGuidelines.filter((rule) => !rule.startsWith(RULE_START));
     options.promptGuidelines.push(
-      `${RULE_START} with no \`timeout\` that is still running after ${seconds} s ` +
-        "(unless it starts with `sleep`) moves to the background. This limit replaces the 120 s in the bash tool " +
+      `${RULE_START} still running after ${seconds} s (unless it starts with \`sleep\`) moves to the background, ` +
+        "even when it sets `timeout`; the timeout still ends it. This limit replaces the 120 s in the bash tool " +
         "description. When a call returns a task id, end your turn if nothing else is left; the completion message starts the next one.",
     );
   });

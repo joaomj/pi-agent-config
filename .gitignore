@@ -72,6 +72,8 @@ versions.lock
 /extensions/*
 !/extensions/bg-bash-timer.ts
 !/extensions/loop-breaker.ts
+!/extensions/shared-rules.ts
+!/extensions/deadline.mjs
 /telemetry.json.example
 /.env.example
 /scripts/sync.mjs
@@ -81,9 +83,11 @@ versions.lock
 /tests/
 /docs/startup/
 /docs/proton-pass-exa.md
-/docs/ROADMAP.md
-!/docs/ROADMAP.md
 
 # Runtime state written by extensions
 cached-compaction.jsonl
 mcp.*.backup
+
+# Dependencies installed when the package loads from a local clone
+node_modules/
+package-lock.json

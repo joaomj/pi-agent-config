@@ -1,155 +1,67 @@
 # Extensions in use
 
-This catalog records packages configured in the maintainer's local Pi settings.
-It is a reference, not an automatically installed bundle or a guarantee of identical
-behavior. `install.sh` offers these installations one at a time.
-Provider settings, MCP connections, credentials, and permission policies are not shared.
+This catalog describes the third-party packages that this package bundles and
+the opt-in add-ons. The [README](../README.md) has the install steps. Review a
+package's source before you install it: extensions run code with your local
+permissions. Provider settings, MCP connections, and credentials are not shared.
 
-## Installable packages
+## Bundled packages
 
-Install only the packages you want, one at a time. Review their source and requirements first.
-Run these commands under the account that runs Pi:
+`pi install git:github.com/joaomj/pi-agent-config@<tag>` installs these
+packages as npm dependencies at the versions pinned in
+[package.json](../package.json). Do not install them separately: two copies of
+one extension register the same tool, and Pi then does not start. Turn one off
+with a package filter, as the README shows.
 
 ### Indexed file search
 
-[`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff) provides `fffind` and `ffgrep`.
-
-```bash
-pi install npm:@ff-labs/pi-fff
-```
-
-### Permission checks
-
-[`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system) provides tool permission checks.
-Configure your own access rules; the maintainer's policy is not included.
-Recommended guardrails from experience: deny `git -c user*`, `git -c *gpgsign*`,
-and `git -c gpg*`, plus `GIT_AUTHOR_*` / `GIT_COMMITTER_*` / `GIT_CONFIG_*`
-environment overrides, so no agent session can commit under a foreign identity
-or unsigned. Deny agent access to the policy file itself; edit it in your own
-editor. Known gap: `git commit` invocations (including `--no-gpg-sign` and
-`--author`) do not match any bash-pattern gate in the permission extension, so
-flag-level commit overrides cannot be blocked at that layer today; the global
-`commit.gpgsign` default plus the `-c` denials above are the working backstop.
-
-```bash
-pi install npm:@gotgenes/pi-permission-system
-```
+[`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff) 0.11.0
+provides `fffind` and `ffgrep`.
 
 ### Background commands
 
-[`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash) replaces the `bash` tool. A
-command that runs longer than the limit moves to the background as a task, and a
-message wakes the session when it ends. It also adds `background: true` and
-`waitFor` to `bash`, the `bash_output`, `bash_tasks`, and `bash_kill` tools, the
-`/bg` command, and the `ctrl+shift+b` shortcut:
-
-```bash
-pi install npm:pi-bg-bash@0.4.1
-```
+[`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash) 0.4.1 replaces the `bash`
+tool. A command that runs longer than the limit moves to the background as a
+task, and a message wakes the session when it ends. It also adds
+`background: true` and `waitFor` to `bash`, the `bash_output`, `bash_tasks`,
+and `bash_kill` tools, the `/bg` command, and the `ctrl+shift+b` shortcut.
 
 This package adds [`bg-bash-timer`](../extensions/bg-bash-timer.ts), which sets
-the limit to 20 seconds instead of 120. Change it with `PI_BG_BASH_PROMOTE_MS`
-(milliseconds) or `/bgtimer <seconds>`. See
-[Background commands](background-commands.md).
+the limit to 20 seconds instead of 120 and applies it also to calls that set
+`timeout`. Change it with `PI_BG_BASH_PROMOTE_MS` (milliseconds) or
+`/bgtimer <seconds>`. See [Background commands](background-commands.md).
 
 Task logs live under `$XDG_STATE_HOME/pi-bg/`, outside the project.
 
-### Claude subscription transport
-
-[Pi Claude DirectSDK](https://github.com/joaomj/pi-claude-directsdk) is an optional provider extension.
-`install.sh --only claude` checks the qualified CLI range and offers the pinned
-CLI install. It runs the CLI login and installs the package only when a qualified
-CLI is present; otherwise it prints the install command and stops. Read its current
-requirements for Claude Code, authentication, and account access first.
-Installing the package alone does not configure or authenticate a provider.
-It intentionally stays a standalone repository (stars, issues, and tag-driven
-releases) and is not part of the monorepo below.
-
-```bash
-pi install git:github.com/joaomj/pi-claude-directsdk
-```
-
-The installer installs the newest release whose tag signature verifies, for
-example `git:github.com/joaomj/pi-claude-directsdk@v0.3.1`. Keep one source
-only; remove the other with `pi remove` before switching.
-
 ### Interactive questions
 
-[`pi-ask-user`](https://www.npmjs.com/package/pi-ask-user) provides interactive questions.
-The current local declaration pins version `0.16.0` and disables its bundled skills:
-
-```bash
-pi install npm:pi-ask-user@0.16.0
-```
-
-To match that resource selection, use this entry in your own `settings.json` package list:
-
-```json
-{
-  "source": "npm:pi-ask-user@0.16.0",
-  "skills": []
-}
-```
-
-This entry replaces the package's string declaration; do not add a duplicate.
-`install.sh` writes it for you after the install.
+[`pi-ask-user`](https://www.npmjs.com/package/pi-ask-user) 0.16.0 provides the
+`ask_user` tool. The package loads its extension only, not its bundled skills.
 
 ### Context usage map
 
-[`pi-context-view`](https://pi.dev/packages/pi-context-view) visualizes what fills
-the context and inspects hidden parts (system prompt, tool definitions, extension
-injections). On-demand commands only; it adds nothing to the model context.
-
-```bash
-pi install npm:pi-context-view
-```
+[`pi-context-view`](https://pi.dev/packages/pi-context-view) 0.8.2 visualizes
+what fills the context and inspects hidden parts (system prompt, tool
+definitions, extension injections). On-demand commands only; it adds nothing to
+the model context.
 
 ### Claude usage footer
 
 [Claude usage](https://github.com/joaomj/pi-extensions/tree/main/extensions/claude-usage)
-shows remaining Claude subscription quota (5-hour and weekly windows) in the footer,
-with a `/claude-account` picker when several Claude logins exist on the machine:
-
-```bash
-pi install npm:@joaomj/pi-claude-usage
-```
+0.2.0 shows remaining Claude subscription quota (5-hour and weekly windows) in
+the footer, with a `/claude-account` picker when several Claude logins exist on
+the machine.
 
 It reads the login that Claude Code owns: `~/.claude/.credentials.json`, or the
 macOS login keychain item `Claude Code-credentials`. The Claude DirectSDK transport
 uses the same login. Packages that read Pi's `anthropic` OAuth login report no
 Claude usage while DirectSDK is the active provider.
 
-### Browser automation
-
-[`pi-browser-use`](https://pi.dev/packages/pi-browser-use) provides the `browser_*`
-tools on a managed headless browser:
-
-```bash
-pi install npm:pi-browser-use
-```
-
-It requires Node.js 24 or later and a Chrome or Chromium binary. Any Chromium-based
-browser works through the `pi-browser-use.executablePath` setting or the `CHROME_PATH`
-environment variable. When Node is missing, `install.sh` offers an official Node
-build. It never downloads a browser, because Google publishes no checksums for
-one: when no browser is found, the step prints what to install and skips the
-package, so it never installs into a startup failure.
-
-On Linux the home-directory Chrome cannot keep the setuid sandbox helper, and
-Ubuntu 24.04 and later also restrict unprivileged user namespaces. There the
-installer adds `"chromeArgs": ["--no-sandbox"]`, which lets the browser start at
-the cost of Chrome's own renderer sandbox. A system Chrome with a working sandbox
-is the stronger choice when you have one.
-
 ### Undo and redo
 
 [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) rolls back the last
 agent run: the conversation and the files that the run changed. It provides
 `/undo`, `/redo`, and `/diff`. `/diff` shows what `/undo` would restore.
-
-```bash
-pi install npm:@ahm3tj4f/pi-undo@0.5.0
-```
 
 It requires Git 2.31 or later. It takes a snapshot of the working folder when a
 run starts and another when it ends. It stores the snapshots in a separate Git
@@ -199,6 +111,54 @@ writes on its first run, or copy the default list from its `src/config.ts`.
 `/undo` restores the folder after a run. It does not prevent damage during the
 run, and it does not protect files outside the working folder. Two Pi sessions
 in the same folder share one store.
+
+## Opt-in add-ons
+
+These need a decision or software from the user, so the package does not bundle
+them. The [README](../README.md#opt-in-add-ons) has the install steps.
+
+### Permission checks
+
+[`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
+41.0.0 provides tool permission checks. This repository ships a reference policy
+in [permissions/pi-permission-system.json](../permissions/pi-permission-system.json);
+the user copies it, or merges a later version into their own policy by hand.
+
+Recommended guardrails from experience: deny `git -c user*`, `git -c *gpgsign*`,
+and `git -c gpg*`, plus `GIT_AUTHOR_*` / `GIT_COMMITTER_*` / `GIT_CONFIG_*`
+environment overrides, so no agent session can commit under a foreign identity
+or unsigned. Deny agent access to the policy file itself; edit it in your own
+editor. Known gap: `git commit` invocations (including `--no-gpg-sign` and
+`--author`) do not match any bash-pattern gate in the permission extension, so
+flag-level commit overrides cannot be blocked at that layer today; the global
+`commit.gpgsign` default plus the `-c` denials above are the working backstop.
+
+### Claude subscription transport
+
+[Pi Claude DirectSDK](https://github.com/joaomj/pi-claude-directsdk) is an
+optional provider extension. It needs a paid Claude plan, a Claude Code CLI in
+the qualified range (`>=2.1.263 <2.2.0`), and a Claude Code login. Installing
+the package alone does not configure or authenticate a provider. It stays a
+standalone repository (stars, issues, and tag-driven releases) and is not part
+of the monorepo below.
+
+### Browser automation
+
+[`pi-browser-use`](https://pi.dev/packages/pi-browser-use) 0.12.15 provides the
+`browser_*` tools on a managed headless browser.
+
+It requires Node.js 24.18 or later and a Chrome or Chromium binary. Pi itself
+needs only Node.js 22.19, which is why the package does not bundle it. Any
+Chromium-based browser works through the `pi-browser-use.executablePath`
+setting or the `CHROME_PATH` environment variable. Do not download a browser
+for the user.
+
+On Linux the home-directory Chrome cannot keep the setuid sandbox helper, and
+Ubuntu 24.04 and later also restrict unprivileged user namespaces. There, set
+`"pi-browser-use": { "chromeArgs": ["--no-sandbox"] }` in
+`~/.pi/agent/settings.json`. The browser then starts, at the cost of Chrome's
+own renderer sandbox. A system Chrome with a working sandbox is the stronger
+choice when you have one.
 
 ## Evaluated and not installed
 
@@ -253,5 +213,5 @@ then attach the repository as trusted publisher on the package's npm settings pa
 ## Check your setup
 
 Use `pi list` to inspect your package declarations. Restart Pi after installing extensions.
-Choose your own versions and review upstream changes before updating.
+Review upstream changes before you move a pinned version.
 Shared prompts and instructions can refer to optional tools; adapt them when you omit a package.
