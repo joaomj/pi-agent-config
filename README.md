@@ -291,58 +291,6 @@ On Linux, a Chrome under the home directory may not start with its sandbox. See
 [Extensions in use](docs/extensions.md#browser-automation) for the setting that
 fixes it and what it costs.
 
-## Review pull requests in GitHub
-
-[.github/workflows/ai-review.yml](.github/workflows/ai-review.yml) runs one code
-review before a pull request can merge, using
-[prompts/code-review.md](prompts/code-review.md). The review runs as a GitHub
-Actions job, so nothing runs outside the runner.
-
-The job posts the report as a review comment and fails when the report contains
-a P0 or P1 finding. That failure blocks a merge while the default branch requires
-the `ai-review / review` check. Without that requirement the review reports and
-does not block.
-
-### Add it to a repository
-
-```bash
-ci/ai-review/rollout.sh --ref v0.7.2 joaomj/example-repo
-```
-
-The script adds `.github/workflows/ai-review.yml` on the `ai-review` branch, sets
-the `DEEPSEEK_API_KEY` secret from `pi auth print-api-key --provider deepseek`,
-and opens a pull request. That pull request runs the review, so the first review
-also proves the wiring. Pass `--no-secret` to set the secret yourself, and
-`--update` to rewrite a branch the script already created.
-
-The caller pins the called workflow and the guidelines to the commit that `--ref`
-resolves to, so moving a release tag cannot change what runs with the secret.
-
-After the pull request merges, require the check:
-
-```bash
-ci/ai-review/ruleset.sh joaomj/example-repo
-```
-
-The ruleset lets a repository administrator bypass it only through a pull
-request, so direct pushes to the default branch then fail. Preview the change
-with `--dry-run`.
-
-### Limits
-
-- The job skips private repositories. GitHub requires a paid plan to enforce a
-  status check on a private repository, so a private repository would post a
-  review that blocks nothing.
-- The job skips fork pull requests, which receive no secret.
-- The default model is `deepseek/deepseek-flash` with `high` thinking. Pass the
-  `model` and `thinking` inputs in the caller workflow to change it.
-- Repositories with pull requests disabled cannot run the review; the rollout
-  script refuses them.
-- Updating the review means a new release and a re-run of `rollout.sh --update`,
-  because callers pin a commit rather than a tag.
-- A review that ends without a `REVIEW-VERDICT` line fails the job. Re-run it
-  rather than merging past an inconclusive report.
-
 ## Maintain this repository
 
 - `scripts/check-package.sh [commit]` installs a commit into a scratch Pi
