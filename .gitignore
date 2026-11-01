@@ -82,8 +82,6 @@ versions.lock
 /tests/
 /docs/startup/
 /docs/proton-pass-exa.md
-/docs/ROADMAP.md
-!/docs/ROADMAP.md
 
 # Runtime state written by extensions
 cached-compaction.jsonl

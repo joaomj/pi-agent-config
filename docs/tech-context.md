@@ -2,25 +2,22 @@
 
 ## Shared resources
 
-This repository distributes agent instructions, prompt templates, skills, and workflow documentation.
-It does not manage a Pi installation or synchronize personal runtime configuration.
+This repository is one Pi package. It distributes agent instructions, prompt
+templates, skills, two extensions of its own, and six pinned third-party
+extensions. See the [README](../README.md) for the full list.
 
-[AGENTS.md](../AGENTS.md) defines collaboration and approval rules.
+[AGENTS.md](../AGENTS.md) defines collaboration and approval rules. The
+`shared-rules` extension adds it to the system prompt, so no user file changes.
 [Prompt templates](../prompts/) provide explicit commands for planning, review,
 explanation, diagrams, slide decks, and other project workflows.
 [Skills](../skills/) provide reusable guidance and supporting tools.
 
 ## Personal resources
 
-Keep provider and model settings, MCP servers, extension code, package declarations,
-permission policies, credentials, sessions, and caches outside Git.
-Install and configure optional packages yourself using the [extension catalog](extensions.md).
-No profile or installer selects them for you.
-
-Some instructions assume indexed search, interactive questions, or durable background commands.
-Those capabilities depend on separately installed extensions. Adapt the instructions
-if your setup does not provide them. Permission checks require your own policy;
-installing an extension does not reproduce the maintainer's access rules.
+Keep provider and model settings, MCP servers, permission policies,
+credentials, sessions, and caches outside Git. The package does not change
+them. Permission checks, the Claude transport, and browser automation are
+opt-in add-ons described in the [extension catalog](extensions.md).
 
 ## Workflow outputs
 
@@ -30,6 +27,6 @@ These workflows generate artifacts directly rather than requiring a shared rende
 
 ## Updates
 
-Review upstream workflow changes before copying them into an active configuration.
-Update Pi and optional extensions independently using their supported commands.
-The former repository installer, profiles, and configuration sync scripts are no longer shared or maintained here.
+Update by installing a newer release tag with `pi install`, and roll back by
+installing an older one. Read [CHANGELOG.md](../CHANGELOG.md) before you move.
+Update Pi and the opt-in add-ons independently with their own commands.
