@@ -6,37 +6,37 @@ Recreate the arrangement yourself with `/login`, `/model`, `/thinking`, and `/sc
 
 ## Default model
 
-The default is DeepSeek V4.1 Flash through the official DeepSeek provider at high thinking effort.
-It is the official Chinese provider endpoint, not the OpenRouter copy of the same model family.
+The default is DeepSeek V4.1 Flash through the OpenRouter provider at low thinking effort.
+No model has its own thinking default: every model starts at the global default, `low`.
 
 ## Scoped models
 
 Interactive cycling (`Ctrl+P`, `/scoped-models`) covers four models:
 
-- DeepSeek V4.1 Flash (official DeepSeek provider) at high: the default.
-- Muse Spark 1.3 Contributor (Meta provider) at xhigh.
-- Claude Opus 5.5 at low.
-- Claude Haiku 5.5 at high.
+- DeepSeek V4.1 Flash (OpenRouter provider): the default.
+- Claude Opus 5.5 (Claude DirectSDK provider).
+- Claude Sonnet 5.5 (Claude DirectSDK provider).
+- Claude Haiku 5.5 (Claude DirectSDK provider).
 
 ## Shared limits
 
-Meta and DeepSeek overrides match the Opus 5.5 arrangement: bounded response length,
-a 250k context window, and a short-tier prompt cache declaration.
+The DeepSeek and Claude DirectSDK overrides in `models.json` (Opus 5.5, Sonnet 5.5, and Haiku 5.5)
+share the same limits: a 250k context window, a 20k maximum response length, and declared prompt cache tiers.
 The shared cap keeps behavior comparable across providers.
-It narrows the large native context windows of the Meta and DeepSeek models.
+It narrows the native context windows of these models.
 
 ## Cache behavior
 
-Cache warming runs in streaming mode: Pi keeps eligible prompt caches warm during active runs.
-The DeepSeek and Meta entries declare the short cache tier so they stay eligible.
-Cache-miss notices stay on, so warming failures and significant misses surface in the TUI.
+Cache warming is off (`cacheWarming` is `"off"` in `settings.json`), so Pi does not keep prompt caches warm.
+The DeepSeek and Claude DirectSDK entries still declare prompt cache tiers.
+Cache-miss notices stay on, so significant misses surface in the TUI.
 
 ## Reproduce it locally
 
 1. Sign in to each provider with `/login`.
-2. Pick each model with `/model` and set its thinking effort with `/thinking`.
+2. Pick each model with `/model`. Set its thinking effort with `/thinking` only if you want something other than `low`.
 3. Save the cycle set with `/scoped-models` and the default with `Ctrl+S` on the model picker.
-4. Mirror the Opus response, context, and short-cache values onto the Meta and DeepSeek entries in `models.json`.
+4. Set the same context window, response length, and prompt cache values on the DeepSeek and Claude DirectSDK entries in `models.json`.
 
 Keep your `models.json`, `settings.json`, and `auth.json` outside Git.
 This document never contains keys, tokens, or complete settings files.
