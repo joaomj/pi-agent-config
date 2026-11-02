@@ -130,12 +130,33 @@ edited `~/.pi/agent/AGENTS.md`, and kept backups in `~/.pi/agent/.install-histor
 7. If `~/.pi/agent/.install-history` exists, decide whether to delete it.
    Nothing uses it any more.
 
-8. Verify as in [New install](#new-install) step 3.
+8. Remove your copies of skills and prompts that the package now ships. Pi
+   loads a skill or prompt from `~/.pi/agent` before the package copy with the
+   same name, so an old copy hides the current version. List the copies:
 
-9. Restart Pi. Running sessions do not load the package.
+   ```bash
+   P=~/.pi/agent/git/github.com/joaomj/pi-agent-config
+   cd ~/.pi/agent
+   for d in $(find "$P/skills" -name SKILL.md -exec dirname {} \; | xargs -n1 basename); do find skills -type d -name "$d"; done 2>/dev/null
+   for f in $(ls "$P/prompts"); do ls "prompts/$f"; done 2>/dev/null
+   ```
+
+   Keep any copy you changed on purpose. Back up and remove the others, for
+   example:
+
+   ```bash
+   tar czf ~/pi-agent-config-backup/user-copies.tgz <paths> && rm -r <paths>
+   ```
+
+   Run the listing again. It prints only the copies you kept.
+
+9. Verify as in [New install](#new-install) step 3.
+
+10. Restart Pi. Running sessions do not load the package.
 
 To undo the upgrade, run `pi remove git:github.com/joaomj/pi-agent-config`,
-copy the files in `~/pi-agent-config-backup/` back to `~/.pi/agent/`, and run
+copy the files in `~/pi-agent-config-backup/` back to `~/.pi/agent/`, extract
+`user-copies.tgz` there with `tar xzf ~/pi-agent-config-backup/user-copies.tgz -C ~/.pi/agent`, and run
 `pi update --extensions`.
 
 ## What the package adds
