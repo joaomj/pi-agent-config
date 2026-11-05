@@ -81,8 +81,9 @@ edited `~/.pi/agent/AGENTS.md`, and kept backups in
    entry also removes any filter such as `"extensions": []` that turned off
    its extensions.
 
-   Keep `npm:@gotgenes/pi-permission-system`, `npm:pi-browser-use`, and
-   `pi-claude-directsdk`. They are the opt-in add-ons and are not bundled.
+   Keep `npm:@gotgenes/pi-permission-system` and `pi-claude-directsdk`. They
+   are the opt-in add-ons and are not bundled. Remove `npm:pi-browser-use`:
+   the bundled `user-browser` skill replaces it.
 
 3. Run `pi list` again. None of the packages removed in step 2 appear.
 

@@ -196,7 +196,8 @@ export CDP_PORT_FILE="$prof/DevToolsActivePort"
 scripts/cdp open https://example.com
 ```
 
-Use the Chrome or Chromium binary the machine has; add `--no-sandbox` only
+Replace `chromium` with the binary the machine has (on macOS, for example,
+`"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"`); add `--no-sandbox` only
 if it does not start without it. Headless browsers do not show the Allow
 prompt. When done, run `scripts/cdp stop`, stop the browser with
 `pkill -f "user-data-dir=$prof"`, and delete `$prof`.

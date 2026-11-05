@@ -68,7 +68,6 @@ bundle them. [Add-ons](docs/add-ons.md) has the setup steps.
   policy that blocks credential reads and asks before commits and pushes.
 - **Claude subscription transport**: use a paid Claude plan through the Claude
   Code login.
-- **Browser automation**: `browser_*` tools on a managed headless browser.
 
 ## Update and remove
 

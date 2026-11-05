@@ -82,16 +82,3 @@ a paid Claude plan through the Claude Code login. It needs a paid Claude plan.
 5. Restart Pi, open `/model`, wait for the DirectSDK catalog, and choose a
    DirectSDK model.
 
-## Browser automation
-
-[`pi-browser-use`](https://pi.dev/packages/pi-browser-use) adds the `browser_*`
-tools on a managed headless browser. It needs Node.js 24.18 or later
-(`node -v`) and Google Chrome or Chromium.
-
-```bash
-pi install npm:pi-browser-use@0.12.15
-```
-
-On Linux, a Chrome under the home directory may not start with its sandbox. See
-[Extensions in use](extensions.md#browser-automation) for the setting that
-fixes it and what it costs.

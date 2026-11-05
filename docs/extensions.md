@@ -154,24 +154,6 @@ the package alone does not configure or authenticate a provider. It stays a
 standalone repository (stars, issues, and tag-driven releases) and is not part
 of the monorepo below.
 
-### Browser automation
-
-[`pi-browser-use`](https://pi.dev/packages/pi-browser-use) 0.12.15 provides the
-`browser_*` tools on a managed headless browser.
-
-It requires Node.js 24.18 or later and a Chrome or Chromium binary. Pi itself
-needs only Node.js 22.19, which is why the package does not bundle it. Any
-Chromium-based browser works through the `pi-browser-use.executablePath`
-setting or the `CHROME_PATH` environment variable. Do not download a browser
-for the user.
-
-On Linux the home-directory Chrome cannot keep the setuid sandbox helper, and
-Ubuntu 24.04 and later also restrict unprivileged user namespaces. There, set
-`"pi-browser-use": { "chromeArgs": ["--no-sandbox"] }` in
-`~/.pi/agent/settings.json`. The browser then starts, at the cost of Chrome's
-own renderer sandbox. A system Chrome with a working sandbox is the stronger
-choice when you have one.
-
 ## Evaluated and not installed
 
 These were reviewed and deliberately left out. Reasons are recorded so the
