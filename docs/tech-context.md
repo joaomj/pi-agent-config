@@ -4,7 +4,7 @@
 
 This repository is one Pi package. It distributes agent instructions, prompt
 templates, skills, two extensions of its own, and six pinned third-party
-extensions. See the [README](../README.md) for the full list.
+extensions, and the pinned `pi-chrome-cdp` browser client. See the [README](../README.md) for the full list.
 
 [AGENTS.md](../AGENTS.md) defines collaboration and approval rules. The
 `shared-rules` extension adds it to the system prompt, so no user file changes.

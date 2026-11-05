@@ -1,0 +1,18 @@
+#!/bin/bash
+# cdp-share: let a Pi session on another machine drive this desktop's browser.
+#
+#   cdp-share [ssh-target] [port]   defaults: $CDP_SHARE_TARGET 9222
+#
+# Run it on the desktop (macOS or Linux), or start it there over ssh. Needs
+# remote debugging switched on (chrome://inspect/#remote-debugging, or
+# brave://inspect/#remote-debugging). Chromium accepts any /devtools/browser
+# path, so the remote port file is written here instead of copied from the
+# browser profile, which macOS hides from ssh sessions. Runs until Ctrl-C or
+# until the ssh connection drops.
+set -euo pipefail
+R=${1:-${CDP_SHARE_TARGET:?set CDP_SHARE_TARGET or pass user@host}}
+port=${2:-9222}
+nc -z 127.0.0.1 "$port" >/dev/null 2>&1 || { echo "cdp-share: nothing on 127.0.0.1:$port. Enable remote debugging in the browser's inspect page" >&2; exit 1; }
+ssh "$R" "mkdir -p -m 700 ~/.cache/cdp-share && printf '%s\n/devtools/browser\n' $port > ~/.cache/cdp-share/DevToolsActivePort"
+echo "cdp-share: browser port $port shared with $R. Ctrl-C to stop."
+exec ssh -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -N -R "$port:127.0.0.1:$port" "$R"

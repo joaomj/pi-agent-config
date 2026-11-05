@@ -57,6 +57,18 @@ macOS login keychain item `Claude Code-credentials`. The Claude DirectSDK transp
 uses the same login. Packages that read Pi's `anthropic` OAuth login report no
 Claude usage while DirectSDK is the active provider.
 
+### User browser
+
+[`pi-chrome-cdp`](https://github.com/pasky/chrome-cdp-skill) 1.1.0 provides
+`cdp.mjs`, a Chrome DevTools Protocol client with no dependencies. The package
+does not load its own skill. The
+[`user-browser`](../skills/tooling/user-browser/SKILL.md) skill runs it
+through `scripts/cdp`, which picks the browser, and adds the rules for using
+the user's accounts, the desktop sharing script `cdp-share`, and a throwaway
+headless browser. It needs Node.js 22 or later and a Chromium-based browser
+with remote debugging turned on. It adds no tools, so it costs nothing until a
+task loads the skill.
+
 ### Undo and redo
 
 [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) rolls back the last

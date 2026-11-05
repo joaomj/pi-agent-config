@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# cdp: run chrome-cdp's cdp.mjs against the user's browser.
+#
+#   scripts/cdp <command> [args...]     same commands as cdp.mjs
+#   scripts/cdp check                   say which browser it would use
+#
+# Browser selection, first match wins:
+#   1. CDP_PORT_FILE, if set.
+#   2. A browser shared from the user's desktop with cdp-share
+#      (~/.cache/cdp-share/DevToolsActivePort). Fails if the tunnel is down.
+#   3. A browser on this machine, found by cdp.mjs itself.
+set -euo pipefail
+
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cdp_mjs="$here/../../../../node_modules/pi-chrome-cdp/skills/chrome-cdp/scripts/cdp.mjs"
+[[ -f "$cdp_mjs" ]] || { echo "cdp: chrome-cdp is missing at $cdp_mjs. Reinstall pi-agent-config." >&2; exit 1; }
+
+node_bin="$(command -v node || true)"
+[[ -n "$node_bin" ]] || for n in "$HOME/.local/bin/node" /usr/local/bin/node /opt/homebrew/bin/node; do
+  [[ -x "$n" ]] && { node_bin="$n"; break; }
+done
+[[ -n "$node_bin" ]] || { echo "cdp: Node.js 22 or later is required and was not found." >&2; exit 1; }
+
+shared="$HOME/.cache/cdp-share/DevToolsActivePort"
+source="the browser on this machine"
+if [[ -n "${CDP_PORT_FILE:-}" ]]; then
+  source="the browser in CDP_PORT_FILE ($CDP_PORT_FILE)"
+elif [[ -f "$shared" ]]; then
+  port="$(head -1 "$shared")"
+  if ! (exec 3<>"/dev/tcp/127.0.0.1/$port") 2>/dev/null; then
+    echo "cdp: the shared browser is not connected (nothing on 127.0.0.1:$port)." >&2
+    echo "cdp: ask the user to run cdp-share on their desktop, then retry." >&2
+    exit 3
+  fi
+  export CDP_PORT_FILE="$shared"
+  source="the shared desktop browser on 127.0.0.1:$port"
+fi
+
+if [[ "${1:-}" == check ]]; then
+  echo "cdp: using $source"
+  exec "$node_bin" "$cdp_mjs" list
+fi
+exec "$node_bin" "$cdp_mjs" "$@"

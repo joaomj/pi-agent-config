@@ -26,6 +26,12 @@ My rules, prompt templates, skills, and extensions for the
   shows what fills the context window, and
   [`@joaomj/pi-claude-usage`](https://www.npmjs.com/package/@joaomj/pi-claude-usage)
   shows the Claude subscription quota in the footer.
+- **Your own browser.** The [`user-browser`](skills/tooling/user-browser/SKILL.md)
+  skill lets the agent read and operate your Chrome or Brave, with your tabs
+  and logins, through the bundled
+  [`pi-chrome-cdp`](https://github.com/pasky/chrome-cdp-skill). When the agent
+  runs on a headless server, `cdp-share` shares your desktop browser over one
+  SSH tunnel.
 - **Commands and skills.** [Prompt templates](prompts/) add `/plan`,
   `/code-review`, `/explain`, `/pr`, `/generate-slides`, and more.
   [Skills](skills/) cover technical writing, research, test audits,
