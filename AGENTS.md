@@ -70,6 +70,7 @@ enforcement blocks or asks, follow it; do not work around it.
 | Credentials, keys, and `.env` files stay unread | `pi-permission-system` policy (`deny`) |
 | `PLAN-*.md` plan files are never committed | `plan-file-guard.ts` |
 | A foreground command still running after 20 seconds moves to the background | `pi-bg-bash` and `bg-bash-timer.ts` |
+| Git commands never open an editor and hang | `git-no-editor.ts` (`GIT_EDITOR=true`) |
 | A check that fails again after fixes, or a repeated identical call, stops the loop | `loop-breaker.ts` |
 
 ## Judgment rules

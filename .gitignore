@@ -71,6 +71,7 @@ versions.lock
 /profiles/
 /extensions/*
 !/extensions/bg-bash-timer.ts
+!/extensions/git-no-editor.ts
 !/extensions/loop-breaker.ts
 !/extensions/shared-rules.ts
 !/extensions/deadline.mjs
