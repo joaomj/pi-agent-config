@@ -42,10 +42,14 @@ with open(path, "w") as handle:
     handle.write("\n")
 VERSION
 
+note "Writing ${tag} into the install commands"
+install_docs=(README.md docs/install.md)
+sed -E -i "s#(pi-agent-config@)v[0-9]+\.[0-9]+\.[0-9]+#\1${tag}#g" "${install_docs[@]}"
+
 note "Checking that the package installs and loads"
 scripts/check-package.sh
 
-git add package.json
+git add package.json "${install_docs[@]}"
 git commit --quiet -m "release: ${tag}"
 note "Tagging ${tag} (signed)"
 git tag -s --annotate "${tag}" --message "${tag}"

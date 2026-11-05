@@ -1,7 +1,7 @@
 # Extensions in use
 
 This catalog describes the third-party packages that this package bundles and
-the opt-in add-ons. The [README](../README.md) has the install steps. Review a
+the opt-in add-ons. [Install and upgrade](install.md) has the install steps. Review a
 package's source before you install it: extensions run code with your local
 permissions. Provider settings, MCP connections, and credentials are not shared.
 
@@ -11,7 +11,7 @@ permissions. Provider settings, MCP connections, and credentials are not shared.
 packages as npm dependencies at the versions pinned in
 [package.json](../package.json). Do not install them separately: two copies of
 one extension register the same tool, and Pi then does not start. Turn one off
-with a package filter, as the README shows.
+with a package filter, as [Turn off one part](install.md#turn-off-one-part) shows.
 
 ### Indexed file search
 
@@ -115,7 +115,7 @@ in the same folder share one store.
 ## Opt-in add-ons
 
 These need a decision or software from the user, so the package does not bundle
-them. The [README](../README.md#opt-in-add-ons) has the install steps.
+them. [Add-ons](add-ons.md) has the install steps.
 
 ### Permission checks
 
