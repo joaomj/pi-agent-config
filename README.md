@@ -48,7 +48,7 @@ rules.
 You need Pi 1.4.0 or later, Node.js 22.19 or later, and Git.
 
 ```bash
-pi install git:github.com/joaomj/pi-agent-config@v0.10.1
+pi install git:github.com/joaomj/pi-agent-config@v0.10.2
 ```
 
 Then restart Pi. Running sessions do not load the package.

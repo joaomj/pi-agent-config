@@ -1,6 +1,6 @@
 {
   "name": "pi-agent-config",
-  "version": "0.10.1",
+  "version": "0.10.2",
   "private": true,
   "type": "module",
   "description": "Shared rules, prompt templates, skills, and extensions for the Pi coding agent, installed as one Pi package",

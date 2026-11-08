@@ -2,6 +2,12 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.10.2] - 2026-11-08
+
+### Changed
+
+- Refuse to start when the package is configured twice
+
 ## [v0.10.1] - 2026-11-08
 
 ### Changed
