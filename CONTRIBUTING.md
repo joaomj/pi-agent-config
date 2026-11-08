@@ -18,10 +18,10 @@ Run it after any change to `package.json` or `extensions/`.
 
 ## Release
 
-`scripts/release.sh vX.Y.Z` runs the package check, sets the version, writes
-the new tag into the install commands in `README.md` and `docs/install.md`,
-signs the tag, and publishes the release. A workflow then updates
-`CHANGELOG.md`.
+`scripts/release.sh vX.Y.Z` sets the version, writes the new tag into the
+install commands in `README.md` and `docs/install.md`, regenerates
+`CHANGELOG.md`, runs the package check, commits, signs the tag, and publishes
+the release.
 
 ## Reference
 

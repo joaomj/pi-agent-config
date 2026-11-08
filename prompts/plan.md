@@ -40,11 +40,11 @@ After the plan, add short bullets. Scale to the work; write "Not applicable" for
 
 ### Close and wait
 
-If a decision blocks approval, use `ask_user` to ask one question naming the choice, your recommendation, and its impact. Update the plan after the answer; answering does not approve it.
+If a decision blocks approval, ask one question naming the choice, your recommendation, and its impact. Update the plan after the answer; answering does not approve it.
 
-Otherwise, request approval with `ask_user`: approve and start, request changes, or stop. Call it standalone, inline, with a freeform option, and refer to the plan above instead of repeating it.
+Otherwise, request approval: approve and start, request changes, or stop. Allow a freeform answer, and refer to the plan above instead of repeating it.
 
-Cancellation, timeout, or an unclear answer is not approval. If `ask_user` cannot render, ask in chat and wait.
+Cancellation, timeout, or an unclear answer is not approval. Wait for an explicit answer.
 
 Do not create branches, write files, edit code, publish tickets, or commit in this phase.
 

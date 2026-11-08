@@ -9,7 +9,7 @@ extensions, and the pinned `pi-chrome-cdp` browser client. See the [README](../R
 [AGENTS.md](../AGENTS.md) defines collaboration and approval rules. The
 `shared-rules` extension adds it to the system prompt, so no user file changes.
 [Prompt templates](../prompts/) provide explicit commands for planning, review,
-explanation, diagrams, slide decks, and other project workflows.
+explanation, diagrams, and other project workflows.
 [Skills](../skills/) provide reusable guidance and supporting tools.
 
 ## Personal resources
