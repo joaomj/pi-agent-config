@@ -23,8 +23,8 @@ Each principle ends with the test that shows you applied it.
    fix follows a check that could have disproved the premise.
 5. **Encode lessons in structure.** A rule that keeps being broken becomes a
    permission rule, hook, lint, type, or test, and its prose is deleted. Text is
-   the last resort, for judgment calls only. Test: the rule is in the table
-   below, or it needs judgment.
+   the last resort, for judgment calls only. Test: the rule is
+   enforced by code, or it needs judgment.
 6. **Build the lever.** For non-trivial edits, migrations, or checks, write the
    script or codemod that does or proves the work, so a reviewer can rerun it.
    Test: the diff contains the tool, or the task was trivial.
@@ -46,8 +46,7 @@ Each principle ends with the test that shows you applied it.
     the final error. Test: you can say what a second run does.
 11. **Test behavior, not implementation.** A test must fail when the behavior
     breaks and pass when only internals change. Prefer a few end-to-end tests
-    through the real interface. Load `test-audit` before writing or changing
-    tests. Test: you can name the behavior each test protects.
+    through the real interface. Test: you can name the behavior each test protects.
 12. **Sequence verifiable units.** Break work into small steps that each end in
     a checkable state, and run the narrowest check that proves each one before
     the next. Test: every step has its own green check.
@@ -59,22 +58,10 @@ Each principle ends with the test that shows you applied it.
     direction, missing facts you cannot obtain, and irreversible or remote
     actions. Test: every question you ask is one only the user can answer.
 
-## Enforced rules
-
-These rules are enforced by code, so they need no further instruction. When an
-enforcement blocks or asks, follow it; do not work around it.
-
-| Rule | Enforced by |
-|---|---|
-| Commits, pushes, tags, merges, rebases, resets, deletes, installs, PR and issue writes, and cloud changes need approval | `pi-permission-system` policy (`ask`) |
-| Credentials, keys, and `.env` files stay unread | `pi-permission-system` policy (`deny`) |
-| `PLAN-*.md` plan files are never committed | `plan-file-guard.ts` |
-| A foreground command still running after 20 seconds moves to the background | `pi-bg-bash` and `bg-bash-timer.ts` |
-| Git commands never open an editor and hang | `git-no-editor.ts` (`GIT_EDITOR=true`) |
-| A check that fails again after fixes, or a repeated identical call, stops the loop | `loop-breaker.ts` |
-
 ## Judgment rules
 
+- When a guard, hook, or permission check blocks or asks, follow it; do not
+  work around it.
 - Keep plans, drafts, temporary outputs, caches, sessions, and credentials out
   of Git unless the user asks for them as durable files.
 - Never reference ticket IDs, plan files, or session artifacts in code or
@@ -101,5 +88,3 @@ timeout or cancellation is not approval. A choice settles only the question aske
 - Report blockers, failures, and verification gaps immediately.
 - Keep exact numbers, conditions, and uncertainty. Use plain words and short
   paragraphs; bold the key point. No emojis.
-- For file-based documentation, PR text, and commit messages, load the
-  `technical-writing` skill.
