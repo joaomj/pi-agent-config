@@ -160,18 +160,6 @@ evaluation is not repeated without new evidence:
   render and input overhead of the reviewed set, mostly cosmetic, and it competes
   for the same footer space as the task list and usage segments above.
 
-## Local-only helpers
-
-The maintainer also uses these individual extension files. They are not distributed
-by this repository and have no separate installation command:
-
-- `exit.ts`: adds `/exit` as a shutdown alias.
-- `plan-file-guard.ts`: blocks detected Git commits that include temporary `PLAN-*.md` files.
-- `startup-time.ts`: shows an approximate startup duration in the TUI status area (currently disabled by renaming it to `startup-time.ts.disabled`; rename it back to re-enable).
-
-The packages above do not install these helpers. An exact reproduction of the
-maintainer's setup requires separately implementing or sourcing equivalent behavior.
-
 ## Maintaining the maintainer's extensions
 
 `pi-claude-usage` lives in the

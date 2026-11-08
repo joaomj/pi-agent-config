@@ -16,6 +16,9 @@ My rules, prompt templates, skills, and extensions for the
 - **No loops.** [`loop-breaker`](extensions/loop-breaker.ts) adds a note when the
   same check fails again after a fix, or when an identical call repeats. The
   note asks the agent to test its premise before a third try.
+- **No editor hangs.** [`git-no-editor`](extensions/git-no-editor.ts) sets
+  `GIT_EDITOR=true`, so `git commit` or `git rebase` never waits for an editor
+  the agent cannot use.
 - **Fast search and undo.** [`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff)
   adds indexed file and content search.
   [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) adds `/undo`,

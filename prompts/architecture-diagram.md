@@ -4,8 +4,9 @@ argument-hint: "<question or view>"
 ---
 
 Create a diagram for `$@`. If the question or audience is unclear, ask before drawing.
-Read `docs/workflows/diagram-output-contract.md` under the Pi agent configuration
-directory (`PI_CODING_AGENT_DIR`, or `~/.pi/agent` when unset), not the current project.
+Read `docs/workflows/diagram-output-contract.md` in the pi-agent-config package
+directory, not the current project. `pi list` prints that directory under the
+package entry.
 
 
 # Architecture Diagram

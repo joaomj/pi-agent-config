@@ -3,7 +3,7 @@
 ## Shared resources
 
 This repository is one Pi package. It distributes agent instructions, prompt
-templates, skills, two extensions of its own, and six pinned third-party
+templates, skills, four extensions of its own, four pinned third-party
 extensions, and the pinned `pi-chrome-cdp` browser client. See the [README](../README.md) for the full list.
 
 [AGENTS.md](../AGENTS.md) defines collaboration and approval rules. The
@@ -16,8 +16,7 @@ explanation, diagrams, and other project workflows.
 
 Keep provider and model settings, MCP servers, permission policies,
 credentials, sessions, and caches outside Git. The package does not change
-them. Permission checks, the Claude transport, and browser automation are
-opt-in add-ons described in the [extension catalog](extensions.md).
+them. Permission checks and the Claude transport are opt-in add-ons described in the [extension catalog](extensions.md).
 
 ## Workflow outputs
 

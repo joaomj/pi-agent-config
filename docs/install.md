@@ -41,8 +41,8 @@ the same tool.
    The output is exactly one line: the one with `--fff-mode`. A
    `Failed to load` or `conflicts with` line names the extension to fix.
 
-3. Ask the user which [add-ons](add-ons.md) they want: permission checks, the
-   Claude subscription transport, and browser automation. Follow the section
+3. Ask the user which [add-ons](add-ons.md) they want: permission checks and the
+   Claude subscription transport. Follow the section
    for each one they choose. None is required.
 
 4. Restart Pi. Running sessions do not load the package.
