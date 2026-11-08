@@ -2,6 +2,15 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.10.1] - 2026-11-08
+
+### Changed
+
+- Keep setup-specific instructions out of the shared rules
+- Align the docs with the shipped package
+- Remove stale references to ask_user, slide decks, and the changelog workflow
+- Generate the changelog in the release commit
+
 ## [v0.10.0] - 2026-11-08
 
 ### Changed

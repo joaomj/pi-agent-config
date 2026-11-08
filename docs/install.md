@@ -27,10 +27,10 @@ the same tool.
 1. Install the package:
 
    ```bash
-   pi install git:github.com/joaomj/pi-agent-config@v0.10.0
+   pi install git:github.com/joaomj/pi-agent-config@v0.10.1
    ```
 
-   The last line reads `Installed git:github.com/joaomj/pi-agent-config@v0.10.0`.
+   The last line reads `Installed git:github.com/joaomj/pi-agent-config@v0.10.1`.
 
 2. Check that every extension loads:
 
@@ -146,7 +146,7 @@ the Claude quota footer:
 
 ```json
 {
-  "source": "git:github.com/joaomj/pi-agent-config@v0.10.0",
+  "source": "git:github.com/joaomj/pi-agent-config@v0.10.1",
   "extensions": [
     "!node_modules/@ahm3tj4f/pi-undo/**",
     "!node_modules/@joaomj/pi-claude-usage/**"
