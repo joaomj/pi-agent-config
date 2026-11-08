@@ -2,6 +2,55 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.10.0] - 2026-11-08
+
+### Changed
+
+- Drop pi-context-view, pi-ask-user, and the postmortem and slide prompts
+- Stop Git from opening an editor in agent shell commands
+- Replace pi-browser-use with the user-browser skill
+- Add a skill for operating the user's own browser
+- Document driving a desktop browser from a headless server with chrome-cdp
+- Lead the README with what the package does and cut install to one command
+- Update the model setup reference to match the current config
+- Remove user copies of packaged skills and prompts when upgrading
+- Remove the GitHub PR review section from the README
+
+## [v0.9.0] - 2026-11-01
+
+### Changed
+
+- Rewrite the README in a human voice
+- Enforce bash deadlines with Node instead of GNU timeout
+- Give agents ordered install steps for new and existing users
+- Ignore dependencies installed in a local clone
+- Replace install.sh with a plain pi install
+- Ship the third-party packages inside this package
+- Move timed foreground bash calls to the background
+- Install the newest signed Claude transport release
+- Check that the Claude transport pin is the newest release
+- Pin the Claude transport to v0.3.1
+- Load the review guidelines from v0.8.0
+
+## [v0.8.0] - 2026-10-29
+
+### Changed
+
+- Key loop-breaker checks by the whole command
+- Track pi-bg-bash tasks in the loop breaker
+- Rebuild the agent rules around engineering principles
+- Add an extension that interrupts repeated failed fixes
+- Require traceable findings in the code review
+- Move slow bash commands to the background after 20 seconds
+- Offer undo and redo of the last agent run
+- Add the AI review workflow
+- Add the AI review workflow
+- Add the AI review workflow
+- Add the AI review workflow
+- Add the AI review workflow
+- Add the standard pull request and issue templates
+- docs: update changelog for v0.7.2
+
 ## [v0.7.2] - 2026-10-28
 
 ### Changed

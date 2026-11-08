@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# Cut a release: set the version, commit, sign the tag, push, and publish.
+# Cut a release: set the version, update the changelog, commit, sign the tag,
+# push, and publish.
 #
 #   scripts/release.sh v0.5.0
-#
-# The changelog is generated from tags by .github/workflows/update-changelog.yml,
-# so this script does not edit CHANGELOG.md.
 set -euo pipefail
 
 usage() { printf 'Usage: %s vMAJOR.MINOR.PATCH\n' "$0" >&2; exit 2; }
@@ -46,10 +44,13 @@ note "Writing ${tag} into the install commands"
 install_docs=(README.md docs/install.md)
 sed -E -i "s#(pi-agent-config@)v[0-9]+\.[0-9]+\.[0-9]+#\1${tag}#g" "${install_docs[@]}"
 
+note "Updating CHANGELOG.md"
+bash scripts/update-changelog.sh "${tag}"
+
 note "Checking that the package installs and loads"
 scripts/check-package.sh
 
-git add package.json "${install_docs[@]}"
+git add package.json CHANGELOG.md "${install_docs[@]}"
 git commit --quiet -m "release: ${tag}"
 note "Tagging ${tag} (signed)"
 git tag -s --annotate "${tag}" --message "${tag}"
@@ -62,5 +63,4 @@ note "Publishing the GitHub release"
 gh release create "${tag}" --title "${tag}" --generate-notes
 
 note "Released ${tag}"
-printf '  The changelog workflow commits CHANGELOG.md to %s within a minute or two.\n' "${default_branch}"
 printf '  Users update with: pi install git:github.com/joaomj/pi-agent-config@%s\n' "${tag}"
