@@ -26,4 +26,3 @@ signs the tag, and publishes the release. A workflow then updates
 ## Reference
 
 - [Diagram output contract](docs/workflows/diagram-output-contract.md)
-- [HTML slide deck contract](docs/workflows/html-slide-decks.md)

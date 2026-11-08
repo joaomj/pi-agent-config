@@ -22,7 +22,6 @@ opt-in add-ons described in the [extension catalog](extensions.md).
 ## Workflow outputs
 
 Diagrams follow the [diagram output contract](workflows/diagram-output-contract.md).
-Slide decks follow the [HTML slide deck contract](workflows/html-slide-decks.md).
 These workflows generate artifacts directly rather than requiring a shared rendering extension.
 
 ## Updates

@@ -83,7 +83,7 @@ const system = request.messages.filter((m) => m.role === "system" || m.role === 
 const tools = (request.tools ?? []).map((t) => t.function?.name ?? t.name);
 const rule = readFileSync(rulesPath, "utf8").split("\n").find((line) => line.startsWith("1. **"));
 const failures = [];
-for (const tool of ["bash", "bash_output", "bash_tasks", "bash_kill", "ask_user", "fffind", "ffgrep"]) {
+for (const tool of ["bash", "bash_output", "bash_tasks", "bash_kill", "fffind", "ffgrep"]) {
   if (!tools.includes(tool)) failures.push(`tool ${tool} is missing`);
 }
 for (const line of log.split("\n")) {

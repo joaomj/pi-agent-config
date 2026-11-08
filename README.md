@@ -16,15 +16,11 @@ My rules, prompt templates, skills, and extensions for the
 - **No loops.** [`loop-breaker`](extensions/loop-breaker.ts) adds a note when the
   same check fails again after a fix, or when an identical call repeats. The
   note asks the agent to test its premise before a third try.
-- **Questions with choices.** [`pi-ask-user`](https://www.npmjs.com/package/pi-ask-user)
-  asks you one focused question with options and a recommended answer.
 - **Fast search and undo.** [`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff)
   adds indexed file and content search.
   [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) adds `/undo`,
   `/redo`, and `/diff` for the last agent run.
-- **Visibility.** [`pi-context-view`](https://pi.dev/packages/pi-context-view)
-  shows what fills the context window, and
-  [`@joaomj/pi-claude-usage`](https://www.npmjs.com/package/@joaomj/pi-claude-usage)
+- **Visibility.** [`@joaomj/pi-claude-usage`](https://www.npmjs.com/package/@joaomj/pi-claude-usage)
   shows the Claude subscription quota in the footer.
 - **Your own browser.** The [`user-browser`](skills/tooling/user-browser/SKILL.md)
   skill lets the agent read and operate your Chrome or Brave, with your tabs
@@ -33,7 +29,7 @@ My rules, prompt templates, skills, and extensions for the
   runs on a headless server, `cdp-share` shares your desktop browser over one
   SSH tunnel.
 - **Commands and skills.** [Prompt templates](prompts/) add `/plan`,
-  `/code-review`, `/explain`, `/pr`, `/generate-slides`, and more.
+  `/code-review`, `/explain`, `/pr`, and more.
   [Skills](skills/) cover technical writing, research, test audits,
   self-improvement from session logs, Proton Pass credentials, and skill
   grading.

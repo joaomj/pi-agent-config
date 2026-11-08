@@ -85,18 +85,12 @@ enforcement blocks or asks, follow it; do not work around it.
   state its likelihood and cost and get agreement.
 - When the user must run something you cannot (sudo, auth, secrets), write one
   script in `/tmp` that logs to the terminal and a file, and give one command.
-- Start known long-running commands (tests, builds, installs, servers, waits)
-  with `bash` and `background: true`; use `waitFor` for a server that must stay
-  up. When a call returns a task id, end the turn: the completion message is the
-  result. Do not poll, sleep, or rerun; read part of the output with
-  `bash_output` and a `filter`, and stop a task with `bash_kill`.
 
 ## Questions
 
-Call `ask_user` directly, never inside `codemode` or a parallel batch. Ask one
-focused question with a recommended option and its impact, and always allow a
-freeform answer. Wait for an explicit answer before dependent work; a timeout or
-cancellation is not approval. A choice settles only the question asked.
+Ask one focused question with a recommended option and its impact, and always
+allow a freeform answer. Wait for an explicit answer before dependent work; a
+timeout or cancellation is not approval. A choice settles only the question asked.
 
 ## Communication
 

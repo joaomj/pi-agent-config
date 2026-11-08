@@ -16,10 +16,8 @@
     "@ahm3tj4f/pi-undo": "0.5.0",
     "@ff-labs/pi-fff": "0.11.0",
     "@joaomj/pi-claude-usage": "0.2.0",
-    "pi-ask-user": "0.16.0",
     "pi-bg-bash": "0.4.1",
-    "pi-chrome-cdp": "1.1.0",
-    "pi-context-view": "0.8.2"
+    "pi-chrome-cdp": "1.1.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
@@ -39,9 +37,7 @@
       "node_modules/@ahm3tj4f/pi-undo/src/index.ts",
       "node_modules/@ff-labs/pi-fff/src/index.ts",
       "node_modules/@joaomj/pi-claude-usage/src/index.ts",
-      "node_modules/pi-ask-user/index.ts",
-      "node_modules/pi-bg-bash/src/index.ts",
-      "node_modules/pi-context-view/src/index.ts"
+      "node_modules/pi-bg-bash/src/index.ts"
     ]
   }
 }

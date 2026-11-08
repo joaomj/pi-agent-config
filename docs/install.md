@@ -13,8 +13,8 @@ access to GitHub and npm.
 pi list
 ```
 
-- If the output names `pi-agent-config`, or any of `pi-bg-bash`, `pi-ask-user`,
-  `@ff-labs/pi-fff`, `pi-context-view`, `@ahm3tj4f/pi-undo`, or
+- If the output names `pi-agent-config`, or any of `pi-bg-bash`,
+  `@ff-labs/pi-fff`, `@ahm3tj4f/pi-undo`, or
   `@joaomj/pi-claude-usage` as a separate entry, follow
   [Upgrade from an older version](#upgrade-from-an-older-version).
 - Otherwise, follow [New install](#new-install).
@@ -70,9 +70,7 @@ edited `~/.pi/agent/AGENTS.md`, and kept backups in
    ```bash
    pi remove git:github.com/joaomj/pi-agent-config
    pi remove npm:pi-bg-bash@0.4.1
-   pi remove npm:pi-ask-user@0.16.0
    pi remove npm:@ff-labs/pi-fff@0.11.0
-   pi remove npm:pi-context-view
    pi remove npm:@ahm3tj4f/pi-undo@0.5.0
    pi remove npm:@joaomj/pi-claude-usage@0.2.0
    ```

@@ -33,18 +33,6 @@ the limit to 20 seconds instead of 120 and applies it also to calls that set
 
 Task logs live under `$XDG_STATE_HOME/pi-bg/`, outside the project.
 
-### Interactive questions
-
-[`pi-ask-user`](https://www.npmjs.com/package/pi-ask-user) 0.16.0 provides the
-`ask_user` tool. The package loads its extension only, not its bundled skills.
-
-### Context usage map
-
-[`pi-context-view`](https://pi.dev/packages/pi-context-view) 0.8.2 visualizes
-what fills the context and inspects hidden parts (system prompt, tool
-definitions, extension injections). On-demand commands only; it adds nothing to
-the model context.
-
 ### Claude usage footer
 
 [Claude usage](https://github.com/joaomj/pi-extensions/tree/main/extensions/claude-usage)
@@ -180,7 +168,6 @@ by this repository and have no separate installation command:
 - `exit.ts`: adds `/exit` as a shutdown alias.
 - `plan-file-guard.ts`: blocks detected Git commits that include temporary `PLAN-*.md` files.
 - `startup-time.ts`: shows an approximate startup duration in the TUI status area (currently disabled by renaming it to `startup-time.ts.disabled`; rename it back to re-enable).
-- `ask-user-defaults.ts`: defaults interactive questions to inline display.
 
 The packages above do not install these helpers. An exact reproduction of the
 maintainer's setup requires separately implementing or sourcing equivalent behavior.

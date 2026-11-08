@@ -22,7 +22,7 @@ Use strict STE only when requested; do not claim certified compliance.
 4. Load only the relevant artifact reference:
    - README: `references/readme.md`
    - API documentation: `references/api-documentation.md`
-   - PR, ADR, and postmortem: follow the invoked prompt template.
+   - PR and ADR: follow the invoked prompt template.
 5. Preserve exact identifiers, paths, commands, versions, errors, and quoted
    material.
 6. Separate observed facts from inference. Do not invent requirements, links,
