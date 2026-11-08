@@ -31,6 +31,7 @@
     ],
     "extensions": [
       "extensions/bg-bash-timer.ts",
+      "extensions/duplicate-guard.ts",
       "extensions/git-no-editor.ts",
       "extensions/loop-breaker.ts",
       "extensions/shared-rules.ts",

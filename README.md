@@ -16,6 +16,9 @@ My rules, prompt templates, skills, and extensions for the
 - **No loops.** [`loop-breaker`](extensions/loop-breaker.ts) adds a note when the
   same check fails again after a fix, or when an identical call repeats. The
   note asks the agent to test its premise before a third try.
+- **One copy only.** [`duplicate-guard`](extensions/duplicate-guard.ts) stops
+  Pi at startup, with both sources named, when the package is configured twice.
+  Two copies register the same tools, and Pi then does not start.
 - **No editor hangs.** [`git-no-editor`](extensions/git-no-editor.ts) sets
   `GIT_EDITOR=true`, so `git commit` or `git rebase` never waits for an editor
   the agent cannot use.
@@ -71,7 +74,8 @@ bundle them. [Add-ons](docs/add-ons.md) has the setup steps.
 ## Update and remove
 
 - Update: run the install command with a newer tag. Read
-  [CHANGELOG.md](CHANGELOG.md) first.
+  [CHANGELOG.md](CHANGELOG.md) first. A git source replaces the older tag; a
+  local path stays a separate entry, so remove one of the two.
 - Roll back: install an older tag the same way.
 - Remove: `pi remove git:github.com/joaomj/pi-agent-config`. This also removes
   the bundled packages.

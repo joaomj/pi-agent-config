@@ -39,7 +39,10 @@ the same tool.
    ```
 
    The output is exactly one line: the one with `--fff-mode`. A
-   `Failed to load` or `conflicts with` line names the extension to fix.
+   `Failed to load` or `conflicts with` line names the extension to fix. When
+   one line says `pi-agent-config is configured more than once`, `pi list`
+   has two entries for this package and one of them is stale: keep the one
+   you update, and remove the other with `pi remove <source>`.
 
 3. Ask the user which [add-ons](add-ons.md) they want: permission checks and the
    Claude subscription transport. Follow the section
