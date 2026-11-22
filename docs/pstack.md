@@ -61,10 +61,7 @@ for a client:
 ## Set up an account
 
 1. Install the package, as in the [README](../README.md#install).
-2. Copy or merge the reference permission policy, as in
-   [Add-ons](add-ons.md#permission-checks). The policy allows commits, asks
-   before pushes, and asks before Atlassian writes.
-3. Name the Atlassian MCP server `atlassian` in `~/.pi/agent/mcp.json`. The
+2. Name the Atlassian MCP server `atlassian` in `~/.pi/agent/mcp.json`. The
    policy asks before any tool of a server whose name contains "atlassian",
    except reads (`get*`, `list*`, `search*`, `lookup*`, `download*`, `fetch`).
    Under another server name, only tools with Jira, Confluence, or Bitbucket in

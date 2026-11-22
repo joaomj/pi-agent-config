@@ -28,7 +28,9 @@ My rules, prompt templates, skills, and extensions for the
   logs why. See [The pstack workflow](docs/pstack.md).
 - **Permission checks.**
   [`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
-  asks or denies before tool calls, MCP calls from `codemode` included.
+  asks or denies before tool calls, MCP calls from `codemode` included. The
+  package keeps the policy current: it blocks credential reads and asks before
+  pushes and Jira and Slack writes.
   [`pi-subagents`](https://www.npmjs.com/package/pi-subagents) runs child
   sessions for `/how`, `/arena`, `/interrogate`, and `/swarm`, under the same
   checks.
@@ -52,10 +54,10 @@ My rules, prompt templates, skills, and extensions for the
   self-improvement from session logs, Proton Pass credentials, and skill
   grading.
 
-The package does not change your providers, models, MCP servers, or permission
-policy. Until you add a policy, every tool call asks; the
-[reference policy](permissions/pi-permission-system.json) blocks credential
-reads and asks before pushes and remote writes.
+The package does not change your providers, models, or MCP servers. It does
+write your permission policy: the [shipped rules](permissions/pi-permission-system.json)
+plus your own, which it keeps in `local.json`. See
+[Permission checks](docs/extensions.md#permission-checks).
 
 ## Install
 

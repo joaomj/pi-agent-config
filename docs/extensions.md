@@ -36,21 +36,43 @@ Task logs live under `$XDG_STATE_HOME/pi-bg/`, outside the project.
 ### Permission checks
 
 [`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
-41.0.0 asks or denies before tool calls, MCP calls from `codemode` included,
-according to `~/.pi/agent/extensions/pi-permission-system/config.json`. The
-package does not write that file. Without it, every tool call asks. This
-repository ships a reference policy in
-[permissions/pi-permission-system.json](../permissions/pi-permission-system.json);
-[Add-ons](add-ons.md#permission-checks) shows how to copy or merge it.
+41.0.0 asks or denies before tool calls, MCP calls from `codemode` included.
+It reads its policy from `~/.pi/agent/extensions/pi-permission-system/config.json`.
 
-Recommended guardrails from experience: deny `git -c user*`, `git -c *gpgsign*`,
-and `git -c gpg*`, plus `GIT_AUTHOR_*` / `GIT_COMMITTER_*` / `GIT_CONFIG_*`
-environment overrides, so no agent session can commit under a foreign identity
-or unsigned. Deny agent access to the policy file itself; edit it in your own
-editor. Known gap: `git commit` invocations (including `--no-gpg-sign` and
-`--author`) do not match any bash-pattern gate in the permission extension, so
-flag-level commit overrides cannot be blocked at that layer today; the global
-`commit.gpgsign` default plus the `-c` denials above are the working backstop.
+This package ships the policy in
+[permissions/pi-permission-system.json](../permissions/pi-permission-system.json),
+and [`permission-policy`](../extensions/permission-policy.ts) writes
+`config.json` from it at every start, so an update brings the new rules. The
+shipped policy:
+
+- denies reads of credentials and `.env` files, and commands that print
+  secrets;
+- asks before pushes, merges, rebases, resets, deletes, installs, PR and issue
+  writes, and cloud changes, also when a git option such as `-C <dir>` comes
+  before the subcommand;
+- asks before Atlassian writes (Jira, Confluence, Bitbucket) and Slack writes;
+  their reads run without a prompt;
+- lets local commits run without a prompt, except a commit of a `PLAN-*.md`
+  file, which it denies.
+
+Your own rules go in `local.json`, next to `config.json`. A rule there replaces
+the shipped rule of the same pattern, and a new pattern goes last, so it wins
+over the shipped catch-alls. You can also edit `config.json` directly: at the
+next start, `permission-policy` moves your changes into `local.json` and keeps
+the previous file as `config.json.bak`. On an account that already had a
+policy, the first start moves its own rules into `local.json` the same way. A
+shipped rule that you delete comes back; to turn one off, give its pattern
+another action in `local.json`. `scripts/check-permission-policy.sh` tests
+these cases.
+
+Atlassian rules cover every tool of an MCP server whose name contains
+"atlassian", except reads (`get*`, `list*`, `search*`, `lookup*`,
+`download*`, `fetch`, `atlassianUserInfo`). Under another server name, only
+tools with Jira, Confluence, or Bitbucket in their names ask.
+
+Known gap: an option between `git commit` and its message, such as `--author`
+or `--no-gpg-sign`, is not matched by any rule. The global `commit.gpgsign`
+default is the backstop.
 
 ### Subagents
 

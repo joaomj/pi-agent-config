@@ -73,6 +73,10 @@ note "Starting Pi with the package"
 (cd "${work}" && pi --no-session -e "${work}/provider.ts" --model check/m -p "hi") > "${work}/run.log" 2>&1 || true
 [[ -s "${work}/request.json" ]] || { cat "${work}/run.log" >&2; die "Pi sent no model request"; }
 
+policy="${PI_CODING_AGENT_DIR}/extensions/pi-permission-system/config.json"
+git -C "${repo_root}" show "${commit}:permissions/pi-permission-system.json" | cmp -s "${policy}" - \
+  || die "a new account did not get the shipped permission policy at ${policy}"
+
 node - "${work}/request.json" "${work}/run.log" "${repo_root}/AGENTS.md" <<'EOF'
 import { readFileSync } from "node:fs";
 const [requestPath, logPath, rulesPath] = process.argv.slice(2);
@@ -96,5 +100,5 @@ if (failures.length > 0) {
   console.error(`FAILED\n  ${failures.join("\n  ")}`);
   process.exit(1);
 }
-console.log("OK: bundled tools registered, no extension errors, shared rules present once");
+console.log("OK: bundled tools registered, no extension errors, shared rules present once, shipped policy in place");
 EOF

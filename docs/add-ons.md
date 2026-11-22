@@ -4,45 +4,6 @@ These add-ons need a decision or extra software from you, so the package does
 not bundle them. [Extensions in use](extensions.md#opt-in-add-ons) describes
 what each one does and what it costs.
 
-## Permission checks
-
-The package bundles
-[`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system),
-which asks or denies before tool calls, according to a policy file. Without the
-file, every tool call asks. This repository
-ships a reference policy in
-[permissions/pi-permission-system.json](../permissions/pi-permission-system.json).
-It denies reads of credentials and `.env` files and asks before pushes,
-deletes, installs, Atlassian writes, and other remote writes. Local commits run
-without a prompt; a push is the gate.
-
-The policy lives at
-`~/.pi/agent/extensions/pi-permission-system/config.json`. If that file does
-not exist, copy the reference there:
-
-```bash
-mkdir -p ~/.pi/agent/extensions/pi-permission-system
-cp ~/.pi/agent/git/github.com/joaomj/pi-agent-config/permissions/pi-permission-system.json \
-   ~/.pi/agent/extensions/pi-permission-system/config.json
-```
-
-If the file exists, do not overwrite it. Instead, bring a later reference into
-your policy by hand:
-
-1. Compare your policy with the reference:
-   `diff -u <your config.json> <the reference>`.
-2. Pick the changes you want. The policy is a map of surface, pattern, and
-   action. Within a surface, the last matching pattern wins, so keep the order
-   of the patterns you copy.
-3. Write the result to `config.json.proposed` next to `config.json`. The
-   reference policy denies agents access to the policy file, so move the file
-   into place yourself:
-
-   ```bash
-   mv ~/.pi/agent/extensions/pi-permission-system/config.json.proposed \
-      ~/.pi/agent/extensions/pi-permission-system/config.json
-   ```
-
 ## Claude subscription transport
 
 [Pi Claude DirectSDK](https://github.com/joaomj/pi-claude-directsdk) lets Pi use

@@ -44,15 +44,11 @@ the same tool.
    has two entries for this package and one of them is stale: keep the one
    you update, and remove the other with `pi remove <source>`.
 
-3. Set up the permission policy, as in
-   [Add-ons](add-ons.md#permission-checks). Until the policy file exists,
-   every tool call asks.
-
-4. Ask the user whether they want the
+3. Ask the user whether they want the
    [Claude subscription transport](add-ons.md#claude-subscription-transport).
    It is not required.
 
-5. Restart Pi. Running sessions do not load the package.
+4. Restart Pi. Running sessions do not load the package.
 
 ## Upgrade from an older version
 

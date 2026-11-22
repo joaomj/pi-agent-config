@@ -42,6 +42,7 @@
       "extensions/duplicate-guard.ts",
       "extensions/git-no-editor.ts",
       "extensions/loop-breaker.ts",
+      "extensions/permission-policy.ts",
       "extensions/shared-rules.ts",
       "node_modules/@ahm3tj4f/pi-undo/src/index.ts",
       "node_modules/@ff-labs/pi-fff/src/index.ts",
