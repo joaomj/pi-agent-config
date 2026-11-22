@@ -22,6 +22,10 @@ My rules, prompt templates, skills, and extensions for the
 - **No editor hangs.** [`git-no-editor`](extensions/git-no-editor.ts) sets
   `GIT_EDITOR=true`, so `git commit` or `git rebase` never waits for an editor
   the agent cannot use.
+- **Ticket to merge with four decisions.** `/skill:ticket <KEY>` carries a Jira
+  ticket through contract, code, PR, CI and review, sign-off, and merge. You
+  decide at four gates; between them the agent decides what it can undo and
+  logs why. See [The pstack workflow](docs/pstack.md).
 - **Fast search and undo.** [`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff)
   adds indexed file and content search.
   [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) adds `/undo`,
@@ -35,7 +39,9 @@ My rules, prompt templates, skills, and extensions for the
   runs on a headless server, `cdp-share` shares your desktop browser over one
   SSH tunnel.
 - **Commands and skills.** [Prompt templates](prompts/) add `/plan`,
-  `/code-review`, `/explain`, `/pr`, and more.
+  `/code-review`, `/explain`, `/pr`, and the on-demand pstack commands
+  `/arena`, `/interrogate`, `/swarm`, `/architect`, `/figure-it-out`, `/how`,
+  and `/why`.
   [Skills](skills/) cover technical writing, research, test audits,
   self-improvement from session logs, Proton Pass credentials, and skill
   grading.

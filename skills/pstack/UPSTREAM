@@ -1,0 +1,25 @@
+# Upstream source of the pstack port: https://github.com/cursor/plugins (pstack/)
+# scripts/pstack-upstream.sh reads this file. Line format: <upstream path> <local path>
+commit 7a583913eb1b8d1a0ee76753d1a2cf072e7b54f9
+pstack/LICENSE skills/pstack/LICENSE
+pstack/skills/poteto-mode/SKILL.md skills/pstack/ticket/SKILL.md
+pstack/skills/poteto-mode/worker.md skills/pstack/ticket/SKILL.md
+pstack/skills/poteto-mode/playbooks/bug-fix.md skills/pstack/ticket/playbooks/bug-fix.md
+pstack/skills/poteto-mode/playbooks/feature.md skills/pstack/ticket/playbooks/feature.md
+pstack/skills/poteto-mode/playbooks/opening-a-pr.md skills/pstack/ticket/playbooks/opening-a-pr.md
+pstack/skills/poteto-mode/playbooks/babysit.md skills/pstack/ticket/playbooks/babysit.md
+pstack/skills/poteto-mode/references/bugbot-triage.md skills/pstack/ticket/references/bugbot-triage.md
+pstack/skills/show-me-your-work/SKILL.md skills/pstack/show-me-your-work/SKILL.md
+pstack/skills/show-me-your-work/scripts/log.sh skills/pstack/show-me-your-work/scripts/log.sh
+pstack/skills/ketchup/SKILL.md skills/pstack/ketchup/SKILL.md
+pstack/skills/create-verification-skill/SKILL.md skills/pstack/create-verification-skill/SKILL.md
+pstack/skills/create-verification-skill/references/feature-map-example skills/pstack/create-verification-skill/references/feature-map-example
+pstack/skills/maintain-verification-skill/SKILL.md skills/pstack/maintain-verification-skill/SKILL.md
+pstack/skills/show-me-your-work/references/decision-log-template.tsv skills/pstack/show-me-your-work/references/decision-log-template.tsv
+pstack/skills/how/SKILL.md prompts/how.md
+pstack/skills/why/SKILL.md prompts/why.md
+pstack/skills/architect/SKILL.md prompts/architect.md
+pstack/skills/arena/SKILL.md prompts/arena.md
+pstack/skills/interrogate/SKILL.md prompts/interrogate.md
+pstack/skills/swarm/SKILL.md prompts/swarm.md
+pstack/skills/figure-it-out/SKILL.md prompts/figure-it-out.md

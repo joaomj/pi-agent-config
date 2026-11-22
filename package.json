@@ -29,6 +29,11 @@
     "skills": [
       "skills"
     ],
+    "subagents": {
+      "agents": [
+        "agents"
+      ]
+    },
     "extensions": [
       "extensions/bg-bash-timer.ts",
       "extensions/duplicate-guard.ts",

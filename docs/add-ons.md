@@ -10,8 +10,9 @@ what each one does and what it costs.
 asks or denies before tool calls, according to a policy file. This repository
 ships a reference policy in
 [permissions/pi-permission-system.json](../permissions/pi-permission-system.json).
-It denies reads of credentials and `.env` files and asks before commits, pushes,
-deletes, installs, and remote writes.
+It denies reads of credentials and `.env` files and asks before pushes,
+deletes, installs, Atlassian writes, and other remote writes. Local commits run
+without a prompt; a push is the gate.
 
 To use it, install the extension:
 
@@ -45,6 +46,20 @@ your policy by hand:
    mv ~/.pi/agent/extensions/pi-permission-system/config.json.proposed \
       ~/.pi/agent/extensions/pi-permission-system/config.json
    ```
+
+## Subagents
+
+[`pi-subagents`](https://www.npmjs.com/package/pi-subagents) runs child agent
+sessions. The pstack commands `/how`, `/arena`, `/interrogate`, and `/swarm`
+need it, and the package's read-only `scout` agent replaces its built-in one.
+
+```bash
+pi install npm:pi-subagents@0.89.2
+```
+
+A background child loads your extensions, so the permission extension also
+checks a writing child. The child forwards an `ask` to your interactive
+session. In print mode (`pi -p`) nothing serves the request, so it is denied.
 
 ## Claude subscription transport
 

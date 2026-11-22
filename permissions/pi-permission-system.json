@@ -145,7 +145,6 @@
       "git stash drop*": "ask",
       "git stash clear": "ask",
       "git filter-branch*": "ask",
-      "git commit*": "ask",
       "git push*": "ask",
       "git tag *": "ask",
       "git tag -d*": "ask",
@@ -225,7 +224,19 @@
     },
 
     "mcp": {
-      "*": "allow"
+      "*": "allow",
+
+      "*tlassian*": "ask",
+      "*Jira*": "ask",
+      "*Confluence*": "ask",
+      "*Bitbucket*": "ask",
+      "get*": "allow",
+      "list*": "allow",
+      "search*": "allow",
+      "lookup*": "allow",
+      "download*": "allow",
+      "fetch": "allow",
+      "atlassianUserInfo": "allow"
     },
 
     "skill": "allow"
