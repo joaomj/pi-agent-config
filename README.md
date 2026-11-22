@@ -64,7 +64,7 @@ plus your own, which it keeps in `local.json`. See
 You need Pi 1.4.0 or later, Node.js 22.19 or later, and Git.
 
 ```bash
-pi install git:github.com/joaomj/pi-agent-config@v0.11.0
+pi install git:github.com/joaomj/pi-agent-config@v0.11.1
 ```
 
 Then restart Pi. Running sessions do not load the package.

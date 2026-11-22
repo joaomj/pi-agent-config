@@ -2,6 +2,13 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.11.1] - 2026-11-22
+
+### Changed
+
+- Keep each account's permission policy current with the package
+- Ask before git commands with a global option
+
 ## [v0.11.0] - 2026-11-22
 
 ### Changed
