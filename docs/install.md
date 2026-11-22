@@ -14,8 +14,8 @@ pi list
 ```
 
 - If the output names `pi-agent-config`, or any of `pi-bg-bash`,
-  `@ff-labs/pi-fff`, `@ahm3tj4f/pi-undo`, or
-  `@joaomj/pi-claude-usage` as a separate entry, follow
+  `@ff-labs/pi-fff`, `@ahm3tj4f/pi-undo`, `@joaomj/pi-claude-usage`,
+  `@gotgenes/pi-permission-system`, or `pi-subagents` as a separate entry, follow
   [Upgrade from an older version](#upgrade-from-an-older-version).
 - Otherwise, follow [New install](#new-install).
 
@@ -44,11 +44,15 @@ the same tool.
    has two entries for this package and one of them is stale: keep the one
    you update, and remove the other with `pi remove <source>`.
 
-3. Ask the user which [add-ons](add-ons.md) they want: permission checks and the
-   Claude subscription transport. Follow the section
-   for each one they choose. None is required.
+3. Set up the permission policy, as in
+   [Add-ons](add-ons.md#permission-checks). Until the policy file exists,
+   every tool call asks.
 
-4. Restart Pi. Running sessions do not load the package.
+4. Ask the user whether they want the
+   [Claude subscription transport](add-ons.md#claude-subscription-transport).
+   It is not required.
+
+5. Restart Pi. Running sessions do not load the package.
 
 ## Upgrade from an older version
 
@@ -76,6 +80,8 @@ edited `~/.pi/agent/AGENTS.md`, and kept backups in
    pi remove npm:@ff-labs/pi-fff@0.11.0
    pi remove npm:@ahm3tj4f/pi-undo@0.5.0
    pi remove npm:@joaomj/pi-claude-usage@0.2.0
+   pi remove npm:@gotgenes/pi-permission-system@41.0.0
+   pi remove npm:pi-subagents@0.89.2
    ```
 
    Each command prints `Removed <source>`. Removing the old `pi-agent-config`

@@ -26,6 +26,12 @@ My rules, prompt templates, skills, and extensions for the
   ticket through contract, code, PR, CI and review, sign-off, and merge. You
   decide at four gates; between them the agent decides what it can undo and
   logs why. See [The pstack workflow](docs/pstack.md).
+- **Permission checks.**
+  [`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
+  asks or denies before tool calls, MCP calls from `codemode` included.
+  [`pi-subagents`](https://www.npmjs.com/package/pi-subagents) runs child
+  sessions for `/how`, `/arena`, `/interrogate`, and `/swarm`, under the same
+  checks.
 - **Fast search and undo.** [`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff)
   adds indexed file and content search.
   [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) adds `/undo`,
@@ -47,7 +53,9 @@ My rules, prompt templates, skills, and extensions for the
   grading.
 
 The package does not change your providers, models, MCP servers, or permission
-rules.
+policy. Until you add a policy, every tool call asks; the
+[reference policy](permissions/pi-permission-system.json) blocks credential
+reads and asks before pushes and remote writes.
 
 ## Install
 
@@ -72,8 +80,6 @@ each step and asks you where a decision is needed.
 These need a decision or extra software from you, so the package does not
 bundle them. [Add-ons](docs/add-ons.md) has the setup steps.
 
-- **Permission checks**: ask or deny before tool calls, with a reference
-  policy that blocks credential reads and asks before commits and pushes.
 - **Claude subscription transport**: use a paid Claude plan through the Claude
   Code login.
 

@@ -33,6 +33,37 @@ the limit to 20 seconds instead of 120 and applies it also to calls that set
 
 Task logs live under `$XDG_STATE_HOME/pi-bg/`, outside the project.
 
+### Permission checks
+
+[`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
+41.0.0 asks or denies before tool calls, MCP calls from `codemode` included,
+according to `~/.pi/agent/extensions/pi-permission-system/config.json`. The
+package does not write that file. Without it, every tool call asks. This
+repository ships a reference policy in
+[permissions/pi-permission-system.json](../permissions/pi-permission-system.json);
+[Add-ons](add-ons.md#permission-checks) shows how to copy or merge it.
+
+Recommended guardrails from experience: deny `git -c user*`, `git -c *gpgsign*`,
+and `git -c gpg*`, plus `GIT_AUTHOR_*` / `GIT_COMMITTER_*` / `GIT_CONFIG_*`
+environment overrides, so no agent session can commit under a foreign identity
+or unsigned. Deny agent access to the policy file itself; edit it in your own
+editor. Known gap: `git commit` invocations (including `--no-gpg-sign` and
+`--author`) do not match any bash-pattern gate in the permission extension, so
+flag-level commit overrides cannot be blocked at that layer today; the global
+`commit.gpgsign` default plus the `-c` denials above are the working backstop.
+
+### Subagents
+
+[`pi-subagents`](https://www.npmjs.com/package/pi-subagents) 0.89.2 adds the
+`subagent` tool, which runs child agent sessions, and its usage skill. The
+pstack commands `/how`, `/arena`, `/interrogate`, and `/swarm` use it, and the
+package's read-only [`scout`](../agents/scout.md) replaces its built-in agent
+of that name. A background child loads your extensions, so the permission
+checks also apply in a writing child, and the child forwards an `ask` to your
+interactive session. In print mode (`pi -p`) nothing serves the request, so it
+is denied. The package does not load its prompt templates or its
+`council-mode` skill.
+
 ### Claude usage footer
 
 [Claude usage](https://github.com/joaomj/pi-extensions/tree/main/extensions/claude-usage)
@@ -116,22 +147,6 @@ in the same folder share one store.
 
 These need a decision or software from the user, so the package does not bundle
 them. [Add-ons](add-ons.md) has the install steps.
-
-### Permission checks
-
-[`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
-41.0.0 provides tool permission checks. This repository ships a reference policy
-in [permissions/pi-permission-system.json](../permissions/pi-permission-system.json);
-the user copies it, or merges a later version into their own policy by hand.
-
-Recommended guardrails from experience: deny `git -c user*`, `git -c *gpgsign*`,
-and `git -c gpg*`, plus `GIT_AUTHOR_*` / `GIT_COMMITTER_*` / `GIT_CONFIG_*`
-environment overrides, so no agent session can commit under a foreign identity
-or unsigned. Deny agent access to the policy file itself; edit it in your own
-editor. Known gap: `git commit` invocations (including `--no-gpg-sign` and
-`--author`) do not match any bash-pattern gate in the permission extension, so
-flag-level commit overrides cannot be blocked at that layer today; the global
-`commit.gpgsign` default plus the `-c` denials above are the working backstop.
 
 ### Claude subscription transport
 
