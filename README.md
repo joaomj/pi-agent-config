@@ -62,7 +62,7 @@ reads and asks before pushes and remote writes.
 You need Pi 1.4.0 or later, Node.js 22.19 or later, and Git.
 
 ```bash
-pi install git:github.com/joaomj/pi-agent-config@v0.10.2
+pi install git:github.com/joaomj/pi-agent-config@v0.11.0
 ```
 
 Then restart Pi. Running sessions do not load the package.

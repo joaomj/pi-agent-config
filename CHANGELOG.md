@@ -2,6 +2,13 @@
 
 All notable changes to this configuration are documented here. This file is generated from version tags and commit history.
 
+## [v0.11.0] - 2026-11-22
+
+### Changed
+
+- Bundle the permission checks and subagents
+- Add the pstack ticket workflow
+
 ## [v0.10.2] - 2026-11-08
 
 ### Changed
