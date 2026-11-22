@@ -12,22 +12,17 @@
   "authorizerChain": [],
   "permission": {
     "*": "allow",
-
     "path": {
       "*": "allow",
-
       "*.env": "deny",
       "*.env.*": "deny",
       "*.env.example": "allow",
       "*.env.sample": "allow",
       "*.env.template": "allow",
-
       "/etc/shadow*": "deny",
       "/etc/ssh/*_key": "deny",
-
       "~/.ssh/*": "ask",
       "*/.ssh/*": "ask",
-
       "~/.aws/*": "ask",
       "*/.aws/*": "ask",
       "~/.aws/credentials": "deny",
@@ -37,7 +32,6 @@
       "~/.kube/config": "ask",
       "**/.docker/config.json": "deny",
       "**/.config/gh/hosts.yml": "deny",
-
       "*.pem": "deny",
       "*.key": "deny",
       "*.p12": "deny",
@@ -52,7 +46,6 @@
       "*id_dsa": "deny",
       "*_sk": "deny",
       "*.pub": "allow",
-
       "*auth.json": "deny",
       "*.npmrc": "deny",
       "*.pypirc": "deny",
@@ -60,30 +53,25 @@
       "*.netrc": "deny",
       "*.authinfo": "deny"
     },
-
     "read": "allow",
     "ls": "allow",
     "grep": "allow",
     "find": "allow",
     "external_directory": "allow",
-
     "bash": {
       "*": "allow",
-
       "rm *": "ask",
       "rmdir *": "ask",
       "unlink *": "ask",
       "dd *": "ask",
       "shred *": "ask",
       "mkfs*": "ask",
-
       "sudo *": "ask",
       "doas *": "ask",
       "su *": "ask",
       "chmod *": "ask",
       "chown *": "ask",
       "chgrp *": "ask",
-
       "pip install*": "ask",
       "pip uninstall*": "ask",
       "pip3 install*": "ask",
@@ -126,37 +114,60 @@
       "twine *": "ask",
       "curl *": "ask",
       "wget *": "ask",
-
       "git add -A*": "ask",
+      "git -* add -A*": "ask",
       "git add --all*": "ask",
+      "git -* add --all*": "ask",
       "git add .": "ask",
+      "git -* add .": "ask",
       "git add ./*": "ask",
+      "git -* add ./*": "ask",
       "git checkout .": "ask",
+      "git -* checkout .": "ask",
       "git checkout ./*": "ask",
+      "git -* checkout ./*": "ask",
       "git checkout -- *": "ask",
+      "git -* checkout -- *": "ask",
       "git checkout HEAD*": "ask",
+      "git -* checkout HEAD*": "ask",
       "git clean *": "ask",
+      "git -* clean *": "ask",
       "git reset*": "ask",
+      "git -* reset*": "ask",
       "git restore *": "ask",
+      "git -* restore *": "ask",
       "git branch -D*": "ask",
+      "git -* branch -D*": "ask",
       "git branch --delete --force*": "ask",
+      "git -* branch --delete --force*": "ask",
       "git stash": "ask",
+      "git -* stash": "ask",
       "git stash push*": "ask",
+      "git -* stash push*": "ask",
       "git stash drop*": "ask",
+      "git -* stash drop*": "ask",
       "git stash clear": "ask",
+      "git -* stash clear": "ask",
       "git filter-branch*": "ask",
+      "git -* filter-branch*": "ask",
       "git push*": "ask",
+      "git -* push*": "ask",
       "git tag *": "ask",
+      "git -* tag *": "ask",
       "git tag -d*": "ask",
+      "git -* tag -d*": "ask",
       "git tag -l": "allow",
       "git tag --list": "allow",
       "git tag -l -- *": "allow",
       "git tag --list -- *": "allow",
       "git merge *": "ask",
+      "git -* merge *": "ask",
       "git rebase*": "ask",
+      "git -* rebase*": "ask",
       "git cherry-pick*": "ask",
+      "git -* cherry-pick*": "ask",
       "git revert*": "ask",
-
+      "git -* revert*": "ask",
       "docker run *--privileged*": "ask",
       "make deploy*": "ask",
       "make release*": "ask",
@@ -167,7 +178,6 @@
       "helm install*": "ask",
       "helm upgrade*": "ask",
       "helm uninstall*": "ask",
-
       "aws *create*": "ask",
       "aws *update*": "ask",
       "aws *modify*": "ask",
@@ -179,7 +189,6 @@
       "gcloud * delete*": "ask",
       "az * create*": "ask",
       "az * delete*": "ask",
-
       "gh pr create*": "ask",
       "gh pr merge*": "ask",
       "gh pr close*": "ask",
@@ -217,15 +226,14 @@
       "gh label delete*": "ask",
       "gh ssh-key add*": "ask",
       "gh ssh-key delete*": "ask",
-
       "ssh-keygen -t *": "ask",
-
-      "*169.254.*": { "action": "deny", "reason": "Link-local addresses can expose credential endpoints." }
+      "*169.254.*": {
+        "action": "deny",
+        "reason": "Link-local addresses can expose credential endpoints."
+      }
     },
-
     "mcp": {
       "*": "allow",
-
       "*tlassian*": "ask",
       "*Jira*": "ask",
       "*Confluence*": "ask",
@@ -238,7 +246,6 @@
       "fetch": "allow",
       "atlassianUserInfo": "allow"
     },
-
     "skill": "allow"
   }
 }
