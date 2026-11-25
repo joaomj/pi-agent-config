@@ -34,10 +34,8 @@ My rules, prompt templates, skills, and extensions for the
   [`pi-subagents`](https://www.npmjs.com/package/pi-subagents) runs child
   sessions for `/how`, `/arena`, `/interrogate`, and `/swarm`, under the same
   checks.
-- **Fast search and undo.** [`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff)
+- **Fast search.** [`@ff-labs/pi-fff`](https://www.npmjs.com/package/@ff-labs/pi-fff)
   adds indexed file and content search.
-  [`@ahm3tj4f/pi-undo`](https://github.com/ahm3tj4f/pi-undo) adds `/undo`,
-  `/redo`, and `/diff` for the last agent run.
 - **Visibility.** [`@joaomj/pi-claude-usage`](https://www.npmjs.com/package/@joaomj/pi-claude-usage)
   shows the Claude subscription quota in the footer.
 - **Your own browser.** The [`user-browser`](skills/tooling/user-browser/SKILL.md)

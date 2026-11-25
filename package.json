@@ -13,7 +13,6 @@
     "url": "git+https://github.com/joaomj/pi-agent-config.git"
   },
   "dependencies": {
-    "@ahm3tj4f/pi-undo": "0.5.0",
     "@ff-labs/pi-fff": "0.11.0",
     "@gotgenes/pi-permission-system": "41.0.0",
     "@joaomj/pi-claude-usage": "0.2.0",
@@ -44,7 +43,6 @@
       "extensions/loop-breaker.ts",
       "extensions/permission-policy.ts",
       "extensions/shared-rules.ts",
-      "node_modules/@ahm3tj4f/pi-undo/src/index.ts",
       "node_modules/@ff-labs/pi-fff/src/index.ts",
       "node_modules/@gotgenes/pi-permission-system/src/index.ts",
       "node_modules/@joaomj/pi-claude-usage/src/index.ts",

@@ -146,14 +146,12 @@ copy the files in `~/pi-agent-config-backup/` back to `~/.pi/agent/`, extract
 ## Turn off one part
 
 Replace the package entry in `~/.pi/agent/settings.json` with the object form
-and exclude what you do not want. For example, to drop the undo extension and
-the Claude quota footer:
+and exclude what you do not want. For example, to drop the Claude quota footer:
 
 ```json
 {
   "source": "git:github.com/joaomj/pi-agent-config@v0.11.1",
   "extensions": [
-    "!node_modules/@ahm3tj4f/pi-undo/**",
     "!node_modules/@joaomj/pi-claude-usage/**"
   ]
 }
