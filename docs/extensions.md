@@ -53,7 +53,22 @@ shipped policy:
 - asks before Atlassian writes (Jira, Confluence, Bitbucket) and Slack writes;
   their reads run without a prompt;
 - lets local commits run without a prompt, except a commit of a `PLAN-*.md`
-  file, which it denies.
+  file, which it denies;
+- denies `git add -A`, `--all`, and `.`, with a reason that asks for named
+  paths;
+- lets `chmod +x`, `u+x`, `600`, and `700` run, and asks for other modes;
+- lets `gh api` reads run, and asks when a flag such as `-X`, `-f`, `-F`, or
+  `--input` makes it a write;
+- lets `curl` reads run, and asks when it sends data, uploads, sets
+  credentials or cookies, uses a shell variable, or writes a file outside
+  `/tmp`;
+- asks before a shell that reads its script from stdin, such as
+  `curl ... | sh`.
+
+`scripts/permission-probes.tsv` lists commands with the decision the policy
+must give, and `scripts/check-package.sh` checks each one. A short-option
+cluster of three or more letters, such as `curl -fsSd`, is not matched by the
+write rules.
 
 Your own rules go in `local.json`, next to `config.json`. A rule there replaces
 the shipped rule of the same pattern, and a new pattern goes last, so it wins

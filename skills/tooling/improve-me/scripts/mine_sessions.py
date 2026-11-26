@@ -9,6 +9,8 @@ Reads ~/.pi/agent/sessions/*/*.jsonl modified in the last N days and writes
 - errors: failing tool results, grouped by a normalized signature
 - commands: shell command shapes repeated across sessions
 - phrases: user sentences repeated across sessions
+- prompts: permission prompts per matched rule, with how often the user
+  approved them, from the pi-permission-system review log (all projects)
 
 Everything stays local. Python 3.9+, stdlib only.
 """
@@ -176,6 +178,50 @@ def mine(path, acc, openings):
                 acc["errors"][f"{tool}: {signature(out)}"].append({**ref, "text": clip(out, 300)})
 
 
+def permission_prompts(pi_home, cutoff):
+    """Group permission prompts by the rule that asked, with the user's answers."""
+    log = pi_home / "extensions/pi-permission-system/logs/pi-permission-system-permission-review.jsonl"
+    if not log.is_file():
+        return []
+    waiting, answers = {}, {}
+    with log.open(encoding="utf-8", errors="replace") as fh:
+        for line_no, line in enumerate(fh, 1):
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                print(f"{log}:{line_no}: bad JSON line skipped", file=sys.stderr)
+                continue
+            stamp = row.get("timestamp") or ""
+            if not stamp or datetime.fromisoformat(stamp.replace("Z", "+00:00")) < cutoff:
+                continue
+            event, rid = row.get("event"), row.get("requestId")
+            if event == "permission_request.waiting":
+                waiting[rid] = row
+            elif event in ("permission_request.approved", "permission_request.denied"):
+                answers[rid] = row
+    groups = defaultdict(lambda: {"prompts": 0, "approved": 0, "denied": 0, "unanswered": 0,
+                                  "examples": [], "denial_reasons": []})
+    for rid, ask in waiting.items():
+        rule = ask.get("matchedPattern") or f"<{ask.get('surface') or ask.get('toolName')}>"
+        g = groups[rule]
+        g["prompts"] += 1
+        answer = answers.get(rid, {}).get("event")
+        if answer == "permission_request.approved":
+            g["approved"] += 1
+        elif answer == "permission_request.denied":
+            g["denied"] += 1
+            reason = answers[rid].get("denialReason")
+            if reason and len(g["denial_reasons"]) < MAX_EXAMPLES:
+                g["denial_reasons"].append(clip(reason, 200))
+        else:
+            g["unanswered"] += 1
+        value = ask.get("command") or ask.get("path") or ask.get("target") or ask.get("toolName") or ""
+        if len(g["examples"]) < MAX_EXAMPLES:
+            g["examples"].append(clip(value, 160))
+    rows = [{"key": rule, **g} for rule, g in groups.items()]
+    return sorted(rows, key=lambda r: -r["prompts"])
+
+
 def recurring(groups, min_sessions):
     rows = []
     for key, refs in groups.items():
@@ -228,6 +274,7 @@ def main():
         "errors": recurring(acc["errors"], args.min_sessions),
         "commands": recurring(acc["commands"], max(args.min_sessions, 3)),
         "phrases": recurring(acc["phrases"], args.min_sessions),
+        "prompts": permission_prompts(args.pi_home.expanduser(), cutoff),
     }
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "signals.json").write_text(json.dumps(signals, indent=2, ensure_ascii=False))
@@ -238,6 +285,11 @@ def main():
         lines.append(f"- {name.capitalize()} (recurring): {len(signals[name])}")
         for row in signals[name][:8]:
             lines.append(f"  - {row['sessions']} sessions, {row['hits']} hits: {row['key']}")
+    total = sum(r["prompts"] for r in signals["prompts"])
+    approved = sum(r["approved"] for r in signals["prompts"])
+    lines.append(f"- Permission prompts: {total}, {approved} approved")
+    for row in signals["prompts"][:8]:
+        lines.append(f"  - {row['approved']}/{row['prompts']} approved: {row['key']}")
     (args.out / "summary.md").write_text("\n".join(lines) + "\n")
     print("\n".join(lines))
     print(f"\nFull signals: {args.out / 'signals.json'}")

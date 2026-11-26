@@ -5,14 +5,15 @@ Paths are relative to the ticket skill directory.
 You own the PR until it is ready for sign-off. Clear one round at a time, and
 stop where the operator's call begins.
 
-- Read the state with commands that only read: `gh pr view <pr> --json
-  state,mergeable,reviewDecision,statusCheckRollup`, and
-  `scripts/pr-threads.sh <pr>` for the open review threads.
-- Wait with a pi-bg-bash background command, then end the turn:
-  `gh pr checks <pr> --watch --fail-fast` for CI. For a reviewer that has not
-  answered yet, poll at a long interval in one background command, such as
-  `until scripts/pr-threads.sh <pr> --since <iso-time> | grep -q .; do sleep 300; done`.
-- Order: conflicts, threads, CI.
+- Wait with one pi-bg-bash background command, then end the turn:
+  `scripts/watch-pr.sh <pr> --since <iso-time>`, where the time is when you
+  last pushed or answered. It returns one verdict: `merge-conflicts`,
+  `review-feedback`, `failing-checks`, `ready`, `merged`, or `closed`. Use
+  `--status-only` to read the state without waiting.
+- On `review-feedback`, read the full text with
+  `scripts/pr-threads.sh <pr> --since <iso-time>`. On `failing-checks`, read
+  the failing log, through a `scout` when it is long.
+- The verdict order is the work order: conflicts, feedback, CI.
 - Never rebase, retarget, or force-push. A conflict or a stale base is the one
   blocker you report instead of resolve. Name the branch that needs the rebase
   and stop.

@@ -40,6 +40,10 @@ Read the printed summary, then `"$OUT/signals.json"`. Signals:
 - `errors`: tool failures grouped across sessions.
 - `commands`: shell command shapes repeated across sessions.
 - `phrases`: sentences the user typed in several sessions.
+- `prompts`: permission prompts per matched rule, with approvals, denials,
+  and denial reasons, across all projects. A rule the user nearly always
+  approves is a candidate for a narrower `allow`; a denial reason is a
+  correction.
 
 The miner filters prompt templates and repeated harness nudges, but some
 injected text still gets through. Drop it. For any signal you keep, open the

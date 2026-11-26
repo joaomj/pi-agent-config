@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Install a commit of this package into a scratch Pi directory and check that
 # it loads: every extension path exists, every bundled tool registers, no
-# extension fails, the shared rules reach the model request exactly once, and
-# a bash call with a long `timeout` still passes the permission check.
+# extension fails, the shared rules reach the model request exactly once, a
+# bash call with a long `timeout` still passes the permission check, and the
+# shipped bash policy decides each row of scripts/permission-probes.tsv as
+# expected.
 #
 #   scripts/check-package.sh            check HEAD
 #   scripts/check-package.sh <commit>   check another commit
@@ -76,6 +78,29 @@ server_pid=$!
 for _ in $(seq 50); do [[ -s "${work}/port" ]] && break; sleep 0.1; done
 [[ -s "${work}/port" ]] || die "the recording server did not start"
 
+# At the first tool call the bash parser is warm, so checkPermission decides
+# each probe as the gate would.
+git -C "${repo_root}" show "${commit}:scripts/permission-probes.tsv" > "${work}/probes.tsv"
+cat > "${work}/probe.ts" <<EOF
+import { readFileSync, writeFileSync } from "node:fs";
+export default function (pi: any) {
+  let done = false;
+  pi.on("tool_call", (_event: any, ctx: any) => {
+    if (done) return;
+    done = true;
+    const services = (globalThis as any)[Symbol.for("@gotgenes/pi-permission-system:session-services")];
+    const service = services?.get(ctx.sessionManager.getSessionId());
+    const rows = readFileSync("${work}/probes.tsv", "utf8").split("\\n").filter((l) => l && !l.startsWith("#"));
+    const out = rows.map((row) => {
+      const [expected, command] = row.split("\\t");
+      const result = service?.checkPermission("bash", command);
+      return [expected, result?.state ?? "no-service", command, result?.matchedPattern ?? ""].join("\\t");
+    });
+    writeFileSync("${work}/probes.out", out.join("\\n") + "\\n");
+  });
+}
+EOF
+
 cat > "${work}/provider.ts" <<EOF
 export default function (pi: any) {
   pi.registerProvider("check", {
@@ -87,9 +112,13 @@ export default function (pi: any) {
 EOF
 
 note "Starting Pi with the package"
-(cd "${work}" && pi --no-session -e "${work}/provider.ts" --model check/m -p "hi") > "${work}/run.log" 2>&1 || true
+(cd "${work}" && pi --no-session -e "${work}/provider.ts" -e "${work}/probe.ts" --model check/m -p "hi") > "${work}/run.log" 2>&1 || true
 [[ -s "${work}/request.json" ]] || { cat "${work}/run.log" >&2; die "Pi sent no model request"; }
 [[ -e "${work}/canary" ]] || die "a bash call with timeout 600 ran 'rm' without a permission check; load pi-permission-system before bg-bash-timer in package.json"
+
+[[ -s "${work}/probes.out" ]] || die "the permission probes did not run"
+awk -F'\t' '$1 != $2 { bad = 1; printf "permission probe: expected %s, got %s (rule %s): %s\n", $1, $2, $4, $3 > "/dev/stderr" } END { exit bad }' "${work}/probes.out" \
+  || die "the shipped bash policy decided a probe in scripts/permission-probes.tsv differently"
 
 installed="$(dirname "$(find "${PI_CODING_AGENT_DIR}" -path '*/pi-agent-config/package.json' -not -path '*/node_modules/*' | head -n 1)")"
 node -e '
@@ -126,5 +155,5 @@ if (failures.length > 0) {
   console.error(`FAILED\n  ${failures.join("\n  ")}`);
   process.exit(1);
 }
-console.log("OK: extension paths exist, bundled tools registered, no extension errors, shared rules present once, shipped policy in place, long-timeout bash still checked");
+console.log("OK: extension paths exist, bundled tools registered, no extension errors, shared rules present once, shipped policy in place, long-timeout bash still checked, permission probes match");
 EOF

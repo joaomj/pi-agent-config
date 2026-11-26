@@ -20,9 +20,13 @@ ticket from a file or pasted text gets no tracker update at Gate D.
 | Gate | When | You do |
 |---|---|---|
 | A | The agent read the ticket and wrote a contract: goal, done check, scope, branch, open questions with its picks | Approve or correct it |
-| B | The code is done and verified | Read the catch-up, answer the push and PR prompts |
+| B | The code is done and verified | Read the catch-up, answer the one `open-pr.sh` prompt (push and PR) |
 | C | CI passes and no review thread is open | Send the sign-off request it drafted, tell it when sign-off is given |
-| D | Sign-off is given | Answer the merge and tracker prompts |
+| D | Sign-off is given | Answer the `land-pr.sh` prompt (merge) and the tracker prompt, if any |
+
+`open-pr.sh` never force-pushes. `land-pr.sh` merges only a PR that
+`watch-pr.sh` still reports `ready`. A rebase or force-push after a conflict
+is yours to do.
 
 Between gates the agent makes every choice it can undo, logs it, and lists it
 at the next gate. It brings review comments it classifies as `ask` to you,

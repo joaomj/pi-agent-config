@@ -84,19 +84,20 @@ proof surface.
 
 ### 3. Open the PR, Gate B
 
-Follow `playbooks/opening-a-pr.md`. Write the catch-up, then push and create
-the PR. Gate B: the operator answers the permission prompts.
+Follow `playbooks/opening-a-pr.md`. Write the catch-up, then run
+`scripts/open-pr.sh <base> <title> <body-file>`, which pushes and opens the
+PR in one step. Gate B: the operator answers its permission prompt.
 
 ### 4. CI and review
 
-Follow `playbooks/babysit.md`. Wait for CI and reviews with a pi-bg-bash
-background command and end the turn. The completion message wakes you, so the
+Follow `playbooks/babysit.md`. Wait for CI and reviews with
+`scripts/watch-pr.sh` in one pi-bg-bash background command and end the turn. The completion message wakes you, so the
 wait costs no tokens. Each round pushes once. Bring only the review comments
 classified `ask` to the operator, batched in one catch-up per round.
 
 ### 5. Sign-off, Gate C
 
-When CI passes and no review thread is open, write the catch-up and a draft
+When `scripts/watch-pr.sh` reports `ready`, write the catch-up and a draft
 sign-off request for the human reviewer. End the turn. Gate C: the operator
 sends the request and tells you when sign-off is given.
 
@@ -104,7 +105,8 @@ sends the request and tells you when sign-off is given.
 
 Write the catch-up with the merge method and, when the ticket lives in a
 tracker this session can write, the change you propose there: comment text
-and target status. Then merge the PR and apply that change. Gate D: the
+and target status. Then run `scripts/land-pr.sh <pr> <method>`, which merges
+only a PR that is still ready, and apply the tracker change. Gate D: the
 operator answers the permission prompts. A ticket from a file or pasted text
 gets no tracker change. Log the outcome, and
 remove the worktree when the merge is confirmed.
