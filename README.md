@@ -13,24 +13,21 @@ My rules, prompt templates, skills, and extensions for the
   `bash` command to the background after 20 s, and
   [`pi-bg-bash`](https://pi.dev/packages/pi-bg-bash) reports when it ends. The
   agent keeps working instead of waiting.
-- **No loops.** [`loop-breaker`](extensions/loop-breaker.ts) adds a note when the
-  same check fails again after a fix, or when an identical call repeats. The
-  note asks the agent to test its premise before a third try.
 - **One copy only.** [`duplicate-guard`](extensions/duplicate-guard.ts) stops
   Pi at startup, with both sources named, when the package is configured twice.
   Two copies register the same tools, and Pi then does not start.
 - **No editor hangs.** [`git-no-editor`](extensions/git-no-editor.ts) sets
   `GIT_EDITOR=true`, so `git commit` or `git rebase` never waits for an editor
   the agent cannot use.
-- **Ticket to merge with four decisions.** `/skill:ticket <KEY>` carries a Jira
-  ticket through contract, code, PR, CI and review, sign-off, and merge. You
+- **Ticket to merge with four decisions.** `/skill:ticket <ticket>` carries a
+  ticket from any tracker, a file, or pasted text through contract, code, PR, CI and review, sign-off, and merge. You
   decide at four gates; between them the agent decides what it can undo and
   logs why. See [The pstack workflow](docs/pstack.md).
 - **Permission checks.**
   [`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
   asks or denies before tool calls, MCP calls from `codemode` included. The
   package keeps the policy current: it blocks credential reads and asks before
-  pushes and Jira and Slack writes.
+  pushes, PR and issue writes, and Atlassian and Slack writes.
   [`pi-subagents`](https://www.npmjs.com/package/pi-subagents) runs child
   sessions for `/how`, `/arena`, `/interrogate`, and `/swarm`, under the same
   checks.
@@ -44,13 +41,13 @@ My rules, prompt templates, skills, and extensions for the
   [`pi-chrome-cdp`](https://github.com/pasky/chrome-cdp-skill). When the agent
   runs on a headless server, `cdp-share` shares your desktop browser over one
   SSH tunnel.
-- **Commands and skills.** [Prompt templates](prompts/) add `/plan`,
-  `/code-review`, `/explain`, `/pr`, and the on-demand pstack commands
-  `/arena`, `/interrogate`, `/swarm`, `/architect`, `/figure-it-out`, `/how`,
-  and `/why`.
-  [Skills](skills/) cover technical writing, research, test audits,
-  self-improvement from session logs, Proton Pass credentials, and skill
-  grading.
+- **Commands and skills.** [Prompt templates](prompts/) add the on-demand
+  pstack commands `/arena`, `/interrogate`, `/swarm`, `/architect`,
+  `/figure-it-out`, `/how`, `/why`, `/blast-radius`, `/correct`, `/reframe`,
+  and `/bro`, plus `/architecture-diagram`.
+  [Skills](skills/) cover the pstack ticket flow, technical writing and
+  unslop, verification skills, self-improvement from session logs, Proton Pass
+  credentials, and your own browser.
 
 The package does not change your providers, models, or MCP servers. It does
 write your permission policy: the [shipped rules](permissions/pi-permission-system.json)

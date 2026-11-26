@@ -3,7 +3,7 @@
 This package carries a port of parts of
 [pstack](https://github.com/cursor/plugins/tree/main/pstack), Lauren Tan's
 skills and playbooks for coding agents (MIT license). The port fits one flow:
-a Jira ticket goes to a merged PR, and you decide at four fixed points instead
+a ticket goes to a merged PR, and you decide at four fixed points instead
 of steering the agent all the time.
 
 ## Run a ticket
@@ -12,12 +12,17 @@ of steering the agent all the time.
 /skill:ticket PROJ-123
 ```
 
+The ticket can be a tracker id or URL, a file, or pasted text. The agent
+reads a tracker with the tools your session has for it, such as an MCP server
+or `gh issue view`. When it has none, it asks once for the ticket text. A
+ticket from a file or pasted text gets no tracker update at Gate D.
+
 | Gate | When | You do |
 |---|---|---|
 | A | The agent read the ticket and wrote a contract: goal, done check, scope, branch, open questions with its picks | Approve or correct it |
 | B | The code is done and verified | Read the catch-up, answer the push and PR prompts |
 | C | CI passes and no review thread is open | Send the sign-off request it drafted, tell it when sign-off is given |
-| D | Sign-off is given | Answer the merge and Jira prompts |
+| D | Sign-off is given | Answer the merge and tracker prompts |
 
 Between gates the agent makes every choice it can undo, logs it, and lists it
 at the next gate. It brings review comments it classifies as `ask` to you,
@@ -61,11 +66,11 @@ for a client:
 ## Set up an account
 
 1. Install the package, as in the [README](../README.md#install).
-2. Name the Atlassian MCP server `atlassian` in `~/.pi/agent/mcp.json`. The
-   policy asks before any tool of a server whose name contains "atlassian",
-   except reads (`get*`, `list*`, `search*`, `lookup*`, `download*`, `fetch`).
-   Under another server name, only tools with Jira, Confluence, or Bitbucket in
-   their names ask. The policy also applies to MCP calls made from `codemode`.
+2. Optional: connect your tracker, as an MCP server or a CLI. Check that the
+   permission policy asks before its writes. The shipped policy covers
+   Atlassian servers and `gh` issue writes, as
+   [Permission checks](extensions.md#permission-checks) describes. For another
+   tracker, add ask rules for its write tools to `local.json`.
 
 ## Subagents
 

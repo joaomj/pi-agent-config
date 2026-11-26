@@ -72,7 +72,7 @@ versions.lock
 /extensions/*
 !/extensions/bg-bash-timer.ts
 !/extensions/git-no-editor.ts
-!/extensions/loop-breaker.ts
+!/extensions/duplicate-guard.ts
 !/extensions/permission-policy.ts
 !/extensions/shared-rules.ts
 !/extensions/deadline.mjs

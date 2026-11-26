@@ -1,6 +1,7 @@
 ---
 name: improve-me
 description: Turn repeated fixes into structure. Mines the last N days of Pi session logs for recurring corrections, policy denials, errors, and manual procedures, then proposes the strongest durable fix for each (guard hook, linter or CI check, script, permission rule, skill, or rule text as a last resort) and removes prose a structural fix makes redundant. Use when the user asks to improve me, automate fixes, find repeatable processes, encode lessons, or reduce repeated corrections.
+disable-model-invocation: true
 ---
 
 # Improve me
@@ -67,9 +68,8 @@ above cannot express it.
 1. **Remove the cause.** Delete the step, file, or option that invites the
    mistake. Fix the tool that fails.
 2. **Guard hook**: a Pi extension `tool_call` handler that blocks or rewrites
-   the call. Model it on `~/.pi/agent/extensions/plan-file-guard.ts`: parse the
-   command, never match on raw text, and fail closed with a reason that says
-   what to do instead.
+   the call. Parse the command, never match on raw text, and fail closed with
+   a reason that says what to do instead.
 3. **Permission rule** in pi-permission-system. The agent cannot read or edit
    that policy file. Give the user the exact rule and reason text to add.
 4. **Project check**: a linter rule, type, test, pre-commit hook, or CI step
@@ -107,7 +107,5 @@ Draft each proposed artifact (extension, script, rule edit, skill diff) under
 
 - Do not edit real configs, extensions, skills, `AGENTS.md`, or repositories
   until the user approves each change.
-- Tests for a new guard or check need the approval and authoring gate in the
-  `test-audit` skill.
 - Never commit or push without explicit approval.
 - When quoting sessions, redact secrets, tokens, and credentials.

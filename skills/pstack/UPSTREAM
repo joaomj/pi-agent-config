@@ -1,6 +1,6 @@
 # Upstream source of the pstack port: https://github.com/cursor/plugins (pstack/)
 # scripts/pstack-upstream.sh reads this file. Line format: <upstream path> <local path>
-commit 7a583913eb1b8d1a0ee76753d1a2cf072e7b54f9
+commit b7b93c36be9bcc36a74db438e0fd385d660bc559
 pstack/LICENSE skills/pstack/LICENSE
 pstack/skills/poteto-mode/SKILL.md skills/pstack/ticket/SKILL.md
 pstack/skills/poteto-mode/worker.md skills/pstack/ticket/SKILL.md
@@ -23,3 +23,9 @@ pstack/skills/arena/SKILL.md prompts/arena.md
 pstack/skills/interrogate/SKILL.md prompts/interrogate.md
 pstack/skills/swarm/SKILL.md prompts/swarm.md
 pstack/skills/figure-it-out/SKILL.md prompts/figure-it-out.md
+pstack/skills/unslop/SKILL.md skills/pstack/unslop/SKILL.md
+pstack/skills/technical-writing/SKILL.md skills/pstack/technical-writing/SKILL.md
+pstack/skills/bro/SKILL.md prompts/bro.md
+pstack/skills/reframe/SKILL.md prompts/reframe.md
+pstack/skills/correct/SKILL.md prompts/correct.md
+pstack/skills/blast-radius/SKILL.md prompts/blast-radius.md
