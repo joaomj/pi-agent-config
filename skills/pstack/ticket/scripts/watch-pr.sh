@@ -2,7 +2,7 @@
 # Wait until a PR needs attention, then print one verdict and what it is about.
 # The script only reads. Run it inside the PR's repository.
 #
-#   watch-pr.sh <pr-number> [--since <ISO-8601 time>] [--interval <seconds>] [--status-only]
+#   watch-pr.sh <pr-number> [--since <ISO-8601 time>] [--interval <seconds>] [--grace <seconds>] [--status-only]
 #
 # Verdicts, first match wins:
 #   merged, closed     the PR is no longer open
@@ -14,20 +14,24 @@
 #   waiting            checks still run (printed only with --status-only)
 #
 # Without --status-only it polls every --interval seconds (default 60) until a
-# verdict other than waiting. Your own comments never count as feedback, so a
+# verdict other than waiting. CI can take a moment to register checks after a
+# push, so a ready PR with no checks counts as waiting for the first --grace
+# seconds (default 180). Your own comments never count as feedback, so a
 # round reply does not wake the watcher.
 set -euo pipefail
 
-usage() { printf 'usage: watch-pr.sh <pr-number> [--since <ISO-8601 time>] [--interval <seconds>] [--status-only]\n' >&2; exit 2; }
+usage() { printf 'usage: watch-pr.sh <pr-number> [--since <ISO-8601 time>] [--interval <seconds>] [--grace <seconds>] [--status-only]\n' >&2; exit 2; }
 [[ $# -ge 1 && $1 =~ ^[0-9]+$ ]] || usage
 pr=$1; shift
 since=1970-01-01T00:00:00Z
 interval=60
+grace=180
 status_only=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     --since) [[ $# -ge 2 ]] || usage; since=$2; shift 2 ;;
     --interval) [[ $# -ge 2 && $2 =~ ^[1-9][0-9]*$ ]] || usage; interval=$2; shift 2 ;;
+    --grace) [[ $# -ge 2 && $2 =~ ^[0-9]+$ ]] || usage; grace=$2; shift 2 ;;
     --status-only) status_only=true; shift ;;
     *) usage ;;
   esac
@@ -82,8 +86,13 @@ query($owner: String!, $name: String!, $pr: Int!) {
   end'
 }
 
+start=$SECONDS
 while :; do
   out=$(verdict)
+  if [[ ${out%%$'\n'*} == ready && $out == *", 0 checks passed,"* && $status_only == false ]] \
+    && (( SECONDS - start < grace )); then
+    out=waiting
+  fi
   if [[ $status_only == true || ${out%%$'\n'*} != waiting ]]; then
     printf 'VERDICT: %s\n' "$out"
     exit 0

@@ -36,7 +36,10 @@ Adapted from pstack by Lauren Tan (`../LICENSE`).
 
 Keep one log per ticket at `~/.pi/agent/pstack/logs/<KEY>.tsv`, never inside
 a repository. `<KEY>` is the tracker's id for the ticket, or a short slug of
-its title when it has no id. Follow `../show-me-your-work/SKILL.md` for its format and rules.
+its title when it has no id. Follow `../show-me-your-work/SKILL.md` for its
+format and rules, and append every row with
+`../show-me-your-work/scripts/log.sh <log> <phase> <decision> <why> <evidence> <result>`,
+never by hand.
 Log decision points, finished units with their check result, reverts, and
 each gate outcome.
 

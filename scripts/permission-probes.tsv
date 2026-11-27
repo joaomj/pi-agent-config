@@ -48,3 +48,7 @@ ask	curl -sS https://x/a -so ~/.bashrc
 ask	scripts/open-pr.sh main 'fix: x' /tmp/body.md
 ask	bash ~/.pi/agent/git/x/skills/pstack/ticket/scripts/land-pr.sh 4 squash
 allow	scripts/watch-pr.sh 4 --status-only
+allow	head -30 /home/u/pi-agent-config/skills/pstack/ticket/scripts/open-pr.sh
+allow	cat skills/pstack/ticket/scripts/land-pr.sh
+ask	bash scripts/land-pr.sh 4 squash
+ask	cd /tmp/w && /home/u/skills/pstack/ticket/scripts/open-pr.sh main t /tmp/b.md
