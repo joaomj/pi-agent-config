@@ -75,6 +75,7 @@ versions.lock
 !/extensions/duplicate-guard.ts
 !/extensions/permission-policy.ts
 !/extensions/shared-rules.ts
+!/extensions/ticket-harness.ts
 !/extensions/deadline.mjs
 /telemetry.json.example
 /.env.example

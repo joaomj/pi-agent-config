@@ -43,6 +43,7 @@
       "extensions/bg-bash-timer.ts",
       "extensions/git-no-editor.ts",
       "extensions/shared-rules.ts",
+      "extensions/ticket-harness.ts",
       "node_modules/@ff-labs/pi-fff/src/index.ts",
       "node_modules/@joaomj/pi-claude-usage/src/index.ts",
       "node_modules/pi-bg-bash/src/index.ts",

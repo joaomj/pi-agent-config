@@ -22,7 +22,9 @@ My rules, prompt templates, skills, and extensions for the
 - **Ticket to merge with four decisions.** `/skill:ticket <ticket>` carries a
   ticket from any tracker, a file, or pasted text through contract, code, PR, CI and review, sign-off, and merge. You
   decide at four gates; between them the agent decides what it can undo and
-  logs why. See [The pstack workflow](docs/pstack.md).
+  logs why. The `ticket-harness` extension keeps the agent working until the
+  contract's done check passes, and a fresh `reviewer` subagent checks the
+  diff before the PR. See [The pstack workflow](docs/pstack.md).
 - **Permission checks.**
   [`@gotgenes/pi-permission-system`](https://www.npmjs.com/package/@gotgenes/pi-permission-system)
   asks or denies before tool calls, MCP calls from `codemode` included. The

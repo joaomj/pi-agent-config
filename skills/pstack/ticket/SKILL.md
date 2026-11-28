@@ -69,7 +69,7 @@ repository's guidance. Write the contract, then end the turn:
 ```text
 Ticket: <KEY> <title> (<where it came from>)
 Goal: <one sentence>
-Done: <command or observation that passes or fails, from the acceptance criteria>
+Done: <one shell command, run in the worktree, that exits 0 only when the acceptance criteria hold>
 Scope: <in> / <out>
 Work: worktree <path> off <base>, branch <name>
 Playbook: bug fix | feature
@@ -80,10 +80,20 @@ Gate A: the operator approves or corrects the contract.
 
 ### 2. Build
 
-Create the worktree. Follow `playbooks/bug-fix.md` or `playbooks/feature.md`.
-Commit each unit after its check passes. Run the done check on the real
-artifact. A verification skill for this repository, when one exists, is the
-proof surface.
+Create the worktree, then call `ticket_contract` with the key, the worktree
+path, the Done command, and the approved contract text. Before you settle,
+the harness runs the Done command and checks that tracked files are
+committed; when either fails, you continue. Follow `playbooks/bug-fix.md` or
+`playbooks/feature.md`. Commit each unit after its check passes. Run the
+done check on the real artifact. A verification skill for this repository,
+when one exists, is the proof surface.
+
+When the done check passes, send one `reviewer` subagent with `cwd` set to
+the worktree. Give it the contract and the output of
+`git diff origin/<base>...HEAD`, and ask for defects only, each with a
+`file:line` and how it fails. Triage each finding with
+`references/bugbot-triage.md`: fix it in a new commit, or log the disproof.
+One review per ticket; a fix round does not get a second review.
 
 ### 3. Open the PR, Gate B
 

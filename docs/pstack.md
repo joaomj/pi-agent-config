@@ -28,6 +28,17 @@ ticket from a file or pasted text gets no tracker update at Gate D.
 `watch-pr.sh` still reports `ready`. A rebase or force-push after a conflict
 is yours to do.
 
+After Gate A, the `ticket-harness` extension holds the approved contract. It
+keeps the contract in the system prompt, and before the agent stops it runs
+the done command in the worktree and checks that tracked files are
+committed. When either fails, the agent continues, at most twice per message
+from you. The harness runs the done command only when the permission policy
+allows it without a prompt; otherwise it tells the agent to run it.
+`scripts/check-ticket-harness.sh` tests this.
+
+Before Gate B, one `reviewer` subagent reads the diff with no memory of
+writing it. The agent fixes or disproves each finding before it opens the PR.
+
 Between gates the agent makes every choice it can undo, logs it, and lists it
 at the next gate. It brings review comments it classifies as `ask` to you,
 batched once per review round. Answer several numbered questions in one line,
@@ -86,6 +97,15 @@ can use the same model providers as your session.
 Writing subagents, such as the `worker` seats of `/arena`, also load your
 permission extension. A child forwards its permission prompts to your
 interactive session; in print mode they are denied.
+
+The package sets no subagent models. A subagent uses your session's model
+unless you choose another in `~/.pi/agent/settings.json`, for example a
+different model for `reviewer`, so it does not share the author's blind
+spots:
+
+```json
+{ "subagents": { "agentOverrides": { "reviewer": { "model": "<provider>/<model>" } } } }
+```
 
 ## Keep the port current
 
