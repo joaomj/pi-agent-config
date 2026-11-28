@@ -89,11 +89,19 @@ done check on the real artifact. A verification skill for this repository,
 when one exists, is the proof surface.
 
 When the done check passes, send one `reviewer` subagent with `cwd` set to
-the worktree. Give it the contract and the output of
-`git diff origin/<base>...HEAD`, and ask for defects only, each with a
-`file:line` and how it fails. Triage each finding with
-`references/bugbot-triage.md`: fix it in a new commit, or log the disproof.
-One review per ticket; a fix round does not get a second review.
+the worktree. The reviewer cannot run commands, so paste the contract and the
+text of `git diff origin/<base>...HEAD` into the task, with this brief:
+
+> Find defects that break this contract. For each, give the `file:line`, a
+> command that shows it, the output the code gives, and the output the
+> contract requires. Leave out style, naming, structure, and risks that need
+> a future change to matter. No findings is a valid result.
+
+Run each finding's command yourself. Keep a finding only when the output
+shows the failure and the failure breaks the contract; log every other
+finding as dropped, with the reason. Fix a kept finding as a bug fix: a test
+that fails first, then the fix, in a new commit. One review per ticket; a
+fix round does not get a second review.
 
 ### 3. Open the PR, Gate B
 
